@@ -107,8 +107,10 @@ if [[ "$stack" == typescript ]]; then
   lint=(npx eslint .)
 else
   # Their pyproject.toml lacks the standard dev tools: check must say so and name the fix.
-  (cd "$project" && make deps 2>&1 | grep -q 'uv add --dev mypy pytest pytest-cov ruff') ||
-    fail "missing dev dependencies not reported by make deps"
+  # make deps exits non-zero here, so capture first: under pipefail a pipe would report that exit.
+  deps_out="$(cd "$project" && make deps 2>&1)"
+  grep -q 'uv add --dev mypy pytest pytest-cov ruff' <<<"$deps_out" ||
+    fail "missing dev dependencies not reported by make deps: $deps_out"
   (cd "$project" && uv add --quiet --dev mypy pre-commit pytest pytest-cov ruff) || fail "uv add --dev"
   (cd "$project" && uv sync --quiet 2>/dev/null) || fail "uv sync"
   (cd "$project" && uv run --quiet ruff format . >/dev/null 2>&1)
