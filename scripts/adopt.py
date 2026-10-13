@@ -13,7 +13,7 @@ Rules, file by file:
   - CLAUDE.md                         -> kept; only the `@AGENTS.md` import line is added
   - package.json, .claude/settings.json -> JSON-merged: only missing keys are added, existing values
                                            win, conflicts are reported
-  - .gitignore, .gitattributes        -> missing lines appended
+  - .gitignore, .gitattributes        -> missing lines added (.gitattributes: at the top, so yours win)
   - anything else that differs        -> new version written next to it as <file>.ai-standards
                                          for review; the original is untouched
 
@@ -76,10 +76,16 @@ def merge_json(existing: Any, incoming: Any, path: str, report: Report) -> Any:
 def merge_lines(target: Path, source: Path, rel: str, report: Report) -> None:
     present = set(target.read_text(encoding="utf-8").splitlines())
     missing = [line for line in source.read_text(encoding="utf-8").splitlines() if line and line not in present]
-    if missing:
+    if not missing:
+        return
+    block = "# Added by ai-standards\n" + "\n".join(missing) + "\n"
+    if rel == ".gitattributes":
+        # Later lines win in .gitattributes: defaults go first so the project's own rules keep priority.
+        target.write_text(block + "\n" + target.read_text(encoding="utf-8"), encoding="utf-8")
+    else:
         with target.open("a", encoding="utf-8") as handle:
-            handle.write("\n# Added by ai-standards\n" + "\n".join(missing) + "\n")
-        report.add("Merged", f"{rel}: appended {len(missing)} line(s)")
+            handle.write("\n" + block)
+    report.add("Merged", f"{rel}: added {len(missing)} line(s)")
 
 
 def adopt_file(source: Path, target: Path, rel: str, report: Report) -> None:
