@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stack: [typescript, python]
+        stack: [typescript, python, dotnet]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,6 +25,10 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-dotnet@v4
+        if: matrix.stack == 'dotnet'
+        with:
+          dotnet-version: "10.0.x"
       - run: uv tool install copier
       - run: bash scripts/test-templates.sh
         env:

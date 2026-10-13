@@ -42,6 +42,10 @@ lint_rule_ids() { # <stack> <project dir> <file> -> one fired rule id per line
   if [[ "$stack" == typescript ]]; then
     (cd "$dir" && { npx --no-install eslint --format json "$file" || true; }) |
       jq -r '.[].messages[].ruleId // empty'
+  elif [[ "$stack" == dotnet ]]; then
+    # Analyzers, code style and Sonar all report through the build; warnings are errors.
+    (cd "$dir" && { dotnet build --nologo 2>&1 || true; }) |
+      grep -oE '(error|warning) [A-Z]+[0-9]+' | awk '{print $2}'
   else
     (cd "$dir" && { $RUN ruff check --output-format json "$file" || true; }) | jq -r '.[].code // empty'
   fi
@@ -51,8 +55,8 @@ check_violations() { # <stack> <org> <project dir> <dest folder for violation fi
   local stack="$1" org="$2" dir="$3" dest="$4" file expected fired rule
   local -a files=()
   shopt -s nullglob
-  files+=("$work/src/tests/violations/$stack"/*.{ts,py})
-  files+=("$work/src/tests/violations/$stack/$org"/*.{ts,py})
+  files+=("$work/src/tests/violations/$stack"/*.{ts,py,cs})
+  files+=("$work/src/tests/violations/$stack/$org"/*.{ts,py,cs})
   shopt -u nullglob
   for file in "${files[@]}"; do
     cp "$file" "$dest/"
@@ -69,14 +73,46 @@ check_violations() { # <stack> <org> <project dir> <dest folder for violation fi
   done
 }
 
+check_feature_isolation() { # <dotnet project dir> <root namespace>: a slice that reaches into
+  # another feature must fail the architecture tests (VSA-2); the project is clean again afterwards.
+  local dir="$1" ns="$2" planted output
+  planted="$dir/src/$ns/Features/Orders/PlaceOrder/PlaceOrderHandler.cs"
+  mkdir -p "$(dirname "$planted")"
+  cat >"$planted" <<EOF
+using $ns.Features.Greetings.BuildGreeting;
+
+namespace $ns.Features.Orders.PlaceOrder;
+
+/// <summary>Planted by test-templates.sh: reaches into another feature.</summary>
+public sealed class PlaceOrderHandler(BuildGreetingHandler greetings)
+{
+    /// <summary>Greets the customer.</summary>
+    public string Handle(string customer) => greetings.Handle(customer);
+}
+EOF
+  output="$(cd "$dir" && dotnet build --nologo -v q >/dev/null 2>&1 &&
+    dotnet test --no-build --output Detailed 2>&1)"
+  rm -r "${dir:?}/src/${ns:?}/Features/Orders"
+  grep -q 'depends on another feature' <<<"$output"
+}
+
 for stack in $stacks; do
+  # .NET is generated once per architecture; the other stacks have none ("-").
+  architectures="-"
+  [[ "$stack" == dotnet ]] && architectures="simple clean vertical-slice"
+  for architecture in $architectures; do
   for org in $orgs; do
     name="$stack-$org"
+    arch_args=()
+    if [[ "$architecture" != - ]]; then
+      name="$stack-$architecture-$org"
+      arch_args=(--data "architecture=$architecture")
+    fi
     dir="$work/$name"
     log "$name: generate"
     copier_cmd copy --trust --defaults --quiet \
       --data project_name="Test $stack $org" --data org="$org" --data stack="$stack" \
-      --data 'ai_tools=["claude","cursor","copilot"]' \
+      "${arch_args[@]}" --data 'ai_tools=["claude","cursor","copilot"]' \
       "$work/src" "$dir"
 
     # shellcheck disable=SC2016  # literal ${{ is GitHub Actions syntax, allowed in workflows
@@ -90,6 +126,16 @@ for stack in $stacks; do
       (cd "$dir" && npm run --silent check) || fail "$name: npm run check"
       check_violations "$stack" "$org" "$dir" "$dir/src"
       bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
+    elif [[ "$stack" == dotnet ]]; then
+      grep -q "^## Architecture" "$dir/AGENTS.md" || fail "$name: no architecture rules in AGENTS.md"
+      (cd "$dir" && bash .ai-standards/check.sh) || fail "$name: check.sh"
+      first_project="$(cd "$dir" && find src -name '*.csproj' | sort | head -n 1)"
+      check_violations "$stack" "$org" "$dir" "$dir/$(dirname "$first_project")"
+      bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
+      if [[ "$architecture" == vertical-slice ]]; then
+        check_feature_isolation "$dir" "$(basename "$first_project" .csproj)" ||
+          fail "$name: VSA-2 not enforced (a cross-feature reference passed the architecture tests)"
+      fi
     else
       if command -v uv >/dev/null 2>&1; then
         RUN="uv run"; (cd "$dir" && uv sync --quiet)
@@ -104,6 +150,7 @@ for stack in $stacks; do
       bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
       [[ -z "$RUN" ]] && deactivate
     fi
+  done
   done
 done
 

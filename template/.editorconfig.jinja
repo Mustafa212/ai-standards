@@ -25,11 +25,13 @@ csharp_style_namespace_declarations = file_scoped:warning
 csharp_using_directive_placement = outside_namespace:warning
 dotnet_sort_system_directives_first = true
 dotnet_style_require_accessibility_modifiers = always:warning
-dotnet_style_predefined_type_for_locals_parameters_members = true:warning
-dotnet_style_predefined_type_for_member_access = true:warning
+# Keywords over runtime type names (CS-14) show in the IDE only: IDE0049 never runs in a build.
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_predefined_type_for_member_access = true:suggestion
 dotnet_diagnostic.IDE0055.severity = warning
 
 # CS-2: constants are PascalCase, private fields are _camelCase (the first matching rule wins)
+dotnet_diagnostic.IDE1006.severity = warning
 dotnet_naming_rule.constants_pascal.severity = warning
 dotnet_naming_rule.constants_pascal.symbols = constants
 dotnet_naming_rule.constants_pascal.style = pascal

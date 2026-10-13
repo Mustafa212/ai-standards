@@ -1,7 +1,7 @@
 ## Stack: .NET (C#)
 
 - **CS-1 [tool]** Nullable reference types are on, and every warning is an error.
-- **CS-2 [tool]** File-scoped namespaces, `using` directives outside the namespace with `System.*` first, explicit access modifiers, `_camelCase` private fields, and language keywords over BCL names (`int`, not `Int32`).
+- **CS-2 [tool]** File-scoped namespaces, `using` directives outside the namespace with `System.*` first, explicit access modifiers, and `_camelCase` private fields.
 - **CS-3 [tool]** `var` only when the type is obvious from the right side (`new`, a cast, a literal).
 - **CS-4 [tool]** Catch only what you can handle: no `catch (Exception)` without a filter, and rethrow with `throw;`.
 - **CS-5 [tool]** Pass the `CancellationToken` through every async I/O call.
@@ -13,6 +13,7 @@
 - **CS-11 [review]** Respect DI lifetimes (no scoped service inside a singleton), and read settings through `IOptions<T>`.
 - **CS-12 [review]** Tests are named `Method_Scenario_Expected`, and test behavior against a real database where data matters (Testcontainers or Respawn).
 - **CS-13 [review]** One public type per file, and the file is named after it.
+- **CS-14 [review]** Language keywords over runtime type names (`int`, not `Int32`). The IDE suggests it; no build check can (IDE0049 runs only in the IDE).
 
 | Task | Command |
 | --- | --- |
