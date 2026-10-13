@@ -85,7 +85,9 @@ python3 "$src/scripts/adopt.py" "$work/rendered-$stack" "$project" >"$work/adopt
 grep -q 'Team notes' "$project/CLAUDE.md" || fail "user's CLAUDE.md content lost"
 [[ "$(head -n 1 "$project/CLAUDE.md")" == "@AGENTS.md" ]] || fail "CLAUDE.md lacks the AGENTS.md import"
 grep -q '## Adoption status' "$project/AGENTS.md" || fail "AGENTS.md has no Adoption status section"
-# The user's decision in the walkthrough: take the standard tool configs.
+# The user's decisions in the walkthrough: take the standard tool configs, keep their own
+# pyproject.toml (it holds their dependencies), as the adopt-project skill recommends.
+rm -f "$project/pyproject.toml.ai-standards"
 for review in $(cd "$project" && find . -name '*.ai-standards' -not -path './node_modules/*'); do
   mv "$project/$review" "$project/${review%.ai-standards}"
 done
@@ -104,6 +106,10 @@ if [[ "$stack" == typescript ]]; then
   check=(npm run --silent check)
   lint=(npx eslint .)
 else
+  # Their pyproject.toml lacks the standard dev tools: check must say so and name the fix.
+  (cd "$project" && make deps 2>&1 | grep -q 'uv add --dev mypy pytest pytest-cov ruff') ||
+    fail "missing dev dependencies not reported by make deps"
+  (cd "$project" && uv add --quiet --dev mypy pre-commit pytest pytest-cov ruff) || fail "uv add --dev"
   (cd "$project" && uv sync --quiet 2>/dev/null) || fail "uv sync"
   (cd "$project" && uv run --quiet ruff format . >/dev/null 2>&1)
   commit "style: apply standard formatting"

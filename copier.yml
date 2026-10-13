@@ -9,6 +9,7 @@ _skip_if_exists:
   - README.md
   - CLAUDE.md
   - docs/PROJECT.md
+  - .gitattributes
   # Manifests hold the project's own dependencies. Created once; updates never touch them, so they
   # can't collide with what the project added. Anything that changes between standards versions
   # lives in managed files instead (.ai-standards/run.mjs, Makefile, tool configs).

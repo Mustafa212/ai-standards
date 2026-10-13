@@ -1,0 +1,3 @@
+# Created by ai-standards, then yours. LF everywhere, even on Windows with core.autocrlf=true,
+# so formatters (Prettier defaults to LF) agree with CI.
+* text=auto eol=lf

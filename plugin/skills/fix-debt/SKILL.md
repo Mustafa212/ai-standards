@@ -14,7 +14,8 @@ into a feature or bug fix (ADOPT-2).
 1. Make sure the tree is clean and you're on a branch for this work (propose
    `refactor/standards-debt-<rule>` if on the default branch).
 2. Refresh the plan so it reflects the code, not an old snapshot: clone the standards repo to a temp
-   dir and run `python3 <tmp>/standards/scripts/standards_audit.py .`
+   dir and run `python3 <tmp>/standards/scripts/standards_audit.py .` (`python` where `python3` is
+   the Windows Store alias)
 3. Take the first unchecked item in priority order (P1 → P4), unless the user named one. A large item
    is split by area: one directory or module per change, small enough to review in one sitting.
 

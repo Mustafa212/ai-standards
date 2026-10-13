@@ -21,6 +21,11 @@ Work in four gated steps. Stop at each gate for the user's answer.
    `requirements*.txt` + `.py` → `python`. Anything else (C#, Dart, Angular-specific, monorepos with
    several stacks) isn't supported by the template yet: say so, offer `propose-rule` to add the
    stack, and stop.
+   - TypeScript: note the module system (`"type": "module"` or CommonJS) and the test runner. The
+     standard check runs **Vitest**, and the standard `tsconfig.json` assumes ESM. Jest suites need
+     migrating first (usually mechanical: `vi` for `jest`, imports from `vitest`), as their own
+     commit before adoption, or the user stops here. CommonJS projects keep their own `tsconfig.json`.
+   - Python: note the layout. The standard configs assume `src/<package>/` and `tests/`.
 3. Read what the project already has: existing lint/format/type/test configs, CI workflows,
    `CLAUDE.md`/`AGENTS.md`/`CODING_RULES.md`, test command and whether tests pass today.
 4. Measure, with the project's own tools: do the tests pass? current coverage %? does the type
@@ -46,8 +51,11 @@ Propose, with a recommendation for each:
 
 ## 3. Apply
 
-Pick a runner: `uvx copier` if `uv` exists, else `pipx run copier`. For Python scripts below, use
-`python3` (or `uv run --no-project python` if Python isn't installed).
+Pick a runner: `uvx copier` if `uv` exists, else `pipx run copier`, else `pip install --user copier`.
+For the Python scripts below use `python3`, or `python` where `python3` isn't a real interpreter
+(on Windows it is often the Microsoft Store alias, which prints "Python was not found"), or
+`uv run --no-project python`. Python projects also need `uv` and `make` (Windows:
+`winget install astral-sh.uv`, `winget install ezwinports.make`).
 
 1. Clone the standards repo to a temp dir for its scripts:
    `git clone --depth 1 https://github.com/<owner>/<repo> <tmp>/standards`.
@@ -67,6 +75,8 @@ Pick a runner: `uvx copier` if `uv` exists, else `pipx run copier`. For Python s
    and type configs: take the standard one (the baseline below absorbs the fallout); for build
    scripts and runtime settings: keep theirs. Delete each `*.ai-standards` once decided.
 5. Install: `npm install` or `uv sync`. Then `pre-commit install --install-hooks -t pre-commit -t commit-msg`.
+   Python projects that kept their own `pyproject.toml` need the standard dev tools in it:
+   `uv add --dev mypy pre-commit pytest pytest-cov ruff` (`make check` names any that are missing).
 6. Offer commit 1: `chore: adopt ai-standards`.
 7. **Format-only commit:** `npm run format` or `uv run ruff format .`. Offer commit 2
    `style: apply standard formatting`, then add its SHA to `.git-blame-ignore-revs` (create it) and

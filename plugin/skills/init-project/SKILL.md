@@ -54,7 +54,9 @@ user's files.
 Run inside the project:
 
 1. `git init` (if not a repo yet).
-2. Install deps: `npm install` (typescript) or `uv sync` (python).
+2. Install deps: `npm install` (typescript) or `uv sync` (python). Python projects need `uv` and
+   `make`; the Claude hooks block edits until `uv` is installed (Windows:
+   `winget install astral-sh.uv`, `winget install ezwinports.make`).
 3. `pre-commit install --install-hooks -t pre-commit -t commit-msg` (install pre-commit with
    `uv tool install pre-commit` or `pipx install pre-commit` if missing).
 4. Run the full check: `npm run check` or `make check`. It must pass on a fresh scaffold. If it does

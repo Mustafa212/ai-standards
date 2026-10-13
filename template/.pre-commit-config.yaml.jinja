@@ -39,10 +39,17 @@ repos:
         language: system
         files: \.(ts|tsx|js|mjs|cjs)$
 {%- else %}
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.4
+  # The project's own ruff (from its lock file), so pre-commit, the edit hook and CI agree on rules.
+  - repo: local
     hooks:
       - id: ruff
-        args: [--fix]
+        name: ruff
+        entry: uv run --quiet ruff check --fix
+        language: system
+        types_or: [python, pyi]
       - id: ruff-format
+        name: ruff format
+        entry: uv run --quiet ruff format
+        language: system
+        types_or: [python, pyi]
 {%- endif %}

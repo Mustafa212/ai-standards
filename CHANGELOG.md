@@ -11,6 +11,37 @@ Each entry names the rule ID, the layer (base / stack / org) and the enforcement
 
 ## Unreleased
 
+## 0.3.1
+
+Fixes (no rule changes):
+
+- **Monthly update PRs:** `create-pull-request` uses the `AI_STANDARDS_TOKEN` secret when set. With the
+  default `GITHUB_TOKEN`, GitHub refused updates that touched `.github/workflows/` and never ran CI
+  on the PR; the workflow now warns when the secret is missing.
+- **Line endings:** `.gitattributes` (`* text=auto eol=lf`) in this repo and in generated projects
+  (project-owned, line-merged on adopt). On Windows with `core.autocrlf=true`, clones got CRLF and
+  `prettier --check` failed on every file.
+- **Python hooks fail closed:** without `uv` they block the edit and say how to install it, instead of
+  failing to start (which Claude Code treats as non-blocking, so managed files were unprotected).
+  The managed-files hook runs with `--no-project`. The edit hook no longer skips files whose names
+  start with `dist` (e.g. `distance.py`), and says how to install ruff when it's missing.
+- **Python dev tools:** `make check` first checks that mypy, pytest, pytest-cov and ruff are installed
+  and prints the `uv add --dev ...` command (adopted projects keep their own `pyproject.toml`).
+  `pytest.ini` sets `pythonpath = src`, so projects that aren't installed as a package still import.
+  pre-commit runs the project's own ruff instead of a separately pinned copy, so pre-commit, the edit
+  hook and CI agree.
+- **TypeScript:** `eslint.config.js` → `eslint.config.mjs`, so it loads in CommonJS projects too (adopt
+  never adds `"type": "module"`). `copier update` removes the old file.
+- **Plugin:** the adoption offer isn't repeated after a compaction. `adopt-project` checks the test runner
+  (Vitest only; Jest suites are migrated first), module system and Python layout, installs the
+  standard Python dev tools into a kept `pyproject.toml`, and works where `python3` is the Windows
+  Store alias.
+- **This repo:** CI calls `bash scripts/test-templates.sh` (immune to lost executable bits), and tag
+  pushes now trigger the release job. The adopt e2e test keeps the legacy `pyproject.toml`, as users
+  do, instead of replacing it.
+- `AGENTS.md`: managed files must not be changed through shell commands either. README: prerequisites,
+  the update token, and CODEOWNERS as the hard guard.
+
 ## 0.3.0
 
 Existing projects:

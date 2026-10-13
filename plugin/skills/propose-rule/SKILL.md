@@ -33,7 +33,7 @@ Clone it to a temp dir and create a branch `rule/<short-name>`. Then edit:
 | Rule text | `rules/base.md`, `rules/stacks/<stack>.md` or `orgs/<org>/rules.md` |
 | Threshold | `config/defaults.jinja` (base) or `orgs/<org>/settings.jinja` (org) |
 | New setting | add to `config/defaults.jinja` **and** `config/settings.jinja` |
-| Lint rule | `template/...eslint.config.js...jinja` or `template/...ruff.toml...jinja` |
+| Lint rule | `template/...eslint.config.mjs...jinja` or `template/...ruff.toml...jinja` |
 | New org | copy `orgs/personal/`, then add it to the `org` choices in `copier.yml` |
 
 Give the rule the next free ID in its section (e.g. `RDB-8`). Keep wording short; every line in

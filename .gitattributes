@@ -1,0 +1,3 @@
+# LF everywhere, even on Windows with core.autocrlf=true: Prettier and bash expect it, and
+# copier clones this repo, so rendered projects inherit these line endings.
+* text=auto eol=lf

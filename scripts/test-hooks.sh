@@ -70,7 +70,7 @@ printf '%s\n' "$new_line" >"$dir/.ai-session/tests/scratch.$ext"
 hook check ".ai-session/tests/scratch.$ext"
 [[ $hook_exit == 0 ]] || fail ".ai-session file was linted: $hook_err"
 
-if [[ "$stack" == typescript ]]; then managed="eslint.config.js"; else managed="ruff.toml"; fi
+if [[ "$stack" == typescript ]]; then managed="eslint.config.mjs"; else managed="ruff.toml"; fi
 hook protect "$managed"
 [[ $hook_exit == 2 ]] || fail "edit to managed $managed not blocked"
 hook protect "CLAUDE.md"

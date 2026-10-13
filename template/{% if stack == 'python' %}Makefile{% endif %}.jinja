@@ -3,14 +3,21 @@
 # Uses uv by default. Inside an already-activated venv:  make check RUN=
 RUN ?= uv run
 
-.PHONY: check check-deferred fix format-check lint typecheck test
+# Tools the checks need. A missing one fails `check` with the exact install command (pyproject.toml
+# is yours and updates never touch it, so adopted projects may not have them yet).
+DEV_DEPS := mypy pytest pytest-cov ruff
 
-check: format-check lint{% if cfg.enforce_typecheck %} typecheck{% endif %} test
+.PHONY: check check-deferred deps fix format-check lint typecheck test
+
+check: deps format-check lint{% if cfg.enforce_typecheck %} typecheck{% endif %} test
 {%- if cfg.deferred %}
 
 # Checks the existing code does not pass yet (see "Adoption status" in AGENTS.md). Not enforced.
 check-deferred: typecheck
 {%- endif %}
+
+deps:
+	@$(RUN) python -c "import importlib.util, sys; missing = [d for d in sys.argv[1:] if importlib.util.find_spec(d.replace('-', '_')) is None]; missing and sys.exit('[ai-standards] missing dev dependencies. Run: uv add --dev ' + ' '.join(missing))" $(DEV_DEPS)
 
 fix:
 	$(RUN) ruff format .

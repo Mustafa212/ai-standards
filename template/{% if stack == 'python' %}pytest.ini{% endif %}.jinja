@@ -2,4 +2,6 @@
 # Managed by ai-standards. TST-1: coverage threshold.
 [pytest]
 testpaths = tests
+# Import from src/ even when the project isn't installed as a package (common in adopted projects).
+pythonpath = src
 addopts = --strict-markers --cov={{ package_name }} --cov-branch --cov-report=term-missing{% if cfg.enforce_coverage %} --cov-fail-under={{ cfg.coverage }}{% endif %}

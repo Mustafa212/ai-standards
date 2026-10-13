@@ -6,6 +6,7 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ["v*"] # without this, tag pushes never trigger the release job
   schedule:
     - cron: "23 5 * * 1" # weekly: catches upstream tool releases that silently change rules
 
@@ -25,7 +26,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv tool install copier
-      - run: scripts/test-templates.sh
+      - run: bash scripts/test-templates.sh
         env:
           STACKS: ${{ matrix.stack }}
 

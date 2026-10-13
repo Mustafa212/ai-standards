@@ -131,7 +131,7 @@ expect "existing script kept" jq -e '.scripts.test == "jest"' "$legacy/package.j
 expect "standard devDependency added" jq -e '.devDependencies.eslint' "$legacy/package.json"
 expect "module type not forced on legacy code" jq -e 'has("type") | not' "$legacy/package.json"
 expect ".gitignore line not duplicated" test "$(grep -cxF 'node_modules/' "$legacy/.gitignore")" = 1
-expect "new files added" test -f "$legacy/eslint.config.js" -a -f "$legacy/.copier-answers.yml"
+expect "new files added" test -f "$legacy/eslint.config.mjs" -a -f "$legacy/.copier-answers.yml"
 expect "second adopt refuses" grep -q 'already on ai-standards' \
   <(python3 "$work/src/scripts/adopt.py" "$work/legacy-rendered" "$legacy")
 

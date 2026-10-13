@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-IGNORED_DIRS = (".ai-session", ".venv", "dist")
+IGNORED_DIRS = (".ai-session/", ".venv/", "dist/")
 BLOCKING_EXIT = 2
 HUNK = re.compile(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", re.MULTILINE)
 
@@ -64,7 +64,9 @@ def lint(project: Path, file: str, *, tracked: bool) -> list[str]:
     try:
         findings = json.loads(result.stdout)
     except json.JSONDecodeError:
-        return [f"ruff failed to run:\n{result.stderr or result.stdout}"]
+        missing = "No module named ruff" in result.stderr
+        hint = "\nRuff isn't installed in this project. Run: uv add --dev ruff" if missing else ""
+        return [f"ruff failed to run:\n{result.stderr or result.stdout}{hint}"]
     relevant = changed_lines(project, file) if tracked else None
     return [
         describe(file, item)

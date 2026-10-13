@@ -39,6 +39,10 @@ readable, typed, tested and secure. Rules are **enforced by tools**, not by memo
 
 ### 2. Install the plugin (once per machine)
 
+Prerequisites: `git` and Node 22 (TypeScript stack); `uv` and `make` (Python stack). On Windows:
+`winget install astral-sh.uv` and `winget install ezwinports.make`. Without `uv`, the Claude hooks of a
+Python project block edits and say why, instead of silently not checking anything.
+
 ```bash
 claude plugin marketplace add Mustafa212/ai-standards
 claude plugin install ai-standards@ai-standards
@@ -85,7 +89,8 @@ isn't rewritten as a side effect.
 ### Which files are whose
 
 - **Yours, never touched by updates:** `CLAUDE.md` (only the `@AGENTS.md` line is guaranteed),
-  `README.md`, `docs/PROJECT.md`, `docs/STANDARDS-DEBT.md`, `package.json`, `pyproject.toml`. The
+  `README.md`, `docs/PROJECT.md`, `docs/STANDARDS-DEBT.md`, `package.json`, `pyproject.toml`,
+  `.gitattributes`. The
   standard scripts in `package.json` just call `.ai-standards/run.mjs`, so updates never need to
   change your manifest or collide with your dependencies.
 - **Managed by the standards:** lint/type/test configs, CI, `AGENTS.md`, `.ai-standards/`,
@@ -135,5 +140,9 @@ user-level/CLAUDE.md       optional snippet for ~/.claude/CLAUDE.md
   required status checks so CI is actually a gate.
 - Hooks run only in Claude Code. Other AI tools get the instruction files, and their output is
   stopped at pre-commit and CI.
-- The managed-file guard stops the AI, not a human. Humans can run `AI_STANDARDS_UNLOCK=1 claude`;
-  pair it with CODEOWNERS on config files if you need a hard rule for people.
+- The managed-file guard stops Claude's edit tools, not shell commands and not humans (humans can
+  run `AI_STANDARDS_UNLOCK=1 claude`). CI runs the configs from the PR itself, so the hard rule is
+  CODEOWNERS on the managed files (see `.claude/managed-files.txt`) plus required review on `main`.
+- The monthly update PR needs a secret `AI_STANDARDS_TOKEN` in each project (Contents, Pull requests
+  and Workflows read/write). With only the default `GITHUB_TOKEN`, GitHub refuses updates that touch
+  `.github/workflows/` and doesn't run CI on the PR.

@@ -1,6 +1,10 @@
 # Managed by ai-standards.
 # Once a month, pull the latest standards into this project and open a PR.
-# For a private standards repo, add a secret AI_STANDARDS_TOKEN with read access to it.
+#
+# Add a secret AI_STANDARDS_TOKEN (fine-grained token or GitHub App token) with Contents, Pull
+# requests and Workflows read/write on THIS repo, plus read access to the standards repo if it is
+# private. Without it the default GITHUB_TOKEN is used, and GitHub then refuses to push updates that
+# touch .github/workflows/ (CI is managed, so many releases do) and never runs CI on the PR it opens.
 name: ai-standards update
 
 on:
@@ -25,6 +29,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install copier
+      - name: Warn when AI_STANDARDS_TOKEN is missing
+        if: env.TOKEN == ''
+        run: echo "::warning::AI_STANDARDS_TOKEN is not set, so workflow-file updates can't be pushed and CI won't run on the update PR. See the top of this workflow."
       - name: Point git at the standards repo with a token (private repos)
         if: env.TOKEN != ''
         run: git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
@@ -35,6 +42,7 @@ jobs:
           copier update --defaults --trust --conflict rej
       - uses: peter-evans/create-pull-request@v7
         with:
+          token: {{ "${{ secrets.AI_STANDARDS_TOKEN || github.token }}" }}
           branch: chore/ai-standards-update
           title: "chore: update ai-standards"
           commit-message: "chore: update ai-standards"

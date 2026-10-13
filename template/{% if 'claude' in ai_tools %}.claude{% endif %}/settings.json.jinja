@@ -2,8 +2,10 @@
 {%- set protect_cmd = 'node \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.mjs\\"' -%}
 {%- set check_cmd = 'node \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.mjs\\"' -%}
 {%- else -%}
-{%- set protect_cmd = 'uv run --quiet python \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect_managed_files.py\\"' -%}
-{%- set check_cmd = 'uv run --quiet python \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check_edited_file.py\\"' -%}
+{#- Without uv the hooks can't start, and a hook that can't start doesn't block: fail closed instead. -#}
+{%- set need_uv = 'command -v uv >/dev/null 2>&1 || { echo \\"ai-standards: uv is not installed, so this edit cannot be checked. Install it: https://docs.astral.sh/uv/\\" >&2; exit 2; }; ' -%}
+{%- set protect_cmd = need_uv ~ 'uv run --quiet --no-project python \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect_managed_files.py\\"' -%}
+{%- set check_cmd = need_uv ~ 'uv run --quiet python \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check_edited_file.py\\"' -%}
 {%- endif -%}
 {
 {%- if standards_source.startswith("gh:") %}

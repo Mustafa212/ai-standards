@@ -9,6 +9,9 @@ project_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 command -v cygpath >/dev/null 2>&1 && project_dir="$(cygpath -u "$project_dir")"
 answers="$project_dir/.copier-answers.yml"
 source_hint="${CLAUDE_PLUGIN_OPTION_STANDARDS_SOURCE:-}"
+# Claude Code passes {"source": "startup|clear|compact", ...} on stdin.
+hook_input=""
+[[ -t 0 ]] || hook_input="$(cat)"
 
 read_answer() {
   sed -n "s/^$1: *//p" "$answers" | head -n 1 | tr -d "'\""
@@ -54,6 +57,8 @@ ai-standards:init-project skill before writing any code or config by hand. Do no
 formatter, CI or tsconfig/pyproject files; the template provides them.${source_hint:+ Template source: $source_hint.}
 EOF
 elif [[ -f "$project_dir/package.json" || -f "$project_dir/pyproject.toml" || -f "$project_dir/requirements.txt" ]]; then
+  # After a compaction the offer was already made in this session; don't repeat it.
+  grep -qE '"source" *: *"compact"' <<<"$hook_input" && exit 0
   cat <<EOF
 [ai-standards] This existing project is not on ai-standards yet (no .copier-answers.yml).
 At the end of your first reply in this session, add ONE short line offering to audit it and bring it

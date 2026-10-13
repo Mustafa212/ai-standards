@@ -13,7 +13,7 @@ Rules, file by file:
   - CLAUDE.md                         -> kept; only the `@AGENTS.md` import line is added
   - package.json, .claude/settings.json -> JSON-merged: only missing keys are added, existing values
                                            win, conflicts are reported
-  - .gitignore                        -> missing lines appended
+  - .gitignore, .gitattributes        -> missing lines appended
   - anything else that differs        -> new version written next to it as <file>.ai-standards
                                          for review; the original is untouched
 
@@ -30,7 +30,7 @@ from ensure_claude_import import ensure_import
 
 PROJECT_OWNED = {"README.md", "docs/PROJECT.md", "docs/STANDARDS-DEBT.md"}
 JSON_MERGED = {"package.json", ".claude/settings.json"}
-LINE_MERGED = {".gitignore"}
+LINE_MERGED = {".gitignore", ".gitattributes"}
 # Keys that change how existing code runs. Never added automatically; reported for a decision.
 # ("type": "module" breaks every require() in a CommonJS project.)
 NEVER_AUTO_ADD = {"package.json.type"}
