@@ -1,0 +1,33 @@
+using {{ dotnet_name }}.Features.Greetings.BuildGreeting;
+
+namespace {{ dotnet_name }}.Tests.Features.Greetings.BuildGreeting;
+
+public sealed class BuildGreetingHandlerTests
+{
+    private static readonly DateTimeOffset _morning = new(2026, 1, 1, 9, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset _afternoon = new(2026, 1, 1, 15, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void Handle_InTheMorning_SaysGoodMorning()
+    {
+        var greeter = new BuildGreetingHandler(new FixedTimeProvider(_morning));
+
+        Assert.Equal("Good morning, Mostafa!", greeter.Handle("Mostafa"));
+    }
+
+    [Fact]
+    public void Handle_InTheAfternoon_SaysHello()
+    {
+        var greeter = new BuildGreetingHandler(new FixedTimeProvider(_afternoon));
+
+        Assert.Equal("Hello, Mostafa!", greeter.Handle("Mostafa"));
+    }
+
+    [Fact]
+    public void Handle_BlankName_GreetsTheWorld()
+    {
+        var greeter = new BuildGreetingHandler(new FixedTimeProvider(_afternoon));
+
+        Assert.Equal("Hello, world!", greeter.Handle("   "));
+    }
+}

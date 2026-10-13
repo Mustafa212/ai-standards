@@ -19,6 +19,8 @@
 {%- set enforce_typecheck = "typecheck" not in deferred -%}
 {%- set node_version = o.node_version | default(d.node_version) -%}
 {%- set python_version = o.python_version | default(d.python_version) -%}
+{%- set dotnet_version = o.dotnet_version | default(d.dotnet_version) -%}
 {%- set banned_ts = o.banned_ts | default(d.banned_ts) -%}
 {%- set banned_py = o.banned_py | default(d.banned_py) -%}
-{%- set check_cmd = "npm run check" if stack == "typescript" else "make check" -%}
+{%- set banned_cs = o.banned_cs | default(d.banned_cs) -%}
+{%- set check_cmd = {"typescript": "npm run check", "python": "make check", "dotnet": "bash .ai-standards/check.sh"}[stack] -%}

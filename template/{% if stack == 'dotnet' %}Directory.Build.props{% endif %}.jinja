@@ -1,0 +1,50 @@
+{% import "config/settings.jinja" as cfg with context -%}
+<!-- Managed by ai-standards. Do not edit: propose changes upstream. Rule IDs refer to AGENTS.md.
+     Project files (*.csproj) are yours; everything the standards need lives here. -->
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net{{ cfg.dotnet_version }}</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- CS-1: nullable reference types on, every warning is an error -->
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- CS-2..CS-7: analyzers and code style run on every build -->
+    <AnalysisLevel>latest-Recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- RDB-8: public types and members have an XML doc comment -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- RDB-1, RDB-2, RDB-4, RDB-5: size, complexity, magic numbers, commented-out code -->
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory).ai-standards/SonarLint.xml" />
+  </ItemGroup>
+
+  <!-- Org rules: APIs banned in production code (RS0030). Tests may use them, for example an
+       HttpClient that calls the app under test. -->
+  <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('Tests'))">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory).ai-standards/BannedSymbols.txt" />
+  </ItemGroup>
+
+  <!-- Test projects (the name ends in "Tests"): xUnit, no doc comments (RDB-8 exempts tests), and
+       Method_Scenario_Expected names (CS-12). -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CS1591;CA1707</NoWarn>
+  </PropertyGroup>
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="coverlet.MTP" Version="10.1.0" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- TST-1: coverage of the production code these tests exercise. Architecture tests run no
+       production code, so they don't count. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests')) And !$(MSBuildProjectName.EndsWith('ArchitectureTests'))">
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --coverlet --coverlet-threshold {{ cfg.coverage }} --coverlet-threshold-type line,branch --coverlet-threshold-stat total --coverlet-exclude-by-file "**/Program.cs"</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+</Project>

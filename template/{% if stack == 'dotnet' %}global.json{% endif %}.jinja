@@ -1,0 +1,10 @@
+{% import "config/settings.jinja" as cfg with context -%}
+{
+  "sdk": {
+    "version": "{{ cfg.dotnet_version }}.100",
+    "rollForward": "latestFeature"
+  },
+  "test": {
+    "runner": "Microsoft.Testing.Platform"
+  }
+}

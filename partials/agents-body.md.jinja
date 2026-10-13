@@ -2,6 +2,8 @@
 
 {% include "rules/stacks/" ~ stack ~ ".md" %}
 
+{% if architecture is defined %}{% include ["rules/architectures/" ~ stack ~ "-" ~ architecture ~ ".md"] ignore missing %}{% endif %}
+
 {% include ["orgs/" ~ org ~ "/rules.md"] ignore missing %}
 
 {#- Project rules live in a private copy of ai-standards (orgs/<org>/projects/<slug>.md). #}

@@ -1,0 +1,9 @@
+namespace {{ dotnet_name }}.UnitTests;
+
+/// <summary>A clock stopped at a chosen moment in UTC, so tests never depend on the real time (TST-4).</summary>
+internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+{
+    public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+
+    public override DateTimeOffset GetUtcNow() => now;
+}

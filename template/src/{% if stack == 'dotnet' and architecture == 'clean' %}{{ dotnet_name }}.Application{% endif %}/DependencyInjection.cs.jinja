@@ -1,0 +1,12 @@
+using Microsoft.Extensions.DependencyInjection;
+using {{ dotnet_name }}.Application.Greetings;
+
+namespace {{ dotnet_name }}.Application;
+
+/// <summary>Registers the use cases of the Application layer.</summary>
+public static class DependencyInjection
+{
+    /// <summary>Adds every use case to <paramref name="services"/>.</summary>
+    public static IServiceCollection AddApplication(this IServiceCollection services) =>
+        services.AddSingleton<BuildGreeting>();
+}

@@ -1,6 +1,6 @@
 """Reject rules written twice within one org: the same ID, or the same text in two places.
 
-A project sees base + stack + its org + its own project rules, so within that scope every rule ID
+A project sees base + stack + architecture + its org + its own project rules, so within that scope every rule ID
 and every rule text must appear once. A rule that two projects share belongs in the org file: the
 onboard skill moves it there, and this check is the safety net for exact matches.
 
@@ -33,6 +33,7 @@ def org_scope(root: Path, org_dir: Path) -> list[Path]:
     return [
         root / "rules" / "base.md",
         *sorted((root / "rules" / "stacks").glob("*.md")),
+        *sorted((root / "rules" / "architectures").glob("*.md")),
         org_dir / "rules.md",
         *sorted((org_dir / "projects").glob("*.md")),
     ]

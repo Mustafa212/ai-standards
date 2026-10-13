@@ -1,0 +1,22 @@
+{% import "config/settings.jinja" as cfg with context -%}
+#!/usr/bin/env bash
+# Managed by ai-standards. Everything CI runs, cheapest feedback first (DONE-1).
+# Usage: bash .ai-standards/check.sh
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+step() { printf '[ai-standards] %s\n' "$*" >&2; }
+
+step "dotnet format whitespace --verify-no-changes (RDB-6)"
+dotnet format whitespace --verify-no-changes
+
+step "dotnet build (warnings are errors: analyzers, code style, doc comments)"
+dotnet build --nologo
+
+step "dotnet test (coverage >= {{ cfg.coverage }}%)"
+# No --nologo here: on Microsoft.Testing.Platform it would reach the test app as an unknown option.
+if ! dotnet test --no-build; then
+  step "Tests failed. If every test passed, coverage is below {{ cfg.coverage }}% (TST-1):"
+  step "see the newest TestResults/coverage.cobertura.*.xml for the uncovered lines."
+  exit 1
+fi

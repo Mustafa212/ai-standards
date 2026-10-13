@@ -1,0 +1,11 @@
+using {{ dotnet_name }}.Application;
+using {{ dotnet_name }}.Application.Greetings;
+using {{ dotnet_name }}.Infrastructure;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddApplication().AddInfrastructure();
+
+WebApplication app = builder.Build();
+app.MapGet("/greetings/{name}", (string name, BuildGreeting buildGreeting) => buildGreeting.Execute(name));
+
+await app.RunAsync();
