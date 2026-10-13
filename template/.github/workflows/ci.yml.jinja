@@ -29,6 +29,40 @@ jobs:
       - run: uv sync
       - run: make check
 {%- endif %}
+{%- if cfg.deferred %}
+
+  # Adoption: checks the existing code does not pass yet. Visible, but not blocking.
+  # Re-enable with: copier update --data 'deferred_checks=[]'  (see docs/STANDARDS-DEBT.md)
+  deferred:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+{%- if stack == "typescript" %}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "{{ cfg.node_version }}"
+          cache: npm
+      - run: npm ci
+{%- if not cfg.enforce_typecheck %}
+      - run: npm run check:deferred
+{%- endif %}
+{%- if not cfg.enforce_coverage %}
+      - run: npx vitest run --coverage --coverage.thresholds.lines={{ cfg.coverage_target }}
+{%- endif %}
+{%- else %}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "{{ cfg.python_version }}"
+      - run: uv sync
+{%- if not cfg.enforce_typecheck %}
+      - run: make check-deferred
+{%- endif %}
+{%- if not cfg.enforce_coverage %}
+      - run: uv run pytest --cov-fail-under={{ cfg.coverage_target }}
+{%- endif %}
+{%- endif %}
+{%- endif %}
 
   secrets:
     runs-on: ubuntu-latest

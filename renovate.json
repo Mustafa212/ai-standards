@@ -6,9 +6,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "npm devDependencies inside the TypeScript template",
-      "managerFilePatterns": ["/^template/.*package\\.json.*\\.jinja$/"],
-      "matchStrings": ["\"(?<depName>[@a-z0-9./-]+)\": \"\\^(?<currentValue>[0-9][0-9.]*)\""],
+      "description": "npm devDependencies in the TypeScript template (package.json for new projects, run.mjs for the required list); keep both in sync",
+      "managerFilePatterns": ["/^template/.*package\\.json.*\\.jinja$/", "/^template/.*run\\.mjs\\.jinja$/"],
+      "matchStrings": ["\"?(?<depName>[@a-z0-9./-]+)\"?: \"\\^(?<currentValue>[0-9][0-9.]*)\""],
       "datasourceTemplate": "npm",
       "versioningTemplate": "npm"
     },

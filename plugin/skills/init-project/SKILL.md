@@ -1,6 +1,6 @@
 ---
 name: init-project
-description: Use whenever the user wants to create, start, init, bootstrap or scaffold a new project or repo, or to adopt shared standards in an existing one. Scaffolds from the ai-standards template so lint, formatting, types, tests, CI and AI rules are identical across projects. Use this instead of hand-writing configs.
+description: Use whenever the user wants to create, start, init, bootstrap or scaffold a NEW project or repo. Scaffolds from the ai-standards template so lint, formatting, types, tests, CI and AI rules are identical across projects. Use this instead of hand-writing configs. For an existing project, use adopt-project instead.
 ---
 
 # Scaffold a project from ai-standards
@@ -45,24 +45,9 @@ uvx copier copy --trust \
 Use the remote source (not a local clone path) so `copier update` and the monthly update workflow
 can reach it later.
 
-### Adopt mode (existing project)
-
-Never run `copier copy` into an existing project, and never pass `--overwrite`: it replaces the
-user's files, including their `CLAUDE.md`. Use the safe merge instead:
-
-1. Require a clean git tree (`git status`), so every change is reviewable and revertable.
-2. Clone the standards repo to a temp dir (`git clone --depth 1 ...`) for its scripts.
-3. Render the template into a second, empty temp dir: the command above with that dir as target.
-4. Merge: `python3 <standards clone>/scripts/adopt.py <rendered dir> .`
-   It never overwrites or deletes. It keeps `CLAUDE.md` and only adds the `@AGENTS.md` line at the
-   top, merges `package.json` / `.claude/settings.json` by adding missing keys, appends missing
-   `.gitignore` lines, and saves the standard version of any other differing file as
-   `<file>.ai-standards` next to the original.
-5. Walk the user through the report: each "Kept yours, differs" and "Not added" JSON value
-   (e.g. `"type": "module"`, which would break a CommonJS project), and each
-   `*.ai-standards` file. Typical decisions: replace an old lint config with the standard one,
-   keep a project-specific script. Delete each `*.ai-standards` file once decided.
-6. Expect many lint errors in existing code. Offer to fix them in small, separate commits.
+If the target directory already contains code, stop and use the `adopt-project` skill instead.
+Never run `copier copy` into an existing project and never pass `--overwrite`: it replaces the
+user's files.
 
 ## 3. Finish setup
 
@@ -74,7 +59,8 @@ Run inside the project:
    `uv tool install pre-commit` or `pipx install pre-commit` if missing).
 4. Run the full check: `npm run check` or `make check`. It must pass on a fresh scaffold. If it does
    not, report the failure; do not edit managed files to make it pass.
-5. Commit: `git add -A && git commit -m "chore: scaffold from ai-standards"`.
+5. Offer the commit; committing is the user's call. Suggested message (Conventional Commits, which
+   the commit-msg hook enforces): `chore: scaffold from ai-standards`.
 
 ## 4. Report
 

@@ -44,7 +44,7 @@ Every rule has an ID and an enforcement level:
 
 ## 5. Tests
 
-- **TST-1 [tool]** Coverage ≥ {{ cfg.coverage }}%. CI fails below it.
+- **TST-1 [tool]** Coverage ≥ {{ cfg.coverage_target }}%. CI fails below it{% if cfg.ratcheting %} (this project: ≥ {{ cfg.coverage }}% today, see Adoption status){% endif %}.
 - **TST-2 [review]** Test behaviour, not implementation. Name tests as sentences describing the behaviour.
 - **TST-3 [ai]** When fixing a bug, first write a test that reproduces it.
 

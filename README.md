@@ -61,18 +61,38 @@ example-corp"*. Without Claude:
 uvx copier copy --trust gh:Mustafa212/ai-standards my-project
 ```
 
-### Existing projects and your own files
+### Existing projects
 
-- **`CLAUDE.md` is yours.** It is created once and never overwritten, by scaffolding, adoption or
-  updates. The only thing ai-standards guarantees in it is the `@AGENTS.md` line at the top, which
-  is how Claude reads the shared rules. Same for `README.md` and `docs/PROJECT.md`.
-- **Adopting an existing project** (`init-project` in adopt mode, or by hand) never runs
-  `copier copy` over your files. It renders the template elsewhere and merges with
-  `scripts/adopt.py`: missing files are added, `package.json` and `.claude/settings.json` only gain
-  missing keys, and any other file that differs gets the standard version saved next to it as
-  `<file>.ai-standards` for you to decide. Nothing is overwritten or deleted.
-- **Managed files** (lint configs, CI, `AGENTS.md`, `.claude/settings.json`, hooks) are owned by
-  the standards. Personal Claude settings belong in `.claude/settings.local.json`.
+Open Claude Code in a project that isn't on the standards yet and it offers, once, to bring it on
+(`/ai-standards:adopt-project`). Say no for good and it creates `.ai-standards-skip`. Adoption:
+
+1. **Audits** read-only: stack, existing configs, tests, coverage, type errors. Failing tests stop it.
+2. **Merges** without overwriting (`scripts/adopt.py`): missing files are added, `package.json` and
+   `.claude/settings.json` only gain missing keys, any other differing file gets the standard version
+   next to it as `<file>.ai-standards` for you to decide.
+3. **Baselines** the old violations (`eslint-suppressions.json` / `# noqa`), in separate commits for
+   formatting and baseline, so from day one CI fails on **new** problems only. Type checking can be
+   *deferred* and coverage can start at today's value (*floor*); both run in CI as visible warnings.
+4. **Writes the plan**, `docs/STANDARDS-DEBT.md`: the baselined debt ordered by risk (P1 correctness
+   and security → P4 style), with commands to see each item.
+
+Then `/ai-standards:fix-debt` pays it down one item per commit. The baseline can only shrink (both
+linters fail on stale entries), and the settings ratchet up with
+`copier update --data coverage_floor=<n> --data 'deferred_checks=[]'`. Debt is never mixed into
+feature work (rule ADOPT-2). The edit hook only reports problems on lines you changed, so old code
+isn't rewritten as a side effect.
+
+### Which files are whose
+
+- **Yours, never touched by updates:** `CLAUDE.md` (only the `@AGENTS.md` line is guaranteed),
+  `README.md`, `docs/PROJECT.md`, `docs/STANDARDS-DEBT.md`, `package.json`, `pyproject.toml`. The
+  standard scripts in `package.json` just call `.ai-standards/run.mjs`, so updates never need to
+  change your manifest or collide with your dependencies.
+- **Managed by the standards:** lint/type/test configs, CI, `AGENTS.md`, `.ai-standards/`,
+  `.claude/settings.json`, hooks, `Makefile`. AI edits to them are blocked. Personal Claude
+  settings belong in `.claude/settings.local.json`.
+- **`.ai-session/`** (local AI working state, e.g. from a senior-dev workflow) is git-ignored and
+  skipped by every linter and hook.
 
 ## Changing the rules
 
@@ -88,7 +108,9 @@ uvx copier copy --trust gh:Mustafa212/ai-standards my-project
 
 Or just tell Claude what keeps going wrong; the `ai-standards:propose-rule` skill turns it into a
 PR. Every PR runs `scripts/test-templates.sh`, which generates all stack × org projects, checks they
-pass, and checks that every rule in `tests/violations/` still fires. See
+pass, checks that every rule in `tests/violations/` still fires, exercises the Claude hooks
+(`scripts/test-hooks.sh`), and adopts a messy legacy project end to end, ratchet included
+(`scripts/test-adopt.sh`). See
 [docs/EVOLVING.md](docs/EVOLVING.md) for the full loop and versioning.
 
 ## Repo layout

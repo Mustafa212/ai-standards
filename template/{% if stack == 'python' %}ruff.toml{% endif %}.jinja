@@ -4,6 +4,7 @@
 line-length = 100
 target-version = "py{{ cfg.python_version | replace('.', '') }}"
 src = ["src", "tests"]
+extend-exclude = [".ai-session"]
 
 [lint]
 # Preview rules stay off unless listed explicitly (PLR1702 nesting depth is preview-only).
@@ -11,6 +12,7 @@ preview = true
 explicit-preview-rules = true
 select = [
   "PLR1702",      # RDB-1 nesting depth
+  "PLW1514",      # PY-5 open() without explicit encoding
   "TID",          # tidy imports (org banned imports)
   "E", "W", "F",  # pycodestyle, pyflakes
   "I",            # import order

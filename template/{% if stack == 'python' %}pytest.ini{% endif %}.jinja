@@ -2,4 +2,4 @@
 # Managed by ai-standards. TST-1: coverage threshold.
 [pytest]
 testpaths = tests
-addopts = --strict-markers --cov={{ package_name }} --cov-branch --cov-report=term-missing --cov-fail-under={{ cfg.coverage }}
+addopts = --strict-markers --cov={{ package_name }} --cov-branch --cov-report=term-missing{% if cfg.enforce_coverage %} --cov-fail-under={{ cfg.coverage }}{% endif %}

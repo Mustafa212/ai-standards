@@ -28,7 +28,7 @@ from typing import Any
 
 from ensure_claude_import import ensure_import
 
-PROJECT_OWNED = {"README.md", "docs/PROJECT.md"}
+PROJECT_OWNED = {"README.md", "docs/PROJECT.md", "docs/STANDARDS-DEBT.md"}
 JSON_MERGED = {"package.json", ".claude/settings.json"}
 LINE_MERGED = {".gitignore"}
 # Keys that change how existing code runs. Never added automatically; reported for a decision.

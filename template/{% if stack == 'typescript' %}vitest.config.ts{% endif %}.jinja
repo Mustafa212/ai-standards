@@ -1,21 +1,23 @@
 {% import "config/settings.jinja" as cfg with context -%}
 // Managed by ai-standards. TST-1: coverage threshold.
 import { defineConfig } from "vitest/config";
-
+{% if cfg.enforce_coverage %}
 const coverageThreshold = {{ cfg.coverage }};
-
+{% endif %}
 export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
       exclude: ["src/**/*.test.ts"],
+{%- if cfg.enforce_coverage %}
       thresholds: {
         lines: coverageThreshold,
         functions: coverageThreshold,
         branches: coverageThreshold,
         statements: coverageThreshold,
       },
+{%- endif %}
     },
   },
 });

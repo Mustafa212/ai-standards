@@ -80,6 +80,7 @@ for stack in $stacks; do
       (cd "$dir" && npm install --no-audit --no-fund --silent)
       (cd "$dir" && npm run --silent check) || fail "$name: npm run check"
       check_violations "$stack" "$org" "$dir" "$dir/src"
+      bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
     else
       if command -v uv >/dev/null 2>&1; then
         RUN="uv run"; (cd "$dir" && uv sync --quiet)
@@ -91,6 +92,7 @@ for stack in $stacks; do
       fi
       (cd "$dir" && make check RUN="$RUN") || fail "$name: make check"
       check_violations "$stack" "$org" "$dir" "$dir/src/test_${stack}_${org//-/_}"
+      bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
       [[ -z "$RUN" ]] && deactivate
     fi
   done
@@ -132,6 +134,11 @@ expect ".gitignore line not duplicated" test "$(grep -cxF 'node_modules/' "$lega
 expect "new files added" test -f "$legacy/eslint.config.js" -a -f "$legacy/.copier-answers.yml"
 expect "second adopt refuses" grep -q 'already on ai-standards' \
   <(python3 "$work/src/scripts/adopt.py" "$work/legacy-rendered" "$legacy")
+
+for stack in $stacks; do
+  log "adopt end to end: $stack (baseline, debt plan, ratchet via copier update)"
+  bash "$work/src/scripts/test-adopt.sh" "$work/src" "$work/e2e" "$stack" || fail "adopt e2e: $stack"
+done
 
 if ((${#failures[@]})); then
   log "${#failures[@]} failure(s)"; printf ' - %s\n' "${failures[@]}"; exit 1

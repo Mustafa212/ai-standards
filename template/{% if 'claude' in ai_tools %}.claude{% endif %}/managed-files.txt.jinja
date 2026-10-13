@@ -10,11 +10,13 @@ AGENTS.md
 .editorconfig
 .copier-answers.yml
 {%- if stack == "typescript" %}
+.ai-standards/*
 eslint.config.js
 tsconfig.json
 tsconfig.build.json
 vitest.config.ts
 .prettierrc.json
+eslint-suppressions.json
 {%- else %}
 Makefile
 ruff.toml

@@ -1,0 +1,39 @@
+// Managed by ai-standards.
+// Blocks AI edits to files owned by ai-standards so rules can't be weakened to "get green" (SUP-2).
+// A human can bypass for one session with:  AI_STANDARDS_UNLOCK=1 claude
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+const BLOCKING_EXIT = 2;
+
+if (process.env.AI_STANDARDS_UNLOCK === "1") process.exit(0);
+
+const input = JSON.parse(readFileSync(0, "utf8") || "{}");
+const projectDir = process.env.CLAUDE_PROJECT_DIR ?? input.cwd ?? process.cwd();
+const filePath = input.tool_input?.file_path;
+const managedList = path.join(projectDir, ".claude", "managed-files.txt");
+if (!filePath || !existsSync(managedList)) process.exit(0);
+
+const file = path
+  .relative(projectDir, path.resolve(projectDir, filePath))
+  .split(path.sep)
+  .join("/");
+
+function toRegExp(pattern) {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  return new RegExp(`^${escaped}$`);
+}
+
+const patterns = readFileSync(managedList, "utf8")
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter((line) => line !== "" && !line.startsWith("#"));
+
+if (patterns.some((pattern) => toRegExp(pattern).test(file))) {
+  process.stderr.write(
+    `Blocked: '${file}' is managed by ai-standards (rule SUP-2).\n` +
+      "Fix the code instead of changing the rules. If the rule itself is wrong,\n" +
+      "tell the user and suggest /ai-standards:propose-rule.\n",
+  );
+  process.exit(BLOCKING_EXIT);
+}

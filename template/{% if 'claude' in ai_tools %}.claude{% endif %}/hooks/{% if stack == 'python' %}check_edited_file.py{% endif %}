@@ -1,0 +1,108 @@
+"""Managed by ai-standards.
+
+Runs after every AI edit. Formats the file and reports lint errors back to the AI (exit 2), but
+only for code the AI is responsible for:
+  - new (untracked) files: the whole file is formatted, auto-fixed and linted
+  - tracked files: lint errors are reported only on lines changed since HEAD, nothing is
+    auto-fixed, and the file is formatted only if it was already formatted at HEAD
+so untouched legacy code is never rewritten or blamed on the current change.
+Standard library only: works the same on Windows (Git Bash), macOS and Linux.
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+IGNORED_DIRS = (".ai-session", ".venv", "dist")
+BLOCKING_EXIT = 2
+HUNK = re.compile(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", re.MULTILINE)
+
+
+def run(args: list[str], cwd: Path, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # noqa: S603  # fixed argument lists, no shell
+        args, cwd=cwd, input=stdin, capture_output=True, text=True, encoding="utf-8", check=False
+    )
+
+
+def ruff(*args: str) -> list[str]:
+    return [sys.executable, "-m", "ruff", *args]
+
+
+def changed_lines(project: Path, file: str) -> set[int] | None:
+    """Line numbers added or modified since HEAD, or None when every line counts."""
+    diff = run(["git", "diff", "-U0", "--no-color", "HEAD", "--", file], project)
+    if diff.returncode != 0:
+        return None
+    lines: set[int] = set()
+    for start, count in HUNK.findall(diff.stdout):
+        first = int(start)
+        lines.update(range(first, first + (int(count) if count else 1)))
+    return lines
+
+
+def format_file(project: Path, file: str, *, tracked: bool) -> None:
+    if tracked:
+        # Only format files that were already formatted, so the formatter never rewrites old code.
+        head = run(["git", "show", f"HEAD:{file}"], project)
+        if head.returncode != 0:
+            return
+        check = run(ruff("format", "--check", "--stdin-filename", file, "-"), project, head.stdout)
+        if check.returncode != 0:
+            return
+    run(ruff("format", "--quiet", file), project)
+
+
+def lint(project: Path, file: str, *, tracked: bool) -> list[str]:
+    fix = [] if tracked else ["--fix"]
+    result = run(ruff("check", "--output-format", "json", *fix, file), project)
+    if result.returncode == 0:
+        return []
+    try:
+        findings = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return [f"ruff failed to run:\n{result.stderr or result.stdout}"]
+    relevant = changed_lines(project, file) if tracked else None
+    return [
+        describe(file, item)
+        for item in findings
+        if relevant is None or item["location"]["row"] in relevant
+    ]
+
+
+def describe(file: str, item: dict[str, Any]) -> str:
+    location = item["location"]
+    return f"{file}:{location['row']}:{location['column']}  {item['message']}  ({item['code']})"
+
+
+def main() -> int:
+    payload = json.loads(sys.stdin.read() or "{}")
+    project = Path(os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or Path.cwd())
+    raw_path = (payload.get("tool_input") or {}).get("file_path")
+    if not raw_path or not (project / raw_path).exists():
+        return 0
+    try:
+        file = (project / raw_path).resolve().relative_to(project.resolve()).as_posix()
+    except ValueError:
+        return 0
+    if not file.endswith(".py") or file.startswith(IGNORED_DIRS):
+        return 0
+
+    tracked = run(["git", "ls-files", "--error-unmatch", "--", file], project).returncode == 0
+    format_file(project, file, tracked=tracked)
+    problems = lint(project, file, tracked=tracked)
+    if not problems:
+        return 0
+    scope = "on the lines you changed " if tracked else ""
+    sys.stderr.write(
+        f"Lint errors {scope}in {file}. Fix them now; suppress only with a specific rule and a "
+        "reason (SUP-1):\n" + "\n".join(problems) + "\n"
+    )
+    return BLOCKING_EXIT
+
+
+if __name__ == "__main__":
+    sys.exit(main())

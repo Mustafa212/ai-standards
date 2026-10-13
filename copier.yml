@@ -9,6 +9,11 @@ _skip_if_exists:
   - README.md
   - CLAUDE.md
   - docs/PROJECT.md
+  # Manifests hold the project's own dependencies. Created once; updates never touch them, so they
+  # can't collide with what the project added. Anything that changes between standards versions
+  # lives in managed files instead (.ai-standards/run.mjs, Makefile, tool configs).
+  - package.json
+  - pyproject.toml
 # CLAUDE.md is the project's own file; the only thing guaranteed in it is the @AGENTS.md import.
 _tasks:
   - command:
@@ -71,6 +76,32 @@ ai_tools:
     Cursor: cursor
     GitHub Copilot: copilot
   default: [claude]
+
+adopted:
+  type: bool
+  help: Is this an EXISTING project being brought onto ai-standards? (new project = no)
+  default: false
+
+deferred_checks:
+  type: str
+  help: >-
+    Checks the existing code does not pass yet. They run in CI as non-blocking warnings until
+    re-enabled (copier update --data 'deferred_checks=[]').
+  multiselect: true
+  choices:
+    Type checking: typecheck
+    Coverage threshold: coverage
+  default: []
+  when: "{{ adopted }}"
+
+coverage_floor:
+  type: int
+  help: >-
+    Coverage % the existing code has today. Enforced as the minimum and raised over time until it
+    reaches the org target (ratchet). 0 = enforce the org target right away.
+  default: 0
+  validator: "{% if coverage_floor < 0 or coverage_floor > 100 %}Use 0-100{% endif %}"
+  when: "{{ adopted }}"
 
 standards_source:
   type: str

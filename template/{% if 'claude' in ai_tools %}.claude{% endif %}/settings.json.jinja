@@ -1,3 +1,10 @@
+{%- if stack == "typescript" -%}
+{%- set protect_cmd = 'node \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.mjs\\"' -%}
+{%- set check_cmd = 'node \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.mjs\\"' -%}
+{%- else -%}
+{%- set protect_cmd = 'uv run --quiet python \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect_managed_files.py\\"' -%}
+{%- set check_cmd = 'uv run --quiet python \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check_edited_file.py\\"' -%}
+{%- endif -%}
 {
 {%- if standards_source.startswith("gh:") %}
   "extraKnownMarketplaces": {
@@ -17,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.sh\""
+            "command": "{{ protect_cmd }}"
           }
         ]
       }
@@ -28,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.sh\""
+            "command": "{{ check_cmd }}"
           }
         ]
       }

@@ -11,6 +11,42 @@ Each entry names the rule ID, the layer (base / stack / org) and the enforcement
 
 ## Unreleased
 
+## 0.3.0
+
+Existing projects:
+
+- New `adopt-project` skill: read-only audit → approved plan → safe merge → format-only commit →
+  lint baseline (`eslint-suppressions.json` / `ruff --add-noqa`) → debt plan. CI enforces new code
+  from day one.
+- New `fix-debt` skill and `scripts/standards_audit.py`, which writes `docs/STANDARDS-DEBT.md`: the
+  baselined debt ordered P1 (correctness, security) → P4 (style), with commands to see each item.
+- New answers `adopted`, `deferred_checks` (typecheck, coverage) and `coverage_floor` (ratchet).
+  Deferred checks run in CI as non-blocking warnings. `AGENTS.md` gets an "Adoption status"
+  section and rules ADOPT-1..3 (new lines clean; debt never mixed into feature work; baseline only
+  shrinks).
+- SessionStart offers adoption once in unadopted projects (opt out with `.ai-standards-skip`), and
+  reports the debt summary in adopted ones.
+
+Fixes:
+
+- **`package.json` and `pyproject.toml` are now project-owned** (`_skip_if_exists`). Before,
+  `copier update` could replace them with the template's version and move the project's own
+  dependencies into a `.rej` file. Standard scripts delegate to the managed
+  `.ai-standards/run.mjs`, which checks required dev dependencies and prints the install command.
+- **Edit hook respects untouched code:** tracked files get lint errors reported only on lines
+  changed since HEAD, no auto-fix, and formatting only if the file was already formatted.
+  New files are formatted, fixed and linted in full.
+- **Hooks work on Windows:** rewritten in Node (TypeScript stack) and Python (Python stack); the old
+  bash hooks needed `jq`, which Git Bash lacks, and silently did nothing without it.
+- `.ai-session/` (local AI working state) is git-ignored and skipped by ESLint, Prettier, Ruff and
+  the hooks.
+- `init-project` offers the commit instead of committing.
+
+Rules:
+
+- **PY-5 [tool]** (stack: python) `open()` needs an explicit encoding (Ruff `PLW1514`); no mutable
+  default arguments (`B006`). **BREAKING** for Python code that opens files without an encoding.
+
 ## 0.2.0
 
 - `CLAUDE.md` is now project-owned: created once, never overwritten (`_skip_if_exists`), no longer

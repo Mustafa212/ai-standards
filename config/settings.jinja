@@ -10,7 +10,13 @@
 {%- set max_params = o.max_params | default(d.max_params) -%}
 {%- set max_depth = o.max_depth | default(d.max_depth) -%}
 {%- set max_file_lines = o.max_file_lines | default(d.max_file_lines) -%}
-{%- set coverage = o.coverage | default(d.coverage) -%}
+{%- set coverage_target = o.coverage | default(d.coverage) -%}
+{#- Adopted projects: enforce today's coverage as a floor until it reaches the target (ratchet). -#}
+{%- set deferred = (deferred_checks if adopted else []) | list -%}
+{%- set ratcheting = adopted and 0 < coverage_floor < coverage_target -%}
+{%- set coverage = coverage_floor if ratcheting else coverage_target -%}
+{%- set enforce_coverage = "coverage" not in deferred -%}
+{%- set enforce_typecheck = "typecheck" not in deferred -%}
 {%- set node_version = o.node_version | default(d.node_version) -%}
 {%- set python_version = o.python_version | default(d.python_version) -%}
 {%- set banned_ts = o.banned_ts | default(d.banned_ts) -%}

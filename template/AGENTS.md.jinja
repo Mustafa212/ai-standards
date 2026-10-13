@@ -7,6 +7,21 @@
 {% endif %}Org: `{{ org }}` · Stack: `{{ stack }}` · Project-specific notes go in `docs/PROJECT.md`, not here.
 
 {% include "partials/agents-body.md.jinja" %}
+{%- if adopted %}
+{% import "config/settings.jinja" as cfg with context %}
+## Adoption status
+
+This project existed before it adopted ai-standards. Violations that were already there are
+baselined ({% if stack == "typescript" %}`eslint-suppressions.json`{% else %}`# noqa` comments{% endif %}) so that every **new or changed** line meets the rules from day one.
+The plan for the old debt is in `docs/STANDARDS-DEBT.md`.
+
+- Coverage: {% if not cfg.enforce_coverage %}deferred (reported in CI, not enforced){% elif cfg.ratcheting %}≥ {{ cfg.coverage }}% enforced now, target {{ cfg.coverage_target }}%{% else %}target {{ cfg.coverage_target }}% enforced{% endif %}.
+- Type checking: {% if cfg.enforce_typecheck %}enforced{% else %}deferred (reported in CI, not enforced){% endif %}.
+
+- **ADOPT-1 [tool]** New and changed lines meet every rule. The edit hook and CI ignore baselined debt on lines you did not touch, and report everything on lines you did.
+- **ADOPT-2 [ai]** Keep debt out of feature work: never fix baselined debt inside a feature or bug-fix change. Debt is paid as its own task (`/ai-standards:fix-debt`), one item per commit.
+- **ADOPT-3 [ai]** The baseline only shrinks. Never add entries to it to get a check passing; fix the code. After fixing debt, prune the baseline ({% if stack == "typescript" %}`npx eslint . --prune-suppressions`{% else %}`uv run ruff check . --fix`{% endif %}); CI fails on stale baseline entries, so it can't be forgotten.
+{%- endif %}
 {%- if 'claude' in ai_tools %}
 
 ## Claude Code

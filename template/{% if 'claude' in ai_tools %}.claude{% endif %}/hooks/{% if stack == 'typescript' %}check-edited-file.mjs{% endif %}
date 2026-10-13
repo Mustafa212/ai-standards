@@ -1,0 +1,104 @@
+// Managed by ai-standards.
+// Runs after every AI edit. Formats the file and reports lint errors back to the AI (exit 2), but
+// only for code the AI is responsible for:
+//   - new (untracked) files: the whole file is formatted, auto-fixed and linted
+//   - tracked files: lint errors are reported only on lines changed since HEAD, nothing is
+//     auto-fixed, and the file is formatted only if it was already formatted at HEAD
+// so untouched legacy code is never rewritten or blamed on the current change.
+// Plain Node, no dependencies: works the same on Windows (Git Bash), macOS and Linux.
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+const IGNORED_DIRS = [".ai-session", "node_modules", "dist", "coverage"];
+const LINTED = /\.(ts|tsx|js|mjs|cjs)$/;
+const FORMATTED = /\.(ts|tsx|js|mjs|cjs|json|md|ya?ml|css)$/;
+const BLOCKING_EXIT = 2;
+
+const input = JSON.parse(readFileSync(0, "utf8") || "{}");
+const projectDir = process.env.CLAUDE_PROJECT_DIR ?? input.cwd ?? process.cwd();
+const absolutePath =
+  input.tool_input?.file_path && path.resolve(projectDir, input.tool_input.file_path);
+if (!absolutePath || !existsSync(absolutePath)) process.exit(0);
+
+const file = path.relative(projectDir, absolutePath).split(path.sep).join("/");
+if (
+  file.startsWith("..") ||
+  IGNORED_DIRS.some((dir) => file === dir || file.startsWith(`${dir}/`))
+) {
+  process.exit(0);
+}
+
+function run(command, args, stdin) {
+  return spawnSync(command, args, { cwd: projectDir, encoding: "utf8", input: stdin });
+}
+
+function localBin(...segments) {
+  const bin = path.join(projectDir, "node_modules", ...segments);
+  return existsSync(bin) ? bin : null;
+}
+
+function isTracked() {
+  return run("git", ["ls-files", "--error-unmatch", "--", file]).status === 0;
+}
+
+/** Line numbers added or modified since HEAD, or null when every line counts. */
+function changedLines() {
+  const diff = run("git", ["diff", "-U0", "--no-color", "HEAD", "--", file]);
+  if (diff.status !== 0) return null;
+  const lines = new Set();
+  for (const match of diff.stdout.matchAll(/^@@ -\S+ \+(\d+)(?:,(\d+))? @@/gm)) {
+    const start = Number(match[1]);
+    const count = match[2] === undefined ? 1 : Number(match[2]);
+    for (let line = start; line < start + count; line += 1) lines.add(line);
+  }
+  return lines;
+}
+
+function format(prettier, tracked) {
+  if (tracked) {
+    // Only format files that were already formatted, so the formatter never rewrites old code.
+    const head = run("git", ["show", `HEAD:${file}`]);
+    const check =
+      head.status === 0 &&
+      run(process.execPath, [prettier, "--check", "--stdin-filepath", file], head.stdout);
+    if (!check || check.status !== 0) return;
+  }
+  run(process.execPath, [prettier, "--write", "--log-level", "warn", file]);
+}
+
+function lint(eslint, tracked) {
+  const args = [eslint, "--format", "json", ...(tracked ? [] : ["--fix"]), file];
+  const result = run(process.execPath, args);
+  if (result.status === 0) return [];
+  let reports;
+  try {
+    reports = JSON.parse(result.stdout);
+  } catch {
+    return [`eslint failed to run:\n${result.stderr || result.stdout}`];
+  }
+  const relevant = tracked ? changedLines() : null;
+  return reports
+    .flatMap((report) => report.messages)
+    .filter((message) => !relevant || relevant.has(message.line))
+    .map(
+      (message) =>
+        `${file}:${message.line}:${message.column}  ${message.message}  (${message.ruleId ?? "parse"})`,
+    );
+}
+
+const tracked = isTracked();
+const prettier = localBin("prettier", "bin", "prettier.cjs");
+const eslint = localBin("eslint", "bin", "eslint.js");
+
+if (prettier && FORMATTED.test(file)) format(prettier, tracked);
+const problems = eslint && LINTED.test(file) ? lint(eslint, tracked) : [];
+
+if (problems.length > 0) {
+  const scope = tracked ? "on the lines you changed" : "";
+  process.stderr.write(
+    `Lint errors ${scope} in ${file}. Fix them now; suppress only with a specific rule and a reason (SUP-1):\n` +
+      `${problems.join("\n")}\n`,
+  );
+  process.exit(BLOCKING_EXIT);
+}
