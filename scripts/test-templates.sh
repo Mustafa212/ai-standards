@@ -31,10 +31,10 @@ tar -C "$root" --exclude=.git --exclude=node_modules -cf - . | tar -C "$work/src
 lint_rule_ids() { # <stack> <project dir> <file> -> one fired rule id per line
   local stack="$1" dir="$2" file="$3"
   if [[ "$stack" == typescript ]]; then
-    (cd "$dir" && npx --no-install eslint --format json "$file" || true) |
+    (cd "$dir" && { npx --no-install eslint --format json "$file" || true; }) |
       jq -r '.[].messages[].ruleId // empty'
   else
-    (cd "$dir" && $RUN ruff check --output-format json "$file" || true) | jq -r '.[].code // empty'
+    (cd "$dir" && { $RUN ruff check --output-format json "$file" || true; }) | jq -r '.[].code // empty'
   fi
 }
 
