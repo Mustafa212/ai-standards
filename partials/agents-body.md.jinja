@@ -3,3 +3,6 @@
 {% include "rules/stacks/" ~ stack ~ ".md" %}
 
 {% include ["orgs/" ~ org ~ "/rules.md"] ignore missing %}
+
+{#- Project rules live in a private copy of ai-standards (orgs/<org>/projects/<slug>.md). #}
+{% include ["orgs/" ~ org ~ "/projects/" ~ project_slug ~ ".md"] ignore missing %}

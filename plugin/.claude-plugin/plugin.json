@@ -1,7 +1,7 @@
 {
   "name": "ai-standards",
   "displayName": "AI Standards",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Forces new projects through the ai-standards template, keeps them updated, and turns repeated feedback into rules",
   "author": {
     "name": "Mostafa Shawkey"

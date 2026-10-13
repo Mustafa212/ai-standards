@@ -9,10 +9,13 @@ readable, typed, tested and secure. Rules are **enforced by tools**, not by memo
               ▼
    stack: typescript │ python   (per technology)
               ▼
-   org: personal │ example-corp │ …   (per organization: stricter limits, own rules)
-              ▼
-   project: docs/PROJECT.md     (per project, never overwritten)
+   org: personal │ example-corp │ …   (per organization: stricter limits, own rules)    ┐ in your
+              ▼                                                                         │ private
+   project: orgs/<org>/projects/<project>.md   (rules of one project)                   ┘ copy
 ```
+
+Readability comes first: plain code a new teammate understands on first read, small functions,
+clear names, and a doc comment on every exported function and class (enforced by the linters).
 
 ## What a generated project gets
 
@@ -35,7 +38,8 @@ readable, typed, tested and secure. Rules are **enforced by tools**, not by memo
 1. Push this repo to GitHub as `Mustafa212/ai-standards` (already set as the default source in
    `copier.yml` and `plugin/.claude-plugin/plugin.json`; change both if you use another name).
 2. Push the tags too (`git push --tags`): projects pin to tags and update from them.
-3. Edit `orgs/`: keep `personal`, rename or delete `example-corp`, add your own.
+3. Your own orgs and project rules don't go into this public repo. The `onboard` skill keeps them
+   in a private copy (see [Orgs and projects](#orgs-and-projects-private)).
 
 ### 2. Install the plugin (once per machine)
 
@@ -58,8 +62,9 @@ installed on every machine and can't be disabled. Generated projects already inc
 
 ### 3. Start a project
 
-In Claude Code, in an empty folder: *"create a new TypeScript project called billing-api for
-example-corp"*. Without Claude:
+In Claude Code, in an empty folder: *"create a new TypeScript project called billing-api"*. The
+`onboard` skill asks which org it belongs to (or creates a new one), registers it, then scaffolds.
+Without Claude:
 
 ```bash
 uvx copier copy --trust gh:Mustafa212/ai-standards my-project
@@ -67,8 +72,9 @@ uvx copier copy --trust gh:Mustafa212/ai-standards my-project
 
 ### Existing projects
 
-Open Claude Code in a project that isn't on the standards yet and it offers, once, to bring it on
-(`/ai-standards:adopt-project`). Say no for good and it creates `.ai-standards-skip`. Adoption:
+Open Claude Code in a project that isn't on the standards yet and it offers, once, to register it
+(`/ai-standards:onboard`): it asks the org, adopts the project, and proposes project rules from the
+code (see below). Say no for good and it creates `.ai-standards-skip`. Adoption:
 
 1. **Audits** read-only: stack, existing configs, tests, coverage, type errors. Failing tests stop it.
 2. **Merges** without overwriting (`scripts/adopt.py`): missing files are added, `package.json` and
@@ -85,6 +91,37 @@ linters fail on stale entries), and the settings ratchet up with
 `copier update --data coverage_floor=<n> --data 'deferred_checks=[]'`. Debt is never mixed into
 feature work (rule ADOPT-2). The edit hook only reports problems on lines you changed, so old code
 isn't rewritten as a side effect.
+
+## Orgs and projects (private)
+
+Orgs, projects and their rules belong to whoever uses the plugin, so they never go into this public
+repo. They live in a **private copy** of it, which the `onboard` skill sets up once per machine:
+
+```
+Mustafa212/ai-standards        public    base + stacks + template + plugin
+        │  upstream: git pull upstream main --tags   (new public releases, after you agree)
+        ▼
+<you>/ai-standards-<name>      private   + orgs/orgs.yml, orgs/<org>/rules.md, orgs/<org>/projects/*.md
+        │  copier copy / update
+        ▼
+your projects (private repos)  AGENTS.md = base + stack + org + project
+```
+
+- **Publishing it:** GitHub has no private forks of public repos, so the copy is a clone with the
+  public repo renamed to `upstream`. You publish it from GitHub Desktop (Publish repository, "Keep
+  this code private"), or the skill uses `gh` if it's installed. Teammates get access to that repo
+  only.
+- **Onboarding a project:** pick the org (or create one with its rule prefix, such as `ACME`),
+  register the project, scaffold or adopt it. For existing code, Claude proposes **project rules**
+  from what the code does consistently, with evidence (`14 of 14 controllers…`). You keep, edit or
+  drop each one.
+- **No rule twice:** a proposal already covered by base, stack or org is dropped. One that another
+  project of the same org already has is offered for **promotion to the org** (`BILL-4` + `PORT-3` →
+  `ACME-5`). `scripts/check_rules.py` fails CI on exact duplicates inside an org.
+- **Refresh:** after 30 days and 10 commits since the last analysis, Claude offers to look at what
+  changed: new patterns, and project rules the code stopped following.
+- **Ask first:** nothing is saved, committed, pushed or updated without your yes. Rules that would
+  help everyone go to this public repo as a PR (`propose-rule`), never org or project data.
 
 ### Which files are whose
 
@@ -108,7 +145,8 @@ isn't rewritten as a side effect.
 | Add a rule for everyone | `rules/base.md` (+ lint config if a tool can check it) |
 | Add a rule for one stack | `rules/stacks/<stack>.md` (+ that stack's lint config) |
 | Add a rule for one org | `orgs/<org>/rules.md` (+ `settings.jinja`, e.g. banned imports) |
-| Add an org | copy `orgs/personal/`, add it to `org` choices in `copier.yml` |
+| Add a rule for one project | `orgs/<org>/projects/<project>.md` in your private copy (or let `onboard` propose it) |
+| Add an org | `/ai-standards:onboard` (it adds `orgs/<org>/` and the choice in `orgs/orgs.yml`) |
 | Add a stack | `rules/stacks/<stack>.md`, template files named `{% if stack == '<stack>' %}…{% endif %}`, a choice in `copier.yml`, a branch in `scripts/test-templates.sh` |
 
 Or just tell Claude what keeps going wrong; the `ai-standards:propose-rule` skill turns it into a
@@ -124,13 +162,15 @@ pass, checks that every rule in `tests/violations/` still fires, exercises the C
 copier.yml                 questions (org, stack, name, AI tools)
 config/                    default thresholds + resolution (org override → base default)
 rules/                     base and per-stack rule text (becomes AGENTS.md)
-orgs/<org>/                settings.jinja (overrides) + rules.md (extra rules)
+orgs/orgs.yml              the org question (a private copy lists its own orgs here)
+orgs/<org>/                settings.jinja (overrides) + rules.md (extra rules) + projects/ (private copy)
 partials/                  composes base + stack + org into one rules body
 template/                  files rendered into each project
 plugin/                    Claude Code plugin: skills + SessionStart hook
 .claude-plugin/            marketplace manifest (this repo is installable as a marketplace)
 tests/violations/          code that must be rejected, per stack and org
 scripts/test-templates.sh  end-to-end test of every combination
+scripts/check_rules.py     no rule written twice inside an org
 user-level/CLAUDE.md       optional snippet for ~/.claude/CLAUDE.md
 ```
 

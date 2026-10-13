@@ -1,6 +1,11 @@
 # ai-standards — project template
-# Layering: base rules -> stack -> org -> (project). See README.md.
-
+# Layering: base rules -> stack -> org -> project. See README.md.
+#
+# The org question lives in orgs/orgs.yml: a private copy lists its own orgs there, so pulling
+# upstream changes to this file never conflicts with them.
+---
+!include orgs/orgs.yml
+---
 _subdirectory: template
 _min_copier_version: "9.4"
 _answers_file: .copier-answers.yml
@@ -29,14 +34,6 @@ _message_after_copy: |
     1. git init && pre-commit install --install-hooks -t pre-commit -t commit-msg
     2. {% if stack == "typescript" %}npm install{% else %}uv sync{% endif %}
     3. {% if stack == "typescript" %}npm run check{% else %}make check{% endif %}
-
-org:
-  type: str
-  help: Which organization's rules apply? (add your own under orgs/)
-  choices:
-    personal: personal
-    example-corp: example-corp
-  default: personal
 
 stack:
   type: str

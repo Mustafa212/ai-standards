@@ -57,6 +57,11 @@ under a version heading and pushing a `vX.Y.Z` tag.
 - **Tooling versions**: Renovate opens PRs in this repo when ESLint, Ruff, pre-commit hooks, etc.
   release. They go through the same template tests before merging.
 - **The plugin**: Claude Code auto-updates it from this repo's marketplace.
+- **Private copies**: `git pull upstream main --tags` brings a public release into a private copy
+  (the plugin offers it and asks first); its projects then update from the private copy.
+- **Project rules**: SessionStart offers a refresh once 30 days and 10 commits have passed since the
+  last analysis, so new conventions become proposals and rules the code stopped following get
+  reviewed.
 
 ## Layers and ownership
 
@@ -64,8 +69,13 @@ under a version heading and pushing a `vX.Y.Z` tag.
 | --- | --- | --- |
 | base | `rules/base.md`, `config/defaults.jinja`, `template/` | Everyone's agreement; changes affect all orgs |
 | stack | `rules/stacks/<stack>.md`, stack template files | People who own that stack |
-| org | `orgs/<org>/` | That org |
-| project | `docs/PROJECT.md` in the project | That project |
+| org | `orgs/<org>/` in the user's private copy | That org |
+| project | `orgs/<org>/projects/<project>.md` in the private copy (rules), `docs/PROJECT.md` in the project (notes) | That project |
+
+Org and project data never goes into the public repo. A rule two projects of an org share moves up
+to the org (the `onboard` skill offers it; `scripts/check_rules.py` fails CI on exact duplicates).
+A rule that would help every project of a stack, or every project, goes to the public repo as a PR.
+Nothing changes in a project or a standards repo without the user's yes.
 
 An org can tighten any threshold. If an org needs to *loosen* a base rule, that is a signal the base
 rule may be wrong: discuss it in a PR to base rather than adding an org exception.

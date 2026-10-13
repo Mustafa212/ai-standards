@@ -45,6 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: shellcheck scripts/*.sh plugin/hooks/*.sh
+      - run: python3 scripts/check_rules.py # no rule written twice inside one org
 
   release:
     # Tag a release by moving "## Unreleased" in CHANGELOG.md under a version heading and pushing

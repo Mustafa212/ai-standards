@@ -5,6 +5,7 @@
 - **TS-3 [review]** Model the domain with discriminated unions and `readonly` types. Use classes only when you need behaviour plus state.
 - **TS-4 [review]** Validate untrusted input at the edge with a schema (e.g. zod) and derive the TypeScript type from it.
 - **TS-5 [review]** Named exports only. Test files sit next to the code: `foo.ts` → `foo.test.ts`.
+- **TS-6 [tool]** Names have at least 2 characters (`i`, `j`, `k`, `x`, `y`, `_` are allowed), checked by ESLint `id-length`.
 
 | Task | Command |
 | --- | --- |

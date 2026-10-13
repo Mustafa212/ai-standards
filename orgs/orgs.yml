@@ -1,0 +1,9 @@
+# The org question. Add an org here and as orgs/<org>/ (copy orgs/personal/).
+# In a private copy, list only your own orgs; the public repo keeps these two examples.
+org:
+  type: str
+  help: Which organization's rules apply?
+  choices:
+    personal: personal
+    example-corp: example-corp
+  default: personal

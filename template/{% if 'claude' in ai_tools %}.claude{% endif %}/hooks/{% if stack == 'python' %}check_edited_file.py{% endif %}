@@ -23,12 +23,14 @@ HUNK = re.compile(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", re.MULTILINE)
 
 
 def run(args: list[str], cwd: Path, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+    """Run a command in the project and capture its output as text; never raises on failure."""
     return subprocess.run(  # noqa: S603  # fixed argument lists, no shell
         args, cwd=cwd, input=stdin, capture_output=True, text=True, encoding="utf-8", check=False
     )
 
 
 def ruff(*args: str) -> list[str]:
+    """Command line for the project's own ruff (the venv this hook runs in)."""
     return [sys.executable, "-m", "ruff", *args]
 
 
@@ -45,6 +47,7 @@ def changed_lines(project: Path, file: str) -> set[int] | None:
 
 
 def format_file(project: Path, file: str, *, tracked: bool) -> None:
+    """Format a new file, or a tracked one only if it was already formatted at HEAD."""
     if tracked:
         # Only format files that were already formatted, so the formatter never rewrites old code.
         head = run(["git", "show", f"HEAD:{file}"], project)
@@ -57,6 +60,7 @@ def format_file(project: Path, file: str, *, tracked: bool) -> None:
 
 
 def lint(project: Path, file: str, *, tracked: bool) -> list[str]:
+    """Lint findings to report: all of them for new files, changed lines only for tracked ones."""
     fix = [] if tracked else ["--fix"]
     result = run(ruff("check", "--output-format", "json", *fix, file), project)
     if result.returncode == 0:
@@ -76,11 +80,13 @@ def lint(project: Path, file: str, *, tracked: bool) -> list[str]:
 
 
 def describe(file: str, item: dict[str, Any]) -> str:
+    """One finding as `file:row:column  message  (code)`."""
     location = item["location"]
     return f"{file}:{location['row']}:{location['column']}  {item['message']}  ({item['code']})"
 
 
 def main() -> int:
+    """Check the file Claude just edited; exit 2 sends the findings back to Claude."""
     payload = json.loads(sys.stdin.read() or "{}")
     project = Path(os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or Path.cwd())
     raw_path = (payload.get("tool_input") or {}).get("file_path")

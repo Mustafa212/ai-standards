@@ -11,6 +11,38 @@ Each entry names the rule ID, the layer (base / stack / org) and the enforcement
 
 ## Unreleased
 
+## 0.4.0
+
+**BREAKING:** readability rules now fail lint on existing code without doc comments, with one-letter
+names (TypeScript) or with boolean positional arguments (Python). Fix or baseline them (see the
+`update-standards` skill).
+
+Readability first (base and stacks):
+
+- The readability section comes right after "Definition of done". **RDB-7 [review]** leads it: code a
+  new teammate understands on first read, plain steps over clever one-liners.
+- **RDB-8 [tool]** (base) Exported functions and classes start with a doc comment.
+  `eslint-plugin-jsdoc` (`require-jsdoc` publicOnly, `require-description`); Ruff `D101`, `D103`.
+- **RDB-9 [review]** (base) Clear names, no boolean flag arguments. **TS-6 [tool]** (stack:
+  typescript) ESLint `id-length`. **PY-6 [tool]** (stack: python) Ruff `FBT`.
+
+Orgs and projects:
+
+- New **project layer**, `orgs/<org>/projects/<slug>.md`, rendered into `AGENTS.md` after the org.
+- Orgs and projects live in the user's **private copy** of ai-standards, never in the public repo.
+  The org question moved to `orgs/orgs.yml` (`!include`), so pulling upstream never conflicts with
+  a private copy's orgs.
+- New **`onboard` skill**: sets up the private copy, asks the org (or creates one), registers the
+  project, scaffolds or adopts it, proposes project rules from the code with evidence, and promotes
+  a rule shared by two projects to the org. Refresh mode looks at what changed since the last
+  analysis.
+- SessionStart offers onboarding in unregistered projects, offers a refresh after 30 days and 10
+  commits, and tells Claude never to apply a standards change without asking.
+- New `scripts/check_rules.py` (in CI): no duplicate rule ID or text inside an org.
+- `propose-rule` routes general rules to the public repo as a PR and org or project rules to the
+  private copy. `update-standards` asks before writing anything.
+- Release `v0.3.1` follow-up: `test-templates.sh` is clean on older shellcheck versions.
+
 ## 0.3.1
 
 Fixes (no rule changes):

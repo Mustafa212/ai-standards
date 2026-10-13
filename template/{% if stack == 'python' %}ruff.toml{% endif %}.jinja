@@ -30,6 +30,8 @@ select = [
   "BLE",          # ERR-1 no blind except
   "TRY",          # error handling
   "T20",          # PY-2 no print
+  "D101", "D103", # RDB-8 public classes and functions have a docstring
+  "FBT",          # PY-6 no boolean positional arguments
   "ERA",          # RDB-5 no commented-out code
   "S",            # security
   "PGH",          # SUP-1 no blanket noqa / type: ignore
@@ -50,7 +52,7 @@ max-branches = {{ cfg.max_complexity }}
 max-nested-blocks = {{ cfg.max_depth }}
 
 [lint.per-file-ignores]
-"tests/**" = ["S101", "PLR2004", "ANN"]
+"tests/**" = ["S101", "PLR2004", "ANN", "D", "FBT"]
 {%- if cfg.banned_py %}
 
 # Org rule: banned imports

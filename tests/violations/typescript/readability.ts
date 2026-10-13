@@ -1,4 +1,4 @@
-// expect: max-params, max-depth, @typescript-eslint/no-magic-numbers, no-nested-ternary, eqeqeq, complexity
+// expect: max-params, max-depth, @typescript-eslint/no-magic-numbers, no-nested-ternary, eqeqeq, complexity, id-length, jsdoc/require-jsdoc
 export function processOrder(a: number, b: number, c: number, d: number, e: number): number {
   if (a > 0) {
     if (b > 0) {

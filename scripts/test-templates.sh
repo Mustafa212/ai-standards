@@ -28,6 +28,15 @@ fail() { printf '\033[31mFAIL: %s\033[0m\n' "$*"; failures+=("$*"); }
 mkdir -p "$work/src"
 tar -C "$root" --exclude=.git --exclude=node_modules -cf - . | tar -C "$work/src" -xf -
 
+# A project rule file, as a private copy holds it: must reach that project's AGENTS.md and no other.
+mkdir -p "$work/src/orgs/personal/projects"
+printf '## Project: fixture
+
+<!-- rules analyzed: 2026-01-01 (none) -->
+
+- **FIX-1 [review]** Fixture rule.
+'   >"$work/src/orgs/personal/projects/test-typescript-personal.md"
+
 lint_rule_ids() { # <stack> <project dir> <file> -> one fired rule id per line
   local stack="$1" dir="$2" file="$3"
   if [[ "$stack" == typescript ]]; then
@@ -102,6 +111,49 @@ expect() { # <description> <command...>: record a failure if the command fails
   local description="$1"; shift
   "$@" >/dev/null 2>&1 || fail "adopt: $description"
 }
+
+log "project layer: a project's rule file reaches only its own AGENTS.md"
+if [[ -d "$work/typescript-personal" ]] && ! grep -q 'FIX-1' "$work/typescript-personal/AGENTS.md"; then
+  fail "project rules missing from typescript-personal/AGENTS.md"
+fi
+for other in "$work"/*-example-corp "$work"/python-personal; do
+  if [[ -f "$other/AGENTS.md" ]] && grep -q 'FIX-1' "$other/AGENTS.md"; then
+    fail "project rules leaked into $(basename "$other")/AGENTS.md"
+  fi
+done
+
+log "plugin: SessionStart offers onboarding and the periodic rule refresh"
+bash "$work/src/scripts/test-session-start.sh" || fail "session-start hook"
+
+log "check_rules.py: no rule written twice inside one org"
+python3 "$work/src/scripts/check_rules.py" "$root" >/dev/null || fail "check_rules: the repo itself has duplicates"
+# Planted duplicates: the same text (modulo case and punctuation) and the same ID inside one org.
+dup="$work/dup-rules"
+mkdir -p "$dup" && tar -C "$root" -cf - rules orgs | tar -C "$dup" -xf -
+printf '
+- **ME-1 [review]** Same text.
+' >>"$dup/orgs/personal/rules.md"
+mkdir -p "$dup/orgs/personal/projects"
+printf '## Project: x
+
+Prose is not a rule.
+
+- **X-1 [review]** Same  text!
+- **ME-1 [ai]** Another rule.
+'   >"$dup/orgs/personal/projects/x.md"
+dup_report="$(python3 "$work/src/scripts/check_rules.py" "$dup" || true)"
+grep -q 'duplicate text' <<<"$dup_report" || fail "check_rules: duplicate text not reported"
+grep -q 'duplicate id ME-1' <<<"$dup_report" || fail "check_rules: duplicate id not reported"
+# The same ID in two different orgs is fine: no project ever sees both.
+cross="$work/cross-org-rules"
+mkdir -p "$cross" && tar -C "$root" -cf - rules orgs | tar -C "$cross" -xf -
+printf '
+- **ME-1 [review]** Personal rule.
+' >>"$cross/orgs/personal/rules.md"
+printf '
+- **ME-1 [review]** Corp rule.
+' >>"$cross/orgs/example-corp/rules.md"
+python3 "$work/src/scripts/check_rules.py" "$cross" >/dev/null || fail "check_rules: same ID in two orgs reported"
 
 log "fresh project: CLAUDE.md imports AGENTS.md exactly once"
 fresh="$(find "$work" -maxdepth 1 -name '*-personal' | head -n 1)"
