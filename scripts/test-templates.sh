@@ -122,6 +122,36 @@ for other in "$work"/*-example-corp "$work"/python-personal; do
   fi
 done
 
+log "check_rules.py: no rule written twice inside one org"
+python3 "$work/src/scripts/check_rules.py" "$root" >/dev/null || fail "check_rules: the repo itself has duplicates"
+# Planted duplicates: the same text (modulo case and punctuation) and the same ID inside one org.
+dup="$work/dup-rules"
+mkdir -p "$dup" && tar -C "$root" -cf - rules orgs | tar -C "$dup" -xf -
+printf '
+- **ME-1 [review]** Same text.
+' >>"$dup/orgs/personal/rules.md"
+mkdir -p "$dup/orgs/personal/projects"
+printf '## Project: x
+
+Prose is not a rule.
+
+- **X-1 [review]** Same  text!
+- **ME-1 [ai]** Another rule.
+'   >"$dup/orgs/personal/projects/x.md"
+dup_report="$(python3 "$work/src/scripts/check_rules.py" "$dup" || true)"
+grep -q 'duplicate text' <<<"$dup_report" || fail "check_rules: duplicate text not reported"
+grep -q 'duplicate id ME-1' <<<"$dup_report" || fail "check_rules: duplicate id not reported"
+# The same ID in two different orgs is fine: no project ever sees both.
+cross="$work/cross-org-rules"
+mkdir -p "$cross" && tar -C "$root" -cf - rules orgs | tar -C "$cross" -xf -
+printf '
+- **ME-1 [review]** Personal rule.
+' >>"$cross/orgs/personal/rules.md"
+printf '
+- **ME-1 [review]** Corp rule.
+' >>"$cross/orgs/example-corp/rules.md"
+python3 "$work/src/scripts/check_rules.py" "$cross" >/dev/null || fail "check_rules: same ID in two orgs reported"
+
 log "fresh project: CLAUDE.md imports AGENTS.md exactly once"
 fresh="$(find "$work" -maxdepth 1 -name '*-personal' | head -n 1)"
 [[ "$(grep -cxF '@AGENTS.md' "$fresh/CLAUDE.md")" == 1 ]] || fail "fresh: @AGENTS.md not imported exactly once"
