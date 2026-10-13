@@ -32,14 +32,15 @@ readable, typed, tested and secure. Rules are **enforced by tools**, not by memo
 
 ### 1. Make it yours
 
-1. Push this repo to GitHub (e.g. `your-user/ai-standards`).
-2. Replace `YOUR_GITHUB_USER` in `copier.yml` and `plugin/.claude-plugin/plugin.json`.
+1. Push this repo to GitHub as `Mustafa212/ai-standards` (already set as the default source in
+   `copier.yml` and `plugin/.claude-plugin/plugin.json`; change both if you use another name).
+2. Push the tags too (`git push --tags`): projects pin to tags and update from them.
 3. Edit `orgs/`: keep `personal`, rename or delete `example-corp`, add your own.
 
 ### 2. Install the plugin (once per machine)
 
 ```bash
-claude plugin marketplace add your-user/ai-standards
+claude plugin marketplace add Mustafa212/ai-standards
 claude plugin install ai-standards@ai-standards
 ```
 
@@ -57,8 +58,21 @@ In Claude Code, in an empty folder: *"create a new TypeScript project called bil
 example-corp"*. Without Claude:
 
 ```bash
-uvx copier copy --trust gh:your-user/ai-standards my-project
+uvx copier copy --trust gh:Mustafa212/ai-standards my-project
 ```
+
+### Existing projects and your own files
+
+- **`CLAUDE.md` is yours.** It is created once and never overwritten, by scaffolding, adoption or
+  updates. The only thing ai-standards guarantees in it is the `@AGENTS.md` line at the top, which
+  is how Claude reads the shared rules. Same for `README.md` and `docs/PROJECT.md`.
+- **Adopting an existing project** (`init-project` in adopt mode, or by hand) never runs
+  `copier copy` over your files. It renders the template elsewhere and merges with
+  `scripts/adopt.py`: missing files are added, `package.json` and `.claude/settings.json` only gain
+  missing keys, and any other file that differs gets the standard version saved next to it as
+  `<file>.ai-standards` for you to decide. Nothing is overwritten or deleted.
+- **Managed files** (lint configs, CI, `AGENTS.md`, `.claude/settings.json`, hooks) are owned by
+  the standards. Personal Claude settings belong in `.claude/settings.local.json`.
 
 ## Changing the rules
 

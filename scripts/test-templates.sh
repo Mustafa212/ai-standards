@@ -96,6 +96,43 @@ for stack in $stacks; do
   done
 done
 
+expect() { # <description> <command...>: record a failure if the command fails
+  local description="$1"; shift
+  "$@" >/dev/null 2>&1 || fail "adopt: $description"
+}
+
+log "fresh project: CLAUDE.md imports AGENTS.md exactly once"
+fresh="$(find "$work" -maxdepth 1 -name '*-personal' | head -n 1)"
+[[ "$(grep -cxF '@AGENTS.md' "$fresh/CLAUDE.md")" == 1 ]] || fail "fresh: @AGENTS.md not imported exactly once"
+
+log "adopt: existing project keeps its own files"
+legacy="$work/legacy"
+mkdir -p "$legacy"
+printf 'My own rules\n- use pnpm\n' >"$legacy/CLAUDE.md"
+printf '# Legacy app\n' >"$legacy/README.md"
+printf 'node_modules/\n.env\n' >"$legacy/.gitignore"
+printf '{"compilerOptions":{"strict":false}}\n' >"$legacy/tsconfig.json"
+printf '{"name":"legacy","scripts":{"test":"jest"},"dependencies":{"express":"^4.19.0"}}\n' >"$legacy/package.json"
+cp -r "$legacy" "$work/legacy-before"
+
+copier_cmd copy --trust --defaults --quiet --data project_name=legacy --data stack=typescript \
+  "$work/src" "$work/legacy-rendered"
+python3 "$work/src/scripts/adopt.py" "$work/legacy-rendered" "$legacy" >"$work/adopt-report.txt"
+
+expect "CLAUDE.md starts with the import" test "$(head -n 1 "$legacy/CLAUDE.md")" = "@AGENTS.md"
+expect "CLAUDE.md keeps the user's content" grep -qxF -- '- use pnpm' "$legacy/CLAUDE.md"
+expect "README untouched" cmp "$legacy/README.md" "$work/legacy-before/README.md"
+expect "tsconfig untouched" cmp "$legacy/tsconfig.json" "$work/legacy-before/tsconfig.json"
+expect "standard tsconfig saved for review" test -f "$legacy/tsconfig.json.ai-standards"
+expect "existing dependency kept" jq -e '.dependencies.express == "^4.19.0"' "$legacy/package.json"
+expect "existing script kept" jq -e '.scripts.test == "jest"' "$legacy/package.json"
+expect "standard devDependency added" jq -e '.devDependencies.eslint' "$legacy/package.json"
+expect "module type not forced on legacy code" jq -e 'has("type") | not' "$legacy/package.json"
+expect ".gitignore line not duplicated" test "$(grep -cxF 'node_modules/' "$legacy/.gitignore")" = 1
+expect "new files added" test -f "$legacy/eslint.config.js" -a -f "$legacy/.copier-answers.yml"
+expect "second adopt refuses" grep -q 'already on ai-standards' \
+  <(python3 "$work/src/scripts/adopt.py" "$work/legacy-rendered" "$legacy")
+
 if ((${#failures[@]})); then
   log "${#failures[@]} failure(s)"; printf ' - %s\n' "${failures[@]}"; exit 1
 fi

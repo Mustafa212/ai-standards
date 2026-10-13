@@ -7,7 +7,15 @@ _answers_file: .copier-answers.yml
 # Created once, then owned by the project. Never overwritten by `copier update`.
 _skip_if_exists:
   - README.md
+  - CLAUDE.md
   - docs/PROJECT.md
+# CLAUDE.md is the project's own file; the only thing guaranteed in it is the @AGENTS.md import.
+_tasks:
+  - command:
+      - "{{ _copier_python }}"
+      - "{{ _copier_conf.src_path }}/scripts/ensure_claude_import.py"
+      - "."
+    when: "{{ 'claude' in ai_tools }}"
 _message_after_copy: |
   Project "{{ project_name }}" scaffolded with ai-standards (org: {{ org }}, stack: {{ stack }}).
 
@@ -67,4 +75,4 @@ ai_tools:
 standards_source:
   type: str
   help: Where this template lives (used by the monthly auto-update workflow)
-  default: "gh:YOUR_GITHUB_USER/ai-standards"
+  default: "gh:Mustafa212/ai-standards"

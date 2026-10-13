@@ -14,7 +14,8 @@ Only works in a project that has `.copier-answers.yml`. If it is missing, offer 
 3. Summarize what changed: `git diff --stat`, and read the CHANGELOG of the standards repo for the
    versions between the old and new `_commit` in `.copier-answers.yml`.
 4. Resolve every `*.rej` file. Rule: managed files take the new upstream version; project-owned
-   content (dependencies, source, `docs/PROJECT.md`) keeps the project's version. Delete the `.rej`
+   content (dependencies, source, `CLAUDE.md`, `docs/PROJECT.md`) keeps the project's version.
+   Copier never overwrites `CLAUDE.md`; it only re-adds the `@AGENTS.md` line if it was removed. Delete the `.rej`
    files when done.
 5. Reinstall deps and hooks if lockfiles or `.pre-commit-config.yaml` changed.
 6. Run the full check (`npm run check` / `make check`). New rules may flag existing code: fix it,

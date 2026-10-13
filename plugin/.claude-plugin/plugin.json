@@ -1,7 +1,7 @@
 {
   "name": "ai-standards",
   "displayName": "AI Standards",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Forces new projects through the ai-standards template, keeps them updated, and turns repeated feedback into rules",
   "author": {
     "name": "Mostafa Shawkey"
@@ -12,8 +12,8 @@
     "standards_source": {
       "type": "string",
       "title": "Standards template source",
-      "description": "Where the ai-standards template lives, e.g. gh:your-user/ai-standards (a git URL or local path also works)",
-      "default": "gh:YOUR_GITHUB_USER/ai-standards"
+      "description": "Where the ai-standards template lives, e.g. gh:Mustafa212/ai-standards (a git URL or local path also works)",
+      "default": "gh:Mustafa212/ai-standards"
     },
     "default_org": {
       "type": "string",

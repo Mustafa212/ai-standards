@@ -45,9 +45,24 @@ uvx copier copy --trust \
 Use the remote source (not a local clone path) so `copier update` and the monthly update workflow
 can reach it later.
 
-Adopt mode (existing project): run the same command into the existing directory with
-`--conflict rej`. Then walk the user through each `*.rej` file and each tool error. Expect many
-lint errors in existing code: offer to fix them in small, separate commits rather than all at once.
+### Adopt mode (existing project)
+
+Never run `copier copy` into an existing project, and never pass `--overwrite`: it replaces the
+user's files, including their `CLAUDE.md`. Use the safe merge instead:
+
+1. Require a clean git tree (`git status`), so every change is reviewable and revertable.
+2. Clone the standards repo to a temp dir (`git clone --depth 1 ...`) for its scripts.
+3. Render the template into a second, empty temp dir: the command above with that dir as target.
+4. Merge: `python3 <standards clone>/scripts/adopt.py <rendered dir> .`
+   It never overwrites or deletes. It keeps `CLAUDE.md` and only adds the `@AGENTS.md` line at the
+   top, merges `package.json` / `.claude/settings.json` by adding missing keys, appends missing
+   `.gitignore` lines, and saves the standard version of any other differing file as
+   `<file>.ai-standards` next to the original.
+5. Walk the user through the report: each "Kept yours, differs" and "Not added" JSON value
+   (e.g. `"type": "module"`, which would break a CommonJS project), and each
+   `*.ai-standards` file. Typical decisions: replace an old lint config with the standard one,
+   keep a project-specific script. Delete each `*.ai-standards` file once decided.
+6. Expect many lint errors in existing code. Offer to fix them in small, separate commits.
 
 ## 3. Finish setup
 
@@ -65,4 +80,5 @@ Run inside the project:
 
 Tell the user, briefly: org, stack, what is enforced (lint, types, coverage threshold, hooks, CI),
 where project-specific notes go (`docs/PROJECT.md`), and that standards updates arrive as a monthly
-PR (or on demand with the `update-standards` skill).
+PR (or on demand with the `update-standards` skill). Mention that `CLAUDE.md` is theirs to edit:
+ai-standards only guarantees the `@AGENTS.md` line in it.
