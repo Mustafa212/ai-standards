@@ -122,6 +122,9 @@ for other in "$work"/*-example-corp "$work"/python-personal; do
   fi
 done
 
+log "plugin: SessionStart offers onboarding and the periodic rule refresh"
+bash "$work/src/scripts/test-session-start.sh" || fail "session-start hook"
+
 log "check_rules.py: no rule written twice inside one org"
 python3 "$work/src/scripts/check_rules.py" "$root" >/dev/null || fail "check_rules: the repo itself has duplicates"
 # Planted duplicates: the same text (modulo case and punctuation) and the same ID inside one org.
