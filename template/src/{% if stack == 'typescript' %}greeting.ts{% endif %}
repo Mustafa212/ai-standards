@@ -1,5 +1,6 @@
 const DEFAULT_NAME = "world";
 
+/** Builds the greeting shown to the user; a blank name falls back to "world". */
 export function buildGreeting(name: string): string {
   const trimmedName = name.trim();
   return `Hello, ${trimmedName === "" ? DEFAULT_NAME : trimmedName}!`;

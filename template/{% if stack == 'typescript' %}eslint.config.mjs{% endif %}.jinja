@@ -4,6 +4,7 @@
 import js from "@eslint/js";
 import comments from "@eslint-community/eslint-plugin-eslint-comments/configs";
 import prettier from "eslint-config-prettier";
+import jsdoc from "eslint-plugin-jsdoc";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -15,6 +16,7 @@ export default tseslint.config(
   tseslint.configs.stylisticTypeChecked,
   comments.recommended,
   {
+    plugins: { jsdoc },
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
@@ -27,6 +29,25 @@ export default tseslint.config(
       "max-lines": ["error", { max: {{ cfg.max_file_lines }}, skipBlankLines: true, skipComments: true }],
       "no-nested-ternary": "error",
       "no-else-return": ["error", { allowElseIf: false }],
+      // RDB-8: exported functions and classes say what they are for
+      "jsdoc/require-jsdoc": [
+        "error",
+        {
+          publicOnly: true,
+          require: {
+            FunctionDeclaration: true,
+            ClassDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true,
+          },
+        },
+      ],
+      "jsdoc/require-description": "error",
+      // TS-6: no unclear one-letter names (loop counters and coordinates excepted)
+      "id-length": [
+        "error",
+        { min: 2, exceptions: ["i", "j", "k", "x", "y", "_"], properties: "never" },
+      ],
       // RDB-4: no magic numbers
       "@typescript-eslint/no-magic-numbers": [
         "error",
@@ -74,7 +95,12 @@ export default tseslint.config(
   },
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
-    rules: { "max-lines-per-function": "off", "@typescript-eslint/no-magic-numbers": "off" },
+    rules: {
+      "max-lines-per-function": "off",
+      "@typescript-eslint/no-magic-numbers": "off",
+      "jsdoc/require-jsdoc": "off",
+      "jsdoc/require-description": "off",
+    },
   },
   {
     files: ["*.config.js", "*.config.ts", "*.config.mjs"],

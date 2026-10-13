@@ -14,6 +14,7 @@ BLOCKING_EXIT = 2
 
 
 def main() -> int:
+    """Block (exit 2) an edit whose target matches .claude/managed-files.txt."""
     if os.environ.get("AI_STANDARDS_UNLOCK") == "1":
         return 0
     payload = json.loads(sys.stdin.read() or "{}")
