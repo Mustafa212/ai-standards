@@ -28,6 +28,15 @@ fail() { printf '\033[31mFAIL: %s\033[0m\n' "$*"; failures+=("$*"); }
 mkdir -p "$work/src"
 tar -C "$root" --exclude=.git --exclude=node_modules -cf - . | tar -C "$work/src" -xf -
 
+# A project rule file, as a private copy holds it: must reach that project's AGENTS.md and no other.
+mkdir -p "$work/src/orgs/personal/projects"
+printf '## Project: fixture
+
+<!-- rules analyzed: 2026-01-01 (none) -->
+
+- **FIX-1 [review]** Fixture rule.
+'   >"$work/src/orgs/personal/projects/test-typescript-personal.md"
+
 lint_rule_ids() { # <stack> <project dir> <file> -> one fired rule id per line
   local stack="$1" dir="$2" file="$3"
   if [[ "$stack" == typescript ]]; then
@@ -102,6 +111,16 @@ expect() { # <description> <command...>: record a failure if the command fails
   local description="$1"; shift
   "$@" >/dev/null 2>&1 || fail "adopt: $description"
 }
+
+log "project layer: a project's rule file reaches only its own AGENTS.md"
+if [[ -d "$work/typescript-personal" ]] && ! grep -q 'FIX-1' "$work/typescript-personal/AGENTS.md"; then
+  fail "project rules missing from typescript-personal/AGENTS.md"
+fi
+for other in "$work"/*-example-corp "$work"/python-personal; do
+  if [[ -f "$other/AGENTS.md" ]] && grep -q 'FIX-1' "$other/AGENTS.md"; then
+    fail "project rules leaked into $(basename "$other")/AGENTS.md"
+  fi
+done
 
 log "fresh project: CLAUDE.md imports AGENTS.md exactly once"
 fresh="$(find "$work" -maxdepth 1 -name '*-personal' | head -n 1)"
