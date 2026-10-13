@@ -1,0 +1,22 @@
+# {{ project_name }}
+{% if description %}
+{{ description }}
+{% endif %}
+## Development
+
+{% if stack == "typescript" -%}
+```bash
+npm install
+pre-commit install --install-hooks
+npm run check   # format, lint, types, tests: the same gate as CI
+```
+{%- else -%}
+```bash
+uv sync
+pre-commit install --install-hooks
+make check      # format, lint, types, tests: the same gate as CI
+```
+{%- endif %}
+
+Engineering rules live in [AGENTS.md](AGENTS.md) and are enforced by tooling. This project was
+scaffolded from ai-standards (org `{{ org }}`); updates arrive as a monthly PR.

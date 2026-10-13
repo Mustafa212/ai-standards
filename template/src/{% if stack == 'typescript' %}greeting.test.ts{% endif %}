@@ -1,0 +1,13 @@
+import { describe, expect, it } from "vitest";
+
+import { buildGreeting } from "./greeting.js";
+
+describe("buildGreeting", () => {
+  it("greets the given name", () => {
+    expect(buildGreeting("Mostafa")).toBe("Hello, Mostafa!");
+  });
+
+  it("falls back to 'world' when the name is blank", () => {
+    expect(buildGreeting("   ")).toBe("Hello, world!");
+  });
+});

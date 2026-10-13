@@ -1,0 +1,70 @@
+# ai-standards — project template
+# Layering: base rules -> stack -> org -> (project). See README.md.
+
+_subdirectory: template
+_min_copier_version: "9.4"
+_answers_file: .copier-answers.yml
+# Created once, then owned by the project. Never overwritten by `copier update`.
+_skip_if_exists:
+  - README.md
+  - docs/PROJECT.md
+_message_after_copy: |
+  Project "{{ project_name }}" scaffolded with ai-standards (org: {{ org }}, stack: {{ stack }}).
+
+  Next:
+    1. git init && pre-commit install --install-hooks -t pre-commit -t commit-msg
+    2. {% if stack == "typescript" %}npm install{% else %}uv sync{% endif %}
+    3. {% if stack == "typescript" %}npm run check{% else %}make check{% endif %}
+
+org:
+  type: str
+  help: Which organization's rules apply? (add your own under orgs/)
+  choices:
+    personal: personal
+    example-corp: example-corp
+  default: personal
+
+stack:
+  type: str
+  help: Tech stack
+  choices:
+    TypeScript (Node): typescript
+    Python: python
+  default: typescript
+
+project_name:
+  type: str
+  help: Project name
+  validator: "{% if not project_name.strip() %}Project name is required{% endif %}"
+
+project_slug:
+  type: str
+  help: Repo / package slug
+  default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') }}"
+  validator: "{% if not (project_slug | regex_search('^[a-z][a-z0-9-]*$')) %}Use lowercase letters, digits and dashes{% endif %}"
+
+package_name:
+  type: str
+  help: Python import name
+  default: "{{ project_slug | replace('-', '_') }}"
+  when: "{{ stack == 'python' }}"
+
+description:
+  type: str
+  help: One-line description
+  default: ""
+
+ai_tools:
+  type: str
+  help: Which AI tools should get instruction files? (AGENTS.md is always generated)
+  multiselect: true
+  choices:
+    Claude Code: claude
+    Cursor: cursor
+    GitHub Copilot: copilot
+  default: [claude]
+
+standards_source:
+  type: str
+  help: Where this template lives (used by the monthly auto-update workflow)
+  default: "gh:YOUR_GITHUB_USER/ai-standards"

@@ -1,0 +1,5 @@
+{% include "rules/base.md" %}
+
+{% include "rules/stacks/" ~ stack ~ ".md" %}
+
+{% include ["orgs/" ~ org ~ "/rules.md"] ignore missing %}

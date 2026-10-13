@@ -1,0 +1,37 @@
+{
+{%- if standards_source.startswith("gh:") %}
+  "extraKnownMarketplaces": {
+    "ai-standards": {
+      "source": { "source": "github", "repo": "{{ standards_source[3:] }}" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "ai-standards@ai-standards": true
+  },
+{%- endif %}
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

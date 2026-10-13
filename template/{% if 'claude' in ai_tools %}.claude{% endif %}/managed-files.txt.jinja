@@ -1,0 +1,22 @@
+# Managed by ai-standards. AI edits to these paths are blocked by .claude/hooks/protect-managed-files.sh
+AGENTS.md
+CLAUDE.md
+.claude/*
+.cursor/rules/ai-standards.mdc
+.github/copilot-instructions.md
+.github/workflows/*
+.pre-commit-config.yaml
+.editorconfig
+.copier-answers.yml
+{%- if stack == "typescript" %}
+eslint.config.js
+tsconfig.json
+tsconfig.build.json
+vitest.config.ts
+.prettierrc.json
+{%- else %}
+Makefile
+ruff.toml
+mypy.ini
+pytest.ini
+{%- endif %}

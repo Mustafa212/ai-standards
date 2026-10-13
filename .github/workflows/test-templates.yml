@@ -1,0 +1,60 @@
+# Every change to the standards is tested: each stack x org is generated, must pass its own
+# check on a fresh scaffold, and every rule in tests/violations must still fire.
+name: test templates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 5 * * 1" # weekly: catches upstream tool releases that silently change rules
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [typescript, python]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv tool install copier
+      - run: scripts/test-templates.sh
+        env:
+          STACKS: ${{ matrix.stack }}
+
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: claude plugin validate . && claude plugin validate ./plugin
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck scripts/*.sh plugin/hooks/*.sh
+
+  release:
+    # Tag a release by moving "## Unreleased" in CHANGELOG.md under a version heading and pushing
+    # a vX.Y.Z tag. Projects pick up tags through `copier update`.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, plugin, shell]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: gh release create "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

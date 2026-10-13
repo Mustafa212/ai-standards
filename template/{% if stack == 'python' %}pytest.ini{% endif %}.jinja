@@ -1,0 +1,5 @@
+{% import "config/settings.jinja" as cfg with context -%}
+# Managed by ai-standards. TST-1: coverage threshold.
+[pytest]
+testpaths = tests
+addopts = --strict-markers --cov={{ package_name }} --cov-branch --cov-report=term-missing --cov-fail-under={{ cfg.coverage }}

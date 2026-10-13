@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+*.rej
+*.orig
+{%- if stack == "typescript" %}
+node_modules/
+dist/
+coverage/
+{%- else %}
+.venv/
+__pycache__/
+*.egg-info/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+{%- endif %}

@@ -1,0 +1,19 @@
+# 1. Use ai-standards for shared engineering rules
+
+Status: accepted
+
+## Context
+
+We want every project, and every AI assistant working on it, to follow the same readable, tested,
+secure conventions without relying on people remembering them.
+
+## Decision
+
+Scaffold and update this project from ai-standards (org `{{ org }}`, stack `{{ stack }}`).
+Rules are enforced by tools where possible (formatter, linter, type checker, coverage, CI,
+pre-commit, AI-tool hooks), and documented for AI tools in `AGENTS.md`.
+
+## Consequences
+
+Managed files are not edited locally. Changes to them go through the ai-standards repo and reach
+this project through `copier update` (a monthly workflow opens the PR automatically).

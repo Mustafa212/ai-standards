@@ -1,0 +1,9 @@
+dist
+coverage
+package-lock.json
+.copier-answers.yml
+# Generated instruction files (managed by ai-standards)
+AGENTS.md
+CLAUDE.md
+.cursor
+.github/copilot-instructions.md

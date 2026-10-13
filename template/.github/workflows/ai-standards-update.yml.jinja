@@ -1,0 +1,43 @@
+# Managed by ai-standards.
+# Once a month, pull the latest standards into this project and open a PR.
+# For a private standards repo, add a secret AI_STANDARDS_TOKEN with read access to it.
+name: ai-standards update
+
+on:
+  schedule:
+    - cron: "17 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      TOKEN: {{ "${{ secrets.AI_STANDARDS_TOKEN }}" }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install copier
+      - name: Point git at the standards repo with a token (private repos)
+        if: env.TOKEN != ''
+        run: git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: copier update
+        run: |
+          git config user.name "ai-standards-bot"
+          git config user.email "ai-standards-bot@users.noreply.github.com"
+          copier update --defaults --trust --conflict rej
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/ai-standards-update
+          title: "chore: update ai-standards"
+          commit-message: "chore: update ai-standards"
+          body: |
+            Automated update from ai-standards. Read the CHANGELOG of the standards repo for what changed.
+            Resolve any `*.rej` files, run the checks, then merge.

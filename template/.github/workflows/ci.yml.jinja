@@ -1,0 +1,49 @@
+{% import "config/settings.jinja" as cfg with context -%}
+# Managed by ai-standards. This is the gate: nothing merges unless it passes.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+{%- if stack == "typescript" %}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "{{ cfg.node_version }}"
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+{%- else %}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "{{ cfg.python_version }}"
+      - run: uv sync
+      - run: make check
+{%- endif %}
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: {{ "${{ secrets.GITHUB_TOKEN }}" }}
+
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: {{ "${{ secrets.GITHUB_TOKEN }}" }}

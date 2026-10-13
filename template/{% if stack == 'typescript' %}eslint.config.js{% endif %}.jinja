@@ -1,0 +1,83 @@
+{% import "config/settings.jinja" as cfg with context -%}
+// Managed by ai-standards. Do not edit: propose changes upstream.
+// Rule IDs in comments refer to AGENTS.md.
+import js from "@eslint/js";
+import comments from "@eslint-community/eslint-plugin-eslint-comments/configs";
+import prettier from "eslint-config-prettier";
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
+  { ignores: ["dist/", "coverage/", "node_modules/"] },
+  js.configs.recommended,
+  tseslint.configs.strictTypeChecked,
+  tseslint.configs.stylisticTypeChecked,
+  comments.recommended,
+  {
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      // RDB-1 / RDB-2: size and complexity limits
+      complexity: ["error", {{ cfg.max_complexity }}],
+      "max-depth": ["error", {{ cfg.max_depth }}],
+      "max-params": ["error", {{ cfg.max_params }}],
+      "max-lines-per-function": ["error", { max: {{ cfg.max_function_lines }}, skipBlankLines: true, skipComments: true }],
+      "max-lines": ["error", { max: {{ cfg.max_file_lines }}, skipBlankLines: true, skipComments: true }],
+      "no-nested-ternary": "error",
+      "no-else-return": ["error", { allowElseIf: false }],
+      // RDB-4: no magic numbers
+      "@typescript-eslint/no-magic-numbers": [
+        "error",
+        {
+          ignore: [-1, 0, 1, 2],
+          ignoreEnums: true,
+          ignoreNumericLiteralTypes: true,
+          ignoreReadonlyClassProperties: true,
+          ignoreTypeIndexes: true,
+        },
+      ],
+      // RDB-3: naming
+      "@typescript-eslint/naming-convention": [
+        "error",
+        { selector: "default", format: ["camelCase"], leadingUnderscore: "allow" },
+        { selector: "variable", format: ["camelCase", "UPPER_CASE", "PascalCase"] },
+        { selector: "typeLike", format: ["PascalCase"] },
+        { selector: "enumMember", format: ["PascalCase", "UPPER_CASE"] },
+        { selector: "objectLiteralProperty", format: null },
+        { selector: "import", format: null },
+      ],
+      // TS-2: correctness
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/explicit-module-boundary-types": "error",
+      eqeqeq: ["error", "always"],
+      "no-console": ["error", { allow: ["warn", "error"] }],
+      // SUP-1: suppressions must be specific and explained
+      "@eslint-community/eslint-comments/require-description": "error",
+      "@eslint-community/eslint-comments/no-unlimited-disable": "error",
+{%- if cfg.banned_ts %}
+      // Org rule: banned imports
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+{%- for name, message in cfg.banned_ts.items() %}
+            { name: "{{ name }}", message: "{{ message }}" },
+{%- endfor %}
+          ],
+        },
+      ],
+{%- endif %}
+    },
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: { "max-lines-per-function": "off", "@typescript-eslint/no-magic-numbers": "off" },
+  },
+  {
+    files: ["*.config.js", "*.config.ts", "*.config.mjs"],
+    extends: [tseslint.configs.disableTypeChecked],
+    rules: { "@typescript-eslint/no-magic-numbers": "off" },
+  },
+  prettier,
+);

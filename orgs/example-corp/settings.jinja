@@ -1,0 +1,11 @@
+{#- example-corp: stricter than base. Anything not set here falls back to config/defaults.jinja. -#}
+{%- set coverage = 90 -%}
+{%- set max_complexity = 8 -%}
+{%- set banned_ts = {
+  "axios": "Use @example-corp/http instead (EC-1).",
+  "node-fetch": "Use @example-corp/http instead (EC-1).",
+} -%}
+{%- set banned_py = {
+  "requests": "Use example_corp.http instead (EC-1).",
+  "httpx": "Use example_corp.http instead (EC-1).",
+} -%}

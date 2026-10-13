@@ -1,0 +1,62 @@
+{% import "config/settings.jinja" as cfg with context -%}
+# Managed by ai-standards. Do not edit: propose changes upstream.
+# Rule IDs in comments refer to AGENTS.md.
+line-length = 100
+target-version = "py{{ cfg.python_version | replace('.', '') }}"
+src = ["src", "tests"]
+
+[lint]
+# Preview rules stay off unless listed explicitly (PLR1702 nesting depth is preview-only).
+preview = true
+explicit-preview-rules = true
+select = [
+  "PLR1702",      # RDB-1 nesting depth
+  "TID",          # tidy imports (org banned imports)
+  "E", "W", "F",  # pycodestyle, pyflakes
+  "I",            # import order
+  "N",            # RDB-3 naming
+  "UP",           # modern syntax
+  "B",            # bugbear
+  "A",            # shadowing builtins
+  "C4",           # comprehensions
+  "SIM",          # simplify
+  "RET",          # return style, no else-after-return
+  "PTH",          # PY-2 pathlib
+  "C90",          # RDB-1 complexity
+  "PL",           # RDB-1 params, branches, statements; RDB-4 magic numbers
+  "ANN",          # PY-1 annotations
+  "BLE",          # ERR-1 no blind except
+  "TRY",          # error handling
+  "T20",          # PY-2 no print
+  "ERA",          # RDB-5 no commented-out code
+  "S",            # security
+  "PGH",          # SUP-1 no blanket noqa / type: ignore
+  "RUF",          # ruff-specific (incl. unused noqa)
+]
+ignore = [
+  "TRY003",   # long messages in exceptions are fine
+]
+
+[lint.mccabe]
+max-complexity = {{ cfg.max_complexity }}
+
+[lint.pylint]
+max-args = {{ cfg.max_params }}
+max-positional-args = {{ cfg.max_params }}
+max-statements = {{ cfg.max_statements }}
+max-branches = {{ cfg.max_complexity }}
+max-nested-blocks = {{ cfg.max_depth }}
+
+[lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "ANN"]
+{%- if cfg.banned_py %}
+
+# Org rule: banned imports
+[lint.flake8-tidy-imports.banned-api]
+{%- for name, message in cfg.banned_py.items() %}
+"{{ name }}".msg = "{{ message }}"
+{%- endfor %}
+{%- endif %}
+
+[format]
+docstring-code-format = true

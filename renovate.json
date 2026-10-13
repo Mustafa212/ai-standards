@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "schedule": ["before 6am on monday"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "npm devDependencies inside the TypeScript template",
+      "managerFilePatterns": ["/^template/.*package\\.json.*\\.jinja$/"],
+      "matchStrings": ["\"(?<depName>[@a-z0-9./-]+)\": \"\\^(?<currentValue>[0-9][0-9.]*)\""],
+      "datasourceTemplate": "npm",
+      "versioningTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "description": "pre-commit hook revisions inside the template",
+      "managerFilePatterns": ["/^template/\\.pre-commit-config\\.yaml\\.jinja$/"],
+      "matchStrings": ["repo: https://github\\.com/(?<depName>[^\\s]+)\\s+rev: (?<currentValue>v?[0-9][^\\s]*)"],
+      "datasourceTemplate": "github-tags"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Tool upgrades can change which rules fire; test-templates.sh must prove they still do",
+      "matchFileNames": ["template/**"],
+      "groupName": "template tooling",
+      "automerge": false
+    }
+  ]
+}

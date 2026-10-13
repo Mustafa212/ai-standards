@@ -1,0 +1,18 @@
+{#-
+  Resolved settings = org override, else base default.
+  Use in any template file:  {% import "config/settings.jinja" as cfg with context %}
+-#}
+{%- import "config/defaults.jinja" as d -%}
+{%- import "orgs/" ~ org ~ "/settings.jinja" as o -%}
+{%- set max_function_lines = o.max_function_lines | default(d.max_function_lines) -%}
+{%- set max_statements = o.max_statements | default(d.max_statements) -%}
+{%- set max_complexity = o.max_complexity | default(d.max_complexity) -%}
+{%- set max_params = o.max_params | default(d.max_params) -%}
+{%- set max_depth = o.max_depth | default(d.max_depth) -%}
+{%- set max_file_lines = o.max_file_lines | default(d.max_file_lines) -%}
+{%- set coverage = o.coverage | default(d.coverage) -%}
+{%- set node_version = o.node_version | default(d.node_version) -%}
+{%- set python_version = o.python_version | default(d.python_version) -%}
+{%- set banned_ts = o.banned_ts | default(d.banned_ts) -%}
+{%- set banned_py = o.banned_py | default(d.banned_py) -%}
+{%- set check_cmd = "npm run check" if stack == "typescript" else "make check" -%}

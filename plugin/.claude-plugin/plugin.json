@@ -1,0 +1,25 @@
+{
+  "name": "ai-standards",
+  "displayName": "AI Standards",
+  "version": "0.1.0",
+  "description": "Forces new projects through the ai-standards template, keeps them updated, and turns repeated feedback into rules",
+  "author": {
+    "name": "Mostafa Shawkey"
+  },
+  "license": "MIT",
+  "keywords": ["standards", "scaffolding", "lint", "conventions"],
+  "userConfig": {
+    "standards_source": {
+      "type": "string",
+      "title": "Standards template source",
+      "description": "Where the ai-standards template lives, e.g. gh:your-user/ai-standards (a git URL or local path also works)",
+      "default": "gh:YOUR_GITHUB_USER/ai-standards"
+    },
+    "default_org": {
+      "type": "string",
+      "title": "Default org",
+      "description": "Org to pre-select when scaffolding (must exist under orgs/ in the standards repo)",
+      "default": "personal"
+    }
+  }
+}

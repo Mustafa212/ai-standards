@@ -1,0 +1,6 @@
+const DEFAULT_NAME = "world";
+
+export function buildGreeting(name: string): string {
+  const trimmedName = name.trim();
+  return `Hello, ${trimmedName === "" ? DEFAULT_NAME : trimmedName}!`;
+}

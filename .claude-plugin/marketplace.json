@@ -1,0 +1,14 @@
+{
+  "name": "ai-standards",
+  "description": "Shared engineering standards: project scaffolding, enforced rules, and rule evolution",
+  "owner": {
+    "name": "Mostafa Shawkey"
+  },
+  "plugins": [
+    {
+      "name": "ai-standards",
+      "source": "./plugin",
+      "description": "Forces new projects through the ai-standards template, keeps them updated, and turns repeated feedback into rules"
+    }
+  ]
+}
