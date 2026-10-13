@@ -10,8 +10,10 @@ write configuration yourself. Never hand-write eslint, prettier, tsconfig, ruff,
 pre-commit or CI files; if the template lacks something, finish the scaffold and then offer the
 `propose-rule` skill.
 
-Template source: `${user_config.standards_source}`
-Default org: `${user_config.default_org}`
+Template source (`<source>` below): the `Source:` line of `~/.claude/ai-standards/config.md`
+(the user's private copy, set up by the `onboard` skill) if that file exists, else
+`${user_config.standards_source}`. Default org: `${user_config.default_org}`.
+Usually the `onboard` skill runs this one, after it has asked the org and registered the project.
 
 ## 1. Collect answers
 
@@ -23,7 +25,7 @@ Ask in one go (use AskUserQuestion when available), skipping anything the user a
 - **description**: one line (optional).
 - **ai_tools**: any of `claude`, `cursor`, `copilot` (AGENTS.md is always generated).
 
-To see which orgs and stacks exist, read `copier.yml` in the template source
+To see which orgs and stacks exist, read `orgs/orgs.yml` and `copier.yml` in the template source
 (for a `gh:` source: `git clone --depth 1 https://github.com/<owner>/<repo> <tmp dir>`).
 If the user names an org that does not exist, say so and offer `personal`; do not invent one.
 
@@ -38,8 +40,8 @@ uvx copier copy --trust \
   --data org=<org> --data stack=<stack> \
   --data project_name="<name>" --data description="<description>" \
   --data 'ai_tools=["claude"]' \
-  --data standards_source="${user_config.standards_source}" \
-  "${user_config.standards_source}" <target-dir>
+  --data standards_source="<source>" \
+  "<source>" <target-dir>
 ```
 
 Use the remote source (not a local clone path) so `copier update` and the monthly update workflow

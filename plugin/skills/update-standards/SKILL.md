@@ -5,8 +5,17 @@ description: Use when the user wants to pull the latest ai-standards rules into 
 
 # Update a project to the latest ai-standards
 
-Only works in a project that has `.copier-answers.yml`. If it is missing, offer the
-`adopt-project` skill instead.
+Only works in a project that has `.copier-answers.yml`. If it is missing, offer the `onboard` skill
+instead.
+
+**Ask first.** An update changes the project, so before writing anything show the user what it
+would bring (the versions, the CHANGELOG entries in between, the `--pretend` output) and wait for a
+clear yes. The monthly update PR is the same question asked in GitHub: nothing changes until it is
+merged.
+
+**Private copy:** if `~/.claude/ai-standards/config.md` exists, new public releases reach the
+private copy first: `git -C <clone> pull upstream main --tags`, after asking. Then update projects
+from it.
 
 1. Make sure the working tree is clean (`git status`). If not, ask the user to commit or stash first.
 2. Run `uvx copier update --trust --defaults --conflict rej` (or `pipx run copier ...`).

@@ -9,7 +9,10 @@ Goal: from day one, every **new or changed** line meets the standards, while the
 keeps working and its debt is paid down deliberately, item by item. Nothing the user wrote is
 overwritten or deleted, and nothing is committed without their OK.
 
-Template source: `${user_config.standards_source}` · Default org: `${user_config.default_org}`
+Template source (`<source>` below): the `Source:` line of `~/.claude/ai-standards/config.md`
+(the user's private copy, set up by the `onboard` skill) if that file exists, else
+`${user_config.standards_source}`. Default org: `${user_config.default_org}`.
+Usually the `onboard` skill runs this one, after it has asked the org and registered the project.
 
 Work in four gated steps. Stop at each gate for the user's answer.
 
@@ -64,8 +67,8 @@ For the Python scripts below use `python3`, or `python` where `python3` isn't a 
    uvx copier copy --trust --defaults \
      --data org=<org> --data stack=<stack> --data project_name="<name>" \
      --data adopted=true --data coverage_floor=<n or 0> --data 'deferred_checks=[<...>]' \
-     --data 'ai_tools=["claude"]' --data standards_source="${user_config.standards_source}" \
-     "${user_config.standards_source}" <tmp>/rendered
+     --data 'ai_tools=["claude"]' --data standards_source="<source>" \
+     "<source>" <tmp>/rendered
    ```
    Use the remote source so later `copier update` runs work.
 3. Merge without overwriting: `python3 <tmp>/standards/scripts/adopt.py <tmp>/rendered .`
