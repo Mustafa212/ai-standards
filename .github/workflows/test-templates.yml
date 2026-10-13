@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck scripts/*.sh plugin/hooks/*.sh
+      - run: shellcheck scripts/*.sh plugin/hooks/*.sh template/*claude*/hooks/*.sh*
       - run: python3 scripts/check_rules.py # no rule written twice inside one org
 
   release:

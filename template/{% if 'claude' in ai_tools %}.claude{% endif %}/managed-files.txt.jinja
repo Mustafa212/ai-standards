@@ -17,9 +17,14 @@ tsconfig.build.json
 vitest.config.ts
 .prettierrc.json
 eslint-suppressions.json
-{%- else %}
+{%- elif stack == "python" %}
 Makefile
 ruff.toml
 mypy.ini
 pytest.ini
+{%- elif stack == "dotnet" %}
+.ai-standards/*
+Directory.Build.props
+global.json
+tests/*.ArchitectureTests/*
 {%- endif %}

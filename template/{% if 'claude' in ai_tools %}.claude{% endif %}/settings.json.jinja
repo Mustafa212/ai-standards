@@ -1,6 +1,9 @@
 {%- if stack == "typescript" -%}
 {%- set protect_cmd = 'node \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.mjs\\"' -%}
 {%- set check_cmd = 'node \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.mjs\\"' -%}
+{%- elif stack == "dotnet" -%}
+{%- set protect_cmd = 'bash \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.sh\\"' -%}
+{%- set check_cmd = 'bash \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.sh\\"' -%}
 {%- else -%}
 {#- Without uv the hooks can't start, and a hook that can't start doesn't block: fail closed instead. -#}
 {%- set need_uv = 'command -v uv >/dev/null 2>&1 || { echo \\"ai-standards: uv is not installed, so this edit cannot be checked. Install it: https://docs.astral.sh/uv/\\" >&2; exit 2; }; ' -%}

@@ -22,6 +22,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+{%- elif stack == "dotnet" %}
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: bash .ai-standards/check.sh
 {%- else %}
       - uses: astral-sh/setup-uv@v5
         with:
@@ -50,7 +55,7 @@ jobs:
 {%- if not cfg.enforce_coverage %}
       - run: npx vitest run --coverage --coverage.thresholds.lines={{ cfg.coverage_target }}
 {%- endif %}
-{%- else %}
+{%- elif stack == "python" %}
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "{{ cfg.python_version }}"

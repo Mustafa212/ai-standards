@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2154  # $project and $rel come from read-hook-file.sh
+# Managed by ai-standards.
+# Runs after every AI edit of a C# file and formats it (whitespace, from .editorconfig). This takes
+# well under a second because `--folder` loads no MSBuild workspace. Analyzer and code-style
+# findings come from the build in .ai-standards/check.sh (DONE-1): running them on every edit would
+# cost seconds each time.
+set -uo pipefail
+
+# shellcheck source=/dev/null  # sets $project and $rel
+. "$(dirname "${BASH_SOURCE[0]}")/read-hook-file.sh"
+
+case "$rel" in
+  bin/* | obj/* | */bin/* | */obj/* | .ai-session/*) exit 0 ;;
+  *.cs) ;;
+  *) exit 0 ;;
+esac
+
+cd "$project" && dotnet format whitespace --folder --include "$rel" >/dev/null 2>&1
+exit 0
