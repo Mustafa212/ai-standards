@@ -1,7 +1,7 @@
 # Clean-code rules for .NET, Angular and Flutter: research and proposal
 
-Date: 2026-10-13, claims re-checked against the sources on 2026-10-14 · Status: **proposal, nothing
-applied yet** (every rule needs the owner's yes)
+Date: 2026-10-13, claims re-checked against the sources on 2026-10-14 · Status: **approved by the owner on 2026-10-14.**
+Base rules (section 3) are applied in 0.5.0. The .NET, Angular and Flutter stacks follow as their own releases.
 
 ## 1. Who we learned from, and why
 

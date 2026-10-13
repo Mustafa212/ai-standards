@@ -11,6 +11,18 @@ Each entry names the rule ID, the layer (base / stack / org) and the enforcement
 
 ## Unreleased
 
+## 0.5.0
+
+New `[review]` rules (base), from the research in `docs/research/2026-10-13-dotnet-angular-flutter-rules.md`,
+approved by the owner:
+
+- **DES-5 [review]** Data is immutable by default.
+- **DES-6 [review]** The UI shows state and forwards events; business logic lives below it.
+- **DES-7 [review]** Switches over an enum or union handle every case, with no catch-all default.
+- **RDB-10 [review]** Files are named after what they hold; no `utils`, `helpers` or `common`.
+- **ERR-5 [review]** Error messages say what happened and what to do next.
+- **TST-4 [review]** Tests never rely on timing; fakes over mocks.
+
 ## 0.4.0
 
 **BREAKING:** readability rules now fail lint on existing code without doc comments, with one-letter
