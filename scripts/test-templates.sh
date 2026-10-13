@@ -235,6 +235,7 @@ expect "second adopt refuses" grep -q 'already on ai-standards' \
   <(python3 "$work/src/scripts/adopt.py" "$work/legacy-rendered" "$legacy")
 
 for stack in $stacks; do
+  [[ "$stack" == dotnet ]] && continue # adopting existing .NET projects arrives in 0.7.0
   log "adopt end to end: $stack (baseline, debt plan, ratchet via copier update)"
   bash "$work/src/scripts/test-adopt.sh" "$work/src" "$work/e2e" "$stack" || fail "adopt e2e: $stack"
 done

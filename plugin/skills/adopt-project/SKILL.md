@@ -21,9 +21,10 @@ Work in four gated steps. Stop at each gate for the user's answer.
 1. `git status`: the tree must be clean so every change is reviewable. If it isn't, ask the user to
    commit or stash first.
 2. Detect the stack: `package.json` + `.ts` files → `typescript`; `pyproject.toml` /
-   `requirements*.txt` + `.py` → `python`. Anything else (C#, Dart, Angular-specific, monorepos with
-   several stacks) isn't supported by the template yet: say so, offer `propose-rule` to add the
-   stack, and stop.
+   `requirements*.txt` + `.py` → `python`. A `.sln`/`.slnx`/`.csproj` → `dotnet`: new .NET projects are
+   supported, adopting existing ones arrives in 0.7.0, so say so and stop. Anything else (Dart,
+   Angular-specific, monorepos with several stacks) isn't supported by the template yet: say so,
+   offer `propose-rule` to add the stack, and stop.
    - TypeScript: note the module system (`"type": "module"` or CommonJS) and the test runner. The
      standard check runs **Vitest**, and the standard `tsconfig.json` assumes ESM. Jest suites need
      migrating first (usually mechanical: `vi` for `jest`, imports from `vitest`), as their own

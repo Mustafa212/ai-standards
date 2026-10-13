@@ -69,6 +69,7 @@ under a version heading and pushing a `vX.Y.Z` tag.
 | --- | --- | --- |
 | base | `rules/base.md`, `config/defaults.jinja`, `template/` | Everyone's agreement; changes affect all orgs |
 | stack | `rules/stacks/<stack>.md`, stack template files | People who own that stack |
+| architecture | `rules/architectures/<stack>-<architecture>.md`, its template folders | People who own that stack |
 | org | `orgs/<org>/` in the user's private copy | That org |
 | project | `orgs/<org>/projects/<project>.md` in the private copy (rules), `docs/PROJECT.md` in the project (notes) | That project |
 

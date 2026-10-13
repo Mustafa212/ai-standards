@@ -26,7 +26,11 @@ The plan for the old debt is in `docs/STANDARDS-DEBT.md`.
 
 ## Claude Code
 
+{%- if stack == "dotnet" %}
+- Hooks format every C# file you edit. Analyzers and code style run in the build, so run `bash .ai-standards/check.sh` before saying a task is done, and fix what it reports.
+{%- else %}
 - Hooks format and lint every file you edit. If a hook reports errors, fix them before moving on.
+{%- endif %}
 - Hooks block edits to files managed by ai-standards (lint configs, CI, this file). Do not work around this, and never change those files through shell commands either; tell the user and suggest `/ai-standards:propose-rule`.
 - `CLAUDE.md` and `docs/PROJECT.md` belong to the project. Edit them when the user asks.
 {%- endif %}
