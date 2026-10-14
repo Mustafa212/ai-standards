@@ -1,0 +1,33 @@
+using {{ dotnet_name }}.Greetings;
+
+namespace {{ dotnet_name }}.Tests.Greetings;
+
+public sealed class GreetingServiceTests
+{
+    private static readonly DateTimeOffset _morning = new(2026, 1, 1, 9, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset _afternoon = new(2026, 1, 1, 15, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void Greet_InTheMorning_SaysGoodMorning()
+    {
+        var greeter = new GreetingService(new FixedTimeProvider(_morning));
+
+        Assert.Equal("Good morning, Mostafa!", greeter.Greet("Mostafa"));
+    }
+
+    [Fact]
+    public void Greet_InTheAfternoon_SaysHello()
+    {
+        var greeter = new GreetingService(new FixedTimeProvider(_afternoon));
+
+        Assert.Equal("Hello, Mostafa!", greeter.Greet("Mostafa"));
+    }
+
+    [Fact]
+    public void Greet_BlankName_GreetsTheWorld()
+    {
+        var greeter = new GreetingService(new FixedTimeProvider(_afternoon));
+
+        Assert.Equal("Hello, world!", greeter.Greet("   "));
+    }
+}

@@ -1,0 +1,17 @@
+namespace {{ dotnet_name }}.Greetings;
+
+/// <summary>Builds the greeting shown to the user: "Good morning" before noon, "Hello" after, and "world" for a blank name.</summary>
+public sealed class GreetingService(TimeProvider timeProvider)
+{
+    private const int NoonHour = 12;
+    private const string DefaultName = "world";
+
+    /// <summary>Returns the greeting for <paramref name="name"/> at the current local time.</summary>
+    public string Greet(string name)
+    {
+        string trimmedName = name.Trim();
+        string who = trimmedName.Length == 0 ? DefaultName : trimmedName;
+        string salutation = timeProvider.GetLocalNow().Hour < NoonHour ? "Good morning" : "Hello";
+        return $"{salutation}, {who}!";
+    }
+}

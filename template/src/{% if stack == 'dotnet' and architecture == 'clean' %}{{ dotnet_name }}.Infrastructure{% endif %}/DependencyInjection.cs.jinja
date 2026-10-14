@@ -1,0 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
+
+namespace {{ dotnet_name }}.Infrastructure;
+
+/// <summary>Registers what talks to the outside world: the clock, the database, external services.</summary>
+public static class DependencyInjection
+{
+    /// <summary>Adds the infrastructure services to <paramref name="services"/>.</summary>
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services) =>
+        services.AddSingleton(TimeProvider.System);
+}

@@ -1,0 +1,19 @@
+using Microsoft.Extensions.DependencyInjection;
+using {{ dotnet_name }}.Application;
+using {{ dotnet_name }}.Application.Greetings;
+
+namespace {{ dotnet_name }}.UnitTests;
+
+public sealed class DependencyInjectionTests
+{
+    [Fact]
+    public void AddApplication_WithAClock_ResolvesEveryUseCase()
+    {
+        using ServiceProvider provider = new ServiceCollection()
+            .AddSingleton(TimeProvider.System)
+            .AddApplication()
+            .BuildServiceProvider();
+
+        Assert.NotNull(provider.GetService<BuildGreeting>());
+    }
+}

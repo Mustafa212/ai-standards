@@ -1,0 +1,42 @@
+// Managed by ai-standards: this test is how VSA-2 is enforced. Propose changes upstream.
+using System.Reflection;
+using NetArchTest.Rules;
+
+namespace {{ dotnet_name }}.ArchitectureTests;
+
+/// <summary>VSA-2: a feature (Features/&lt;Feature&gt;/) never depends on another feature.</summary>
+public sealed class FeatureIsolationTests
+{
+    private const string FeaturesNamespace = "{{ dotnet_name }}.Features";
+    private static readonly Assembly _app = typeof(Program).Assembly;
+
+    [Fact]
+    public void EachFeature_DependsOnNoOtherFeature()
+    {
+        string[] features = Features();
+        foreach (string feature in features)
+        {
+            string[] others = [.. features.Where(other => other != feature)];
+            NetArchTest.Rules.TestResult result = Types.InAssembly(_app)
+                .That()
+                .ResideInNamespace(feature)
+                .ShouldNot()
+                .HaveDependencyOnAny(others)
+                .GetResult();
+            string offenders = string.Join(", ", result.FailingTypeNames ?? []);
+            Assert.True(result.IsSuccessful, $"{feature} depends on another feature: {offenders}");
+        }
+    }
+
+    /// <summary>The namespaces one level below Features: one per feature.</summary>
+    private static string[] Features()
+    {
+        int featureDepth = FeaturesNamespace.Split('.').Length + 1;
+        return [.. _app.GetTypes()
+            .Select(type => type.Namespace)
+            .OfType<string>()
+            .Where(name => name.StartsWith(FeaturesNamespace + ".", StringComparison.Ordinal))
+            .Select(name => string.Join('.', name.Split('.').Take(featureDepth)))
+            .Distinct(StringComparer.Ordinal)];
+    }
+}

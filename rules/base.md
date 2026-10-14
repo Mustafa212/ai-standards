@@ -14,14 +14,15 @@ Every rule has an ID and an enforcement level:
 ## 1. Readability first
 
 - **RDB-7 [review]** Write code a new teammate understands on first read: plain steps over clever one-liners, one idea per line. If code needs a comment to say what it does, simplify the code first.
-- **RDB-1 [tool]** {% if stack == "typescript" %}Functions ≤ {{ cfg.max_function_lines }} lines{% else %}Functions ≤ {{ cfg.max_statements }} statements{% endif %}, cyclomatic complexity ≤ {{ cfg.max_complexity }}, ≤ {{ cfg.max_params }} parameters (use an options object beyond that), nesting depth ≤ {{ cfg.max_depth }}. Use early returns and guard clauses.
+- **RDB-1 [tool]** {% if stack == "python" %}Functions ≤ {{ cfg.max_statements }} statements{% else %}Functions ≤ {{ cfg.max_function_lines }} lines{% endif %}, cyclomatic complexity ≤ {{ cfg.max_complexity }}, ≤ {{ cfg.max_params }} parameters (use an options object beyond that), nesting depth ≤ {{ cfg.max_depth }}. Use early returns and guard clauses.
 - **RDB-2 [tool]** Files ≤ {{ cfg.max_file_lines }} lines. A file past that has more than one responsibility.
 - **RDB-3 [review]** Names say what, not how: `unpaidInvoices` not `list2`, `isExpired` for booleans, verbs for functions. No abbreviations except universal ones (id, url, http).
 - **RDB-4 [tool]** No magic numbers. Name them as constants.
 - **RDB-5 [review]** Comments explain *why*, not *what*. Delete commented-out code; git remembers.
 - **RDB-6 [tool]** Formatting is automatic. Never hand-format.
-- **RDB-8 [tool]** Every exported function and class starts with a doc comment ({% if stack == "typescript" %}JSDoc `/** … */`{% else %}a docstring{% endif %}) saying what it is for and anything a caller must know. One sentence is enough; tests are exempt.
+- **RDB-8 [tool]** Every exported function and class starts with a doc comment ({% if stack == "typescript" %}JSDoc `/** … */`{% elif stack == "dotnet" %}an XML doc comment, `/// <summary>`{% else %}a docstring{% endif %}) saying what it is for and anything a caller must know. One sentence is enough; tests are exempt.
 - **RDB-9 [review]** Names a reader understands: single letters only for short loop counters. No boolean flag arguments (`send(user, true)`): use an options object or two functions.
+- **RDB-10 [review]** A file is named after what it holds. No dumping-ground names such as `utils`, `helpers` or `common`: name it for its job (`date-format`, `tax`).
 
 ## 2. Before writing code
 
@@ -36,6 +37,9 @@ Every rule has an ID and an enforcement level:
 - **DES-2 [review]** Inject dependencies at boundaries instead of reaching for globals deep inside logic.
 - **DES-3 [review]** Make illegal states unrepresentable: precise types over boolean flags and bags of optional fields.
 - **DES-4 [ai]** YAGNI. No abstractions for hypothetical futures; wait for three real cases before extracting.
+- **DES-5 [review]** Data is immutable by default ({% if stack == "typescript" %}`readonly`, `as const`{% elif stack == "dotnet" %}records, `init`, `readonly`{% else %}frozen dataclasses, tuples{% endif %}). Change data by making a new value.
+- **DES-6 [review]** The UI shows state and forwards events; business logic lives below it (view models, services, handlers).
+- **DES-7 [review]** A switch over an enum or union handles every case, with no catch-all default, so a new value fails the build{% if stack == "typescript" %} (TS-2 enforces it){% elif stack == "dotnet" %} (use a switch expression without a `_` arm: a missing case is build error CS8509){% else %} (end a `match` with `assert_never`){% endif %}.
 
 ## 4. Errors and security
 
@@ -43,12 +47,14 @@ Every rule has an ID and an enforcement level:
 - **ERR-2 [review]** Validate external input (requests, files, env vars) once, at the edge, and fail fast with a clear message.
 - **ERR-3 [tool]** No secrets in code or git history (gitleaks runs in pre-commit and CI). Configuration comes from environment variables.
 - **ERR-4 [review]** Never log secrets, tokens or personal data.
+- **ERR-5 [review]** Error messages say what happened and what to do next.
 
 ## 5. Tests
 
 - **TST-1 [tool]** Coverage ≥ {{ cfg.coverage_target }}%. CI fails below it{% if cfg.ratcheting %} (this project: ≥ {{ cfg.coverage }}% today, see Adoption status){% endif %}.
 - **TST-2 [review]** Test behaviour, not implementation. Name tests as sentences describing the behaviour.
 - **TST-3 [ai]** When fixing a bug, first write a test that reproduces it.
+- **TST-4 [review]** Tests never rely on timing (no sleeps or timeouts): wait for the event. Prefer fakes to mocks.
 
 ## 6. Git
 

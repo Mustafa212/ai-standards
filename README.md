@@ -7,7 +7,9 @@ readable, typed, tested and secure. Rules are **enforced by tools**, not by memo
 ```
           base rules            (everyone)
               ▼
-   stack: typescript │ python   (per technology)
+   stack: typescript │ python │ dotnet   (per technology)
+              ▼
+   architecture: simple │ clean │ vertical-slice   (.NET; each has its own rules)
               ▼
    org: personal │ example-corp │ …   (per organization: stricter limits, own rules)    ┐ in your
               ▼                                                                         │ private
@@ -21,10 +23,11 @@ clear names, and a doc comment on every exported function and class (enforced by
 
 | Layer | What enforces it |
 | --- | --- |
-| Formatting | Prettier / Ruff format |
-| Readability limits (function size, complexity, params, nesting, file size, magic numbers, naming) | ESLint / Ruff, thresholds from base or org |
-| Types | TypeScript `strict` + type-checked lint / mypy `--strict` |
-| Tests | Vitest / pytest with a coverage threshold |
+| Formatting | Prettier / Ruff format / `dotnet format` |
+| Readability limits (function size, complexity, params, nesting, file size, magic numbers, naming) | ESLint / Ruff / Roslyn analyzers + SonarAnalyzer, thresholds from base or org |
+| Types | TypeScript `strict` + type-checked lint / mypy `--strict` / C# nullable, warnings as errors |
+| Tests | Vitest / pytest / xUnit with a coverage threshold |
+| Architecture (.NET) | Architecture tests (NetArchTest): Clean Architecture's dependency direction, no slice reaching into another feature |
 | Secrets, commit format | pre-commit (gitleaks, Conventional Commits) |
 | The gate | GitHub Actions CI running the same `check` command |
 | AI while it writes | Claude Code hooks: lint every edited file and send errors back; block edits to managed files |
@@ -43,7 +46,8 @@ clear names, and a doc comment on every exported function and class (enforced by
 
 ### 2. Install the plugin (once per machine)
 
-Prerequisites: `git` and Node 22 (TypeScript stack); `uv` and `make` (Python stack). On Windows:
+Prerequisites: `git` and Node 22 (TypeScript stack); `uv` and `make` (Python stack); the .NET 10
+SDK (.NET stack). On Windows:
 `winget install astral-sh.uv` and `winget install ezwinports.make`. Without `uv`, the Claude hooks of a
 Python project block edits and say why, instead of silently not checking anything.
 
@@ -148,6 +152,7 @@ your projects (private repos)  AGENTS.md = base + stack + org + project
 | Add a rule for one project | `orgs/<org>/projects/<project>.md` in your private copy (or let `onboard` propose it) |
 | Add an org | `/ai-standards:onboard` (it adds `orgs/<org>/` and the choice in `orgs/orgs.yml`) |
 | Add a stack | `rules/stacks/<stack>.md`, template files named `{% if stack == '<stack>' %}…{% endif %}`, a choice in `copier.yml`, a branch in `scripts/test-templates.sh` |
+| Add an architecture | `rules/architectures/<stack>-<architecture>.md`, its template folders, a choice in `copier.yml`, its loop entry in `scripts/test-templates.sh` |
 
 Or just tell Claude what keeps going wrong; the `ai-standards:propose-rule` skill turns it into a
 PR. Every PR runs `scripts/test-templates.sh`, which generates all stack × org projects, checks they

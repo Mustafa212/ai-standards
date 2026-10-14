@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2154  # $project and $rel come from read-hook-file.sh
+# Managed by ai-standards.
+# Blocks AI edits to files owned by ai-standards so rules can't be weakened to "get green" (SUP-2).
+# A human can bypass for one session with:  AI_STANDARDS_UNLOCK=1 claude
+set -uo pipefail
+
+[[ "${AI_STANDARDS_UNLOCK:-}" == 1 ]] && exit 0
+# shellcheck source=/dev/null  # sets $project and $rel
+. "$(dirname "${BASH_SOURCE[0]}")/read-hook-file.sh"
+
+managed_list="$project/.claude/managed-files.txt"
+[[ -f "$managed_list" ]] || exit 0
+
+while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+  pattern="${pattern%$'\r'}"
+  [[ -z "$pattern" || "$pattern" == \#* ]] && continue
+  # shellcheck disable=SC2053  # unquoted on purpose: the pattern is a glob
+  if [[ "$rel" == $pattern ]]; then
+    printf '%s\n' "Blocked: '$rel' is managed by ai-standards (rule SUP-2)." \
+      "Fix the code instead of changing the rules. If the rule itself is wrong," \
+      "tell the user and suggest /ai-standards:propose-rule." >&2
+    exit 2
+  fi
+done <"$managed_list"
+exit 0

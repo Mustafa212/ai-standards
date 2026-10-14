@@ -1,0 +1,10 @@
+using {{ dotnet_name }}.Greetings;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<GreetingService>();
+
+WebApplication app = builder.Build();
+app.MapGet("/greetings/{name}", (string name, GreetingService greetings) => greetings.Greet(name));
+
+await app.RunAsync();

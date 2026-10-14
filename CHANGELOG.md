@@ -11,6 +11,48 @@ Each entry names the rule ID, the layer (base / stack / org) and the enforcement
 
 ## Unreleased
 
+## 0.6.0
+
+New stack: **.NET (C#)** for new projects. Adopting existing .NET projects comes in 0.7.0.
+
+- `stack=dotnet` scaffolds a .NET 10 solution. A new **architecture** layer sits between the stack
+  and the org, chosen at scaffold time, and each architecture has its own rules in `AGENTS.md`:
+  - `simple`: one Web API project and its tests (API-1, API-2).
+  - `clean`: Domain, Application, Infrastructure, Api. **CLEAN-1 [tool]**: architecture tests keep
+    dependencies pointing inward.
+  - `vertical-slice`: `Features/<Feature>/<UseCase>/`. **VSA-2 [tool]**: architecture tests stop a
+    feature from depending on another.
+- Stack rules **CS-1..CS-14** (approved in `docs/research/2026-10-13-dotnet-angular-flutter-rules.md`).
+  CS-1..CS-7 are enforced by the build: a managed `Directory.Build.props` (nullable, warnings as
+  errors, `latest-Recommended` analyzers, code style in the build, XML docs) and `.editorconfig`.
+  IDE0049 never runs in a build, so "keywords over runtime type names" moved from CS-2 to
+  **CS-14 [review]**.
+- The base readability rules are tool-enforced in .NET too, through **SonarAnalyzer.CSharp** (S107,
+  S138, S1541, S134, S104, S109, S125). Thresholds come from base or org settings, through a managed
+  `.ai-standards/SonarLint.xml`.
+- Org banned APIs for .NET (`banned_cs`, BannedApiAnalyzers RS0030); example-corp bans `HttpClient`
+  in production code (EC-1).
+- Tests: xUnit v3 on Microsoft.Testing.Platform, coverage with `coverlet.MTP` and the org threshold,
+  and a fake `TimeProvider` (TST-4).
+- `bash .ai-standards/check.sh` is the check (format, build, test). The Claude hooks are bash
+  without jq: they block managed files and format every edited `.cs` file.
+- `test-templates.sh` covers 3 architectures × every org: a fresh scaffold passes, every `[tool]`
+  rule fires (`tests/violations/dotnet/`), the hooks work, and a planted cross-feature reference
+  fails VSA-2. CI adds `dotnet` to the matrix.
+- `DES-5`, `DES-7`, `RDB-1` and `RDB-8` now have .NET wording.
+
+## 0.5.0
+
+New `[review]` rules (base), from the research in `docs/research/2026-10-13-dotnet-angular-flutter-rules.md`,
+approved by the owner:
+
+- **DES-5 [review]** Data is immutable by default.
+- **DES-6 [review]** The UI shows state and forwards events; business logic lives below it.
+- **DES-7 [review]** Switches over an enum or union handle every case, with no catch-all default.
+- **RDB-10 [review]** Files are named after what they hold; no `utils`, `helpers` or `common`.
+- **ERR-5 [review]** Error messages say what happened and what to do next.
+- **TST-4 [review]** Tests never rely on timing; fakes over mocks.
+
 ## 0.4.0
 
 **BREAKING:** readability rules now fail lint on existing code without doc comments, with one-letter

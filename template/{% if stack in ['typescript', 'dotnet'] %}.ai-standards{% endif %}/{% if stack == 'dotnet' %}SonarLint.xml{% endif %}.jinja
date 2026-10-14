@@ -1,0 +1,28 @@
+{% import "config/settings.jinja" as cfg with context -%}
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Managed by ai-standards. Thresholds for the Sonar readability rules (RDB-1, RDB-2), from the
+     base defaults or the org's settings. Which rules run, and how strictly, is in .editorconfig. -->
+<AnalysisInput>
+  <Rules>
+    <Rule>
+      <Key>S107</Key>
+      <Parameters><Parameter><Key>max</Key><Value>{{ cfg.max_params }}</Value></Parameter></Parameters>
+    </Rule>
+    <Rule>
+      <Key>S138</Key>
+      <Parameters><Parameter><Key>max</Key><Value>{{ cfg.max_function_lines }}</Value></Parameter></Parameters>
+    </Rule>
+    <Rule>
+      <Key>S1541</Key>
+      <Parameters><Parameter><Key>maximumFunctionComplexityThreshold</Key><Value>{{ cfg.max_complexity }}</Value></Parameter></Parameters>
+    </Rule>
+    <Rule>
+      <Key>S134</Key>
+      <Parameters><Parameter><Key>max</Key><Value>{{ cfg.max_depth }}</Value></Parameter></Parameters>
+    </Rule>
+    <Rule>
+      <Key>S104</Key>
+      <Parameters><Parameter><Key>maximumFileLocThreshold</Key><Value>{{ cfg.max_file_lines }}</Value></Parameter></Parameters>
+    </Rule>
+  </Rules>
+</AnalysisInput>

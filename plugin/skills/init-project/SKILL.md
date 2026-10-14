@@ -20,7 +20,10 @@ Usually the `onboard` skill runs this one, after it has asked the org and regist
 Ask in one go (use AskUserQuestion when available), skipping anything the user already said:
 
 - **org**: which org's rules apply. Default `${user_config.default_org}`.
-- **stack**: `typescript` or `python`.
+- **stack**: `typescript`, `python` or `dotnet`.
+- **architecture** (dotnet only): `simple` (one Web API project), `clean` (Domain, Application,
+  Infrastructure, Api) or `vertical-slice` (one folder per use case). Recommend `simple` for small
+  services; each architecture adds its own rules to `AGENTS.md`.
 - **project_name**: human-readable name.
 - **description**: one line (optional).
 - **ai_tools**: any of `claude`, `cursor`, `copilot` (AGENTS.md is always generated).
@@ -56,12 +59,13 @@ user's files.
 Run inside the project:
 
 1. `git init` (if not a repo yet).
-2. Install deps: `npm install` (typescript) or `uv sync` (python). Python projects need `uv` and
+2. Install deps: `npm install` (typescript), `uv sync` (python) or `dotnet restore` (dotnet, needs
+   the .NET 10 SDK). Python projects need `uv` and
    `make`; the Claude hooks block edits until `uv` is installed (Windows:
    `winget install astral-sh.uv`, `winget install ezwinports.make`).
 3. `pre-commit install --install-hooks -t pre-commit -t commit-msg` (install pre-commit with
    `uv tool install pre-commit` or `pipx install pre-commit` if missing).
-4. Run the full check: `npm run check` or `make check`. It must pass on a fresh scaffold. If it does
+4. Run the full check: `npm run check`, `make check` or `bash .ai-standards/check.sh`. It must pass on a fresh scaffold. If it does
    not, report the failure; do not edit managed files to make it pass.
 5. Offer the commit; committing is the user's call. Suggested message (Conventional Commits, which
    the commit-msg hook enforces): `chore: scaffold from ai-standards`.

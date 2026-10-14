@@ -38,6 +38,14 @@ repos:
         entry: npx --no-install eslint --fix --max-warnings=0
         language: system
         files: \.(ts|tsx|js|mjs|cjs)$
+{%- elif stack == "dotnet" %}
+  - repo: local
+    hooks:
+      - id: dotnet-format
+        name: dotnet format (whitespace)
+        entry: dotnet format whitespace --verify-no-changes --include
+        language: system
+        types_or: [c#]
 {%- else %}
   # The project's own ruff (from its lock file), so pre-commit, the edit hook and CI agree on rules.
   - repo: local

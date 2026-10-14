@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/{{ dotnet_name }}.Domain/{{ dotnet_name }}.Domain.csproj" />
+    <ProjectReference Include="../../src/{{ dotnet_name }}.Application/{{ dotnet_name }}.Application.csproj" />
+    <ProjectReference Include="../../src/{{ dotnet_name }}.Infrastructure/{{ dotnet_name }}.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/{{ dotnet_name }}.Api/{{ dotnet_name }}.Api.csproj" />
+    <PackageReference Include="NetArchTest.Rules" Version="1.3.2" />
+  </ItemGroup>
+</Project>

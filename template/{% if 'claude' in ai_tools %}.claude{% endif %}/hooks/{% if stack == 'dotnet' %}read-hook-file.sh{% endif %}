@@ -1,0 +1,23 @@
+# shellcheck shell=bash
+# Managed by ai-standards. Sourced by the .NET hooks; not run on its own.
+# Reads the hook's JSON from stdin and sets:
+#   project  the project directory, as a POSIX path
+#   rel      the edited file, relative to the project, with forward slashes
+# Exits 0 (nothing to check) when there is no file path, or the file is outside the project.
+# Plain bash and sed, so it needs neither jq nor another runtime (Git Bash on Windows has none).
+
+to_posix() { # <path>: C:\Users\... becomes /c/Users/... on Windows; unchanged elsewhere
+  if command -v cygpath >/dev/null 2>&1; then cygpath -u "$1"; else printf '%s\n' "$1"; fi
+}
+
+hook_json="$(cat)"
+raw_path="$(sed -nE 's/.*"file_path"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' <<<"$hook_json" | head -n 1)"
+raw_path="${raw_path//\\\\/\\}" # JSON escapes: \\ is one backslash
+raw_path="${raw_path//\\\"/\"}" #               \" is a quote
+[[ -n "$raw_path" ]] || exit 0
+
+project="$(to_posix "${CLAUDE_PROJECT_DIR:-$PWD}")"
+file="$(to_posix "$raw_path")"
+[[ "$file" == /* ]] || file="$project/$file"
+rel="${file#"$project"/}"
+[[ "$rel" != "$file" ]] || exit 0

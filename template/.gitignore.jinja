@@ -11,6 +11,12 @@
 node_modules/
 dist/
 coverage/
+{%- elif stack == "dotnet" %}
+bin/
+obj/
+TestResults/
+.vs/
+*.user
 {%- else %}
 .venv/
 __pycache__/

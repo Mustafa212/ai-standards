@@ -1,0 +1,10 @@
+using {{ dotnet_name }}.Features.Greetings.BuildGreeting;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddBuildGreeting();
+
+WebApplication app = builder.Build();
+app.MapBuildGreeting();
+
+await app.RunAsync();

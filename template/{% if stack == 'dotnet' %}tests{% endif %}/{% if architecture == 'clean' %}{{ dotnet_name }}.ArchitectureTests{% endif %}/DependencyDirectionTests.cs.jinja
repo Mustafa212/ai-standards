@@ -1,0 +1,33 @@
+// Managed by ai-standards: this test is how CLEAN-1 is enforced. Propose changes upstream.
+using System.Reflection;
+using NetArchTest.Rules;
+
+namespace {{ dotnet_name }}.ArchitectureTests;
+
+/// <summary>CLEAN-1: dependencies point inward, from Api and Infrastructure to Application to Domain.</summary>
+public sealed class DependencyDirectionTests
+{
+    private const string Domain = "{{ dotnet_name }}.Domain";
+    private const string Application = "{{ dotnet_name }}.Application";
+    private const string Infrastructure = "{{ dotnet_name }}.Infrastructure";
+    private const string Api = "{{ dotnet_name }}.Api";
+
+    [Fact]
+    public void Domain_DependsOnNoOtherLayer() => AssertNoDependency(Domain, Application, Infrastructure, Api);
+
+    [Fact]
+    public void Application_DependsOnlyOnDomain() => AssertNoDependency(Application, Infrastructure, Api);
+
+    [Fact]
+    public void Infrastructure_DoesNotDependOnTheApi() => AssertNoDependency(Infrastructure, Api);
+
+    private static void AssertNoDependency(string layer, params string[] forbidden)
+    {
+        NetArchTest.Rules.TestResult result = Types.InAssembly(Assembly.Load(layer))
+            .ShouldNot()
+            .HaveDependencyOnAny(forbidden)
+            .GetResult();
+        string offenders = string.Join(", ", result.FailingTypeNames ?? []);
+        Assert.True(result.IsSuccessful, $"{layer} must not depend on {string.Join(", ", forbidden)}: {offenders}");
+    }
+}

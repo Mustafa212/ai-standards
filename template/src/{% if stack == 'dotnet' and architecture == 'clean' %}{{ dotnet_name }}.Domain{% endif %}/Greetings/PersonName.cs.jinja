@@ -1,0 +1,19 @@
+namespace {{ dotnet_name }}.Domain.Greetings;
+
+/// <summary>A person's name as it is greeted: trimmed, and "world" when blank.</summary>
+public sealed record PersonName
+{
+    private const string DefaultName = "world";
+
+    private PersonName(string value) => Value = value;
+
+    /// <summary>The trimmed name; never blank.</summary>
+    public string Value { get; }
+
+    /// <summary>Creates a name from user input; blank input becomes "world".</summary>
+    public static PersonName From(string input)
+    {
+        string trimmed = input.Trim();
+        return new PersonName(trimmed.Length == 0 ? DefaultName : trimmed);
+    }
+}

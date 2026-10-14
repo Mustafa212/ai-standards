@@ -20,6 +20,8 @@ _skip_if_exists:
   # lives in managed files instead (.ai-standards/run.mjs, Makefile, tool configs).
   - package.json
   - pyproject.toml
+  - "**/*.csproj"
+  - "*.slnx"
 # CLAUDE.md is the project's own file; the only thing guaranteed in it is the @AGENTS.md import.
 _tasks:
   - command:
@@ -32,8 +34,8 @@ _message_after_copy: |
 
   Next:
     1. git init && pre-commit install --install-hooks -t pre-commit -t commit-msg
-    2. {% if stack == "typescript" %}npm install{% else %}uv sync{% endif %}
-    3. {% if stack == "typescript" %}npm run check{% else %}make check{% endif %}
+    2. {% if stack == "typescript" %}npm install{% elif stack == "dotnet" %}dotnet restore{% else %}uv sync{% endif %}
+    3. {% if stack == "typescript" %}npm run check{% elif stack == "dotnet" %}bash .ai-standards/check.sh{% else %}make check{% endif %}
 
 stack:
   type: str
@@ -41,7 +43,18 @@ stack:
   choices:
     TypeScript (Node): typescript
     Python: python
+    .NET (C#): dotnet
   default: typescript
+
+architecture:
+  type: str
+  help: Architecture (each one has its own rules in AGENTS.md)
+  choices:
+    "Simple: one Web API project + tests": simple
+    "Clean Architecture: Domain, Application, Infrastructure, Api": clean
+    "Vertical slices: one folder per use case": vertical-slice
+  default: simple
+  when: "{{ stack == 'dotnet' }}"
 
 project_name:
   type: str
@@ -53,6 +66,13 @@ project_slug:
   help: Repo / package slug
   default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') }}"
   validator: "{% if not (project_slug | regex_search('^[a-z][a-z0-9-]*$')) %}Use lowercase letters, digits and dashes{% endif %}"
+
+dotnet_name:
+  type: str
+  help: .NET solution and root namespace (PascalCase)
+  default: "{{ project_name | title | replace(' ', '') | replace('-', '') | replace('_', '') }}"
+  validator: "{% if not (dotnet_name | regex_search('^[A-Z][A-Za-z0-9]*$')) %}Use PascalCase letters and digits{% endif %}"
+  when: "{{ stack == 'dotnet' }}"
 
 package_name:
   type: str
