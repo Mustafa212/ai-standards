@@ -11,6 +11,26 @@ Each entry names the rule ID, the layer (base / stack / org) and the enforcement
 
 ## Unreleased
 
+## 0.7.0
+
+New stacks for new projects (adopting existing ones comes later): **Angular** and **Flutter**.
+
+- **Angular 22** (`stack=angular`): standalone components, signals, `inject()` and feature folders, as
+  in the Angular style guide. `AGENTS.md` holds the TypeScript rules (TS-3 and TS-5 have Angular
+  wording) plus **NG-1..NG-10**. ESLint shares its TypeScript rules with the typescript stack
+  (`partials/eslint-typescript-rules.jinja`) and adds angular-eslint, template rules included.
+  `ng build` (with `strictTemplates`) is the type check; `ng test` runs Vitest with the coverage
+  threshold (`vitest-base.config.mts`). Angular 22 made OnPush the default, so **NG-1** now forbids
+  opting out (`ChangeDetectionStrategy.Eager`).
+- **Flutter 3.47 / Dart 3.13** (`stack=flutter`): MVVM as in the Flutter architecture guide (views,
+  view models, services), with a fake clock in the tests. **DART-1..DART-10**; `very_good_analysis`
+  plus `public_member_api_docs` (RDB-8), `avoid_positional_boolean_parameters` (RDB-9),
+  `no_default_cases` (DES-7). Lines are 100 columns (`formatter.page_width`). `check.sh` runs format,
+  `flutter analyze --fatal-infos`, the file-length check (RDB-2) and `flutter test` with the coverage
+  threshold. RDB-1 and RDB-4 have no free Dart analyzer rule, so they read `[review]` for Flutter.
+- Both stacks: Claude hooks (Node for Angular, bash for Flutter), CI jobs, pre-commit, managed files,
+  violation tests for every `[tool]` rule, and a CI matrix entry.
+
 ## 0.6.0
 
 New stack: **.NET (C#)** for new projects. Adopting existing .NET projects comes in 0.7.0.
