@@ -1,0 +1,21 @@
+{% import "config/settings.jinja" as cfg with context -%}
+// Managed by ai-standards. TST-1: coverage threshold. `ng test` loads this file (runnerConfig).
+import { defineConfig } from "vitest/config";
+
+const coverageThreshold = {{ cfg.coverage }};
+
+export default defineConfig({
+  test: {
+    coverage: {
+      enabled: true,
+      provider: "v8",
+      // Which files count is up to the Angular builder (it already leaves out the specs).
+      thresholds: {
+        lines: coverageThreshold,
+        functions: coverageThreshold,
+        branches: coverageThreshold,
+        statements: coverageThreshold,
+      },
+    },
+  },
+});

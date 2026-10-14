@@ -1,4 +1,5 @@
 dist
+.angular
 coverage
 package-lock.json
 .copier-answers.yml

@@ -11,6 +11,18 @@
 node_modules/
 dist/
 coverage/
+{%- elif stack == "angular" %}
+node_modules/
+dist/
+coverage/
+.angular/
+{%- elif stack == "flutter" %}
+.dart_tool/
+build/
+coverage/
+.flutter-plugins-dependencies
+*.iml
+.idea/
 {%- elif stack == "dotnet" %}
 bin/
 obj/

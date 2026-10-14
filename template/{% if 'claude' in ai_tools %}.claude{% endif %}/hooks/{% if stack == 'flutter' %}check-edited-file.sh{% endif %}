@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2154  # $project and $rel come from read-hook-file.sh
+# Managed by ai-standards.
+# Runs after every AI edit of a Dart file and formats it with `dart format` (fast). Lint, type and
+# doc-comment findings come from `flutter analyze` in .ai-standards/check.sh (DONE-1).
+set -uo pipefail
+
+# shellcheck source=/dev/null  # sets $project and $rel
+. "$(dirname "${BASH_SOURCE[0]}")/read-hook-file.sh"
+
+case "$rel" in
+  build/* | .dart_tool/* | .ai-session/*) exit 0 ;;
+  *.dart) ;;
+  *) exit 0 ;;
+esac
+
+cd "$project" && dart format "$rel" >/dev/null 2>&1
+exit 0

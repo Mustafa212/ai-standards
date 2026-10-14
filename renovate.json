@@ -36,6 +36,17 @@
     },
     {
       "customType": "regex",
+      "description": "Dart packages in the Flutter template (pubspec.yaml)",
+      "managerFilePatterns": [
+        "/^template/.*pubspec\\.yaml(\\{%[^/]*%\\})?\\.jinja$/"
+      ],
+      "matchStrings": [
+        "\n  (?<depName>very_good_analysis): \\^(?<currentValue>[0-9][0-9.]*)"
+      ],
+      "datasourceTemplate": "dart"
+    },
+    {
+      "customType": "regex",
       "description": "pre-commit hook revisions inside the template",
       "managerFilePatterns": [
         "/^template/\\.pre-commit-config\\.yaml\\.jinja$/"

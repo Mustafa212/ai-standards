@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stack: [typescript, python, dotnet]
+        stack: [typescript, angular, python, dotnet, flutter]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,6 +29,10 @@ jobs:
         if: matrix.stack == 'dotnet'
         with:
           dotnet-version: "10.0.x"
+      - uses: subosito/flutter-action@v2
+        if: matrix.stack == 'flutter'
+        with:
+          channel: stable
       - run: uv tool install copier
       - run: bash scripts/test-templates.sh
         env:

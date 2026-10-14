@@ -20,7 +20,7 @@ Usually the `onboard` skill runs this one, after it has asked the org and regist
 Ask in one go (use AskUserQuestion when available), skipping anything the user already said:
 
 - **org**: which org's rules apply. Default `${user_config.default_org}`.
-- **stack**: `typescript`, `python` or `dotnet`.
+- **stack**: `typescript`, `angular`, `python`, `dotnet` or `flutter`.
 - **architecture** (dotnet only): `simple` (one Web API project), `clean` (Domain, Application,
   Infrastructure, Api) or `vertical-slice` (one folder per use case). Recommend `simple` for small
   services; each architecture adds its own rules to `AGENTS.md`.
@@ -59,13 +59,16 @@ user's files.
 Run inside the project:
 
 1. `git init` (if not a repo yet).
-2. Install deps: `npm install` (typescript), `uv sync` (python) or `dotnet restore` (dotnet, needs
-   the .NET 10 SDK). Python projects need `uv` and
+2. Install deps: `npm install` (typescript, angular), `uv sync` (python), `dotnet restore` (dotnet,
+   needs the .NET 10 SDK) or `flutter pub get` (flutter). A Flutter scaffold has no platform folders
+   yet: `flutter create . --project-name <package>` adds them (android, ios, web…) without touching
+   `lib/`. Python projects need `uv` and
    `make`; the Claude hooks block edits until `uv` is installed (Windows:
    `winget install astral-sh.uv`, `winget install ezwinports.make`).
 3. `pre-commit install --install-hooks -t pre-commit -t commit-msg` (install pre-commit with
    `uv tool install pre-commit` or `pipx install pre-commit` if missing).
-4. Run the full check: `npm run check`, `make check` or `bash .ai-standards/check.sh`. It must pass on a fresh scaffold. If it does
+4. Run the full check: `npm run check` (typescript, angular), `make check` (python) or
+   `bash .ai-standards/check.sh` (dotnet, flutter). It must pass on a fresh scaffold. If it does
    not, report the failure; do not edit managed files to make it pass.
 5. Offer the commit; committing is the user's call. Suggested message (Conventional Commits, which
    the commit-msg hook enforces): `chore: scaffold from ai-standards`.

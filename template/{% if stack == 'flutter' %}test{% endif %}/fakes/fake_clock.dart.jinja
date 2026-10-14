@@ -1,0 +1,13 @@
+import 'package:{{ package_name }}/data/services/clock.dart';
+
+/// A clock stopped at [moment], so tests never depend on the real time (TST-4).
+class FakeClock implements Clock {
+  /// Creates a clock that always says [moment].
+  new(this.moment);
+
+  /// The time this clock always returns.
+  final DateTime moment;
+
+  @override
+  DateTime now() => moment;
+}

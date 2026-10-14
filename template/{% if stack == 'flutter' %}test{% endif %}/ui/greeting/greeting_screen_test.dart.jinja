@@ -1,0 +1,16 @@
+{% for uri in ["package:flutter/material.dart", "package:flutter_test/flutter_test.dart", "package:" ~ package_name ~ "/ui/greeting/view_models/greeting_view_model.dart", "package:" ~ package_name ~ "/ui/greeting/widgets/greeting_screen.dart"] | sort -%}
+import '{{ uri }}';
+{% endfor %}
+import '../../fakes/fake_clock.dart';
+
+void main() {
+  testWidgets('greets the name the user types', (tester) async {
+    final viewModel = GreetingViewModel(clock: FakeClock(DateTime(2026, 1, 1, 15)));
+    await tester.pumpWidget(MaterialApp(home: GreetingScreen(viewModel: viewModel)));
+
+    await tester.enterText(find.byKey(const Key('name')), 'Mostafa');
+    await tester.pump();
+
+    expect(find.text('Hello, Mostafa!'), findsOneWidget);
+  });
+}

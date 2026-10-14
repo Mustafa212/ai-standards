@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Managed by ai-standards. Sourced by the .NET hooks; not run on its own.
+# Managed by ai-standards. Sourced by the bash hooks (.NET, Flutter); not run on its own.
 # Reads the hook's JSON from stdin and sets:
 #   project  the project directory, as a POSIX path
 #   rel      the edited file, relative to the project, with forward slashes

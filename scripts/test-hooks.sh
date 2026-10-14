@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Exercises the Claude Code hooks of a generated, installed project.
-# Usage: scripts/test-hooks.sh <project dir> <typescript|python|dotnet>
+# Usage: scripts/test-hooks.sh <project dir> <typescript|angular|python|dotnet|flutter>
 # Prints FAIL lines and exits non-zero on any failure.
 set -uo pipefail
 
@@ -10,10 +10,10 @@ failures=0
 fail() { printf '\033[31mFAIL: hooks/%s: %s\033[0m\n' "$stack" "$*"; failures=$((failures + 1)); }
 
 # shellcheck disable=SC2034  # check/protect are read through the nameref in hook()
-if [[ "$stack" == dotnet ]]; then
+if [[ "$stack" == dotnet || "$stack" == flutter ]]; then
   check=(bash .claude/hooks/check-edited-file.sh)
   protect=(bash .claude/hooks/protect-managed-files.sh)
-elif [[ "$stack" == typescript ]]; then
+elif [[ "$stack" == typescript || "$stack" == angular ]]; then
   check=(node .claude/hooks/check-edited-file.mjs)
   protect=(node .claude/hooks/protect-managed-files.mjs)
   ext=ts
@@ -33,6 +33,7 @@ else
 fi
 code_dir="src"
 [[ "$stack" == dotnet ]] && code_dir="$(dirname "$(cd "$dir" && find src -name '*.csproj' | head -n 1)")"
+[[ "$stack" == flutter ]] && code_dir="lib"
 [[ "$stack" == python ]] && code_dir="src/$(basename "$(find "$dir/src" -mindepth 1 -maxdepth 1 -type d | head -n 1)")"
 
 # shellcheck disable=SC2034  # check/protect are used through the nameref in hook()
@@ -44,37 +45,39 @@ hook() { # <hook command array name> <relative file> -> sets $hook_exit and $hoo
   hook_exit=$?
 }
 
-# .NET: the edit hook only formats (analyzers run in the build), and both hooks are plain bash.
-if [[ "$stack" == dotnet ]]; then
-  hook protect "Directory.Build.props"
-  [[ $hook_exit == 2 ]] || fail "edit to managed Directory.Build.props not blocked"
+# .NET and Flutter: the edit hook only formats (the analyzers run in check.sh), and both hooks
+# are plain bash.
+if [[ "$stack" == dotnet || "$stack" == flutter ]]; then
+  if [[ "$stack" == dotnet ]]; then
+    managed="Directory.Build.props" source="$code_dir/Program.cs" ext=cs
+    unformatted='namespace Demo;\npublic static class Spacing\n{\n        public static int One()   =>   1;\n}\n'
+  else
+    managed="analysis_options.yaml" source="$code_dir/main.dart" ext=dart
+    unformatted='int    one( )   =>   1 ;\n'
+  fi
+  hook protect "$managed"
+  [[ $hook_exit == 2 ]] || fail "edit to managed $managed not blocked"
   hook protect "CLAUDE.md"
   [[ $hook_exit == 0 ]] || fail "edit to project-owned CLAUDE.md was blocked: $hook_err"
-  hook protect "$code_dir/Program.cs"
+  hook protect "$source"
   [[ $hook_exit == 0 ]] || fail "edit to source file was blocked: $hook_err"
   # A relative path, as some tools send it, is matched the same way.
-  relative_err="$(cd "$dir" && printf '{"tool_input":{"file_path":"global.json"}}' |
+  relative_err="$(cd "$dir" && printf '{"tool_input":{"file_path":".ai-standards/check.sh"}}' |
     CLAUDE_PROJECT_DIR="$dir" bash .claude/hooks/protect-managed-files.sh 2>&1)"
-  grep -q 'Blocked' <<<"$relative_err" || fail "relative path to managed global.json not blocked"
+  grep -q 'Blocked' <<<"$relative_err" || fail "relative path to managed .ai-standards/check.sh not blocked"
 
-  unformatted='namespace Demo;
-public static class Spacing
-{
-        public static int One()   =>   1;
-}
-'
-  printf '%b' "$unformatted" >"$dir/$code_dir/Spacing.cs"
-  cp "$dir/$code_dir/Spacing.cs" "$dir/unformatted.cs.txt"
-  hook check "$code_dir/Spacing.cs"
+  printf '%b' "$unformatted" >"$dir/$code_dir/spacing.$ext"
+  cp "$dir/$code_dir/spacing.$ext" "$dir/unformatted.txt"
+  hook check "$code_dir/spacing.$ext"
   [[ $hook_exit == 0 ]] || fail "check hook failed (exit $hook_exit): $hook_err"
-  cmp -s "$dir/$code_dir/Spacing.cs" "$dir/unformatted.cs.txt" && fail "edited C# file was not formatted"
+  cmp -s "$dir/$code_dir/spacing.$ext" "$dir/unformatted.txt" && fail "edited .$ext file was not formatted"
 
   mkdir -p "$dir/.ai-session"
-  printf '%b' "$unformatted" >"$dir/.ai-session/Scratch.cs"
-  hook check ".ai-session/Scratch.cs"
-  cmp -s "$dir/.ai-session/Scratch.cs" "$dir/unformatted.cs.txt" || fail ".ai-session file was formatted"
+  printf '%b' "$unformatted" >"$dir/.ai-session/scratch.$ext"
+  hook check ".ai-session/scratch.$ext"
+  cmp -s "$dir/.ai-session/scratch.$ext" "$dir/unformatted.txt" || fail ".ai-session file was formatted"
 
-  rm -rf "$dir/.ai-session" "$dir/$code_dir/Spacing.cs" "$dir/unformatted.cs.txt"
+  rm -rf "$dir/.ai-session" "$dir/$code_dir/spacing.$ext" "$dir/unformatted.txt"
   exit $((failures > 0))
 fi
 
@@ -108,7 +111,7 @@ printf '%s\n' "$new_line" >"$dir/.ai-session/tests/scratch.$ext"
 hook check ".ai-session/tests/scratch.$ext"
 [[ $hook_exit == 0 ]] || fail ".ai-session file was linted: $hook_err"
 
-if [[ "$stack" == typescript ]]; then managed="eslint.config.mjs"; else managed="ruff.toml"; fi
+if [[ "$stack" == typescript || "$stack" == angular ]]; then managed="eslint.config.mjs"; else managed="ruff.toml"; fi
 hook protect "$managed"
 [[ $hook_exit == 2 ]] || fail "edit to managed $managed not blocked"
 hook protect "CLAUDE.md"

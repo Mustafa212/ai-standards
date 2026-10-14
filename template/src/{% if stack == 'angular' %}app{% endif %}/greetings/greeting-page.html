@@ -1,0 +1,3 @@
+<label for="name">Your name</label>
+<input id="name" data-testid="name" [value]="name()" (input)="updateName($event)" />
+<p data-testid="greeting">{{ greeting() }}</p>

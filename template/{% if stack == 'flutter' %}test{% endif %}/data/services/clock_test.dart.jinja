@@ -1,0 +1,10 @@
+{% for uri in ["package:flutter_test/flutter_test.dart", "package:" ~ package_name ~ "/data/services/clock.dart"] | sort -%}
+import '{{ uri }}';
+{% endfor %}
+void main() {
+  test('the system clock tells the current time', () {
+    final before = DateTime.now();
+
+    expect(SystemClock().now().isBefore(before), isFalse);
+  });
+}

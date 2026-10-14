@@ -23,4 +23,4 @@
 {%- set banned_ts = o.banned_ts | default(d.banned_ts) -%}
 {%- set banned_py = o.banned_py | default(d.banned_py) -%}
 {%- set banned_cs = o.banned_cs | default(d.banned_cs) -%}
-{%- set check_cmd = {"typescript": "npm run check", "python": "make check", "dotnet": "bash .ai-standards/check.sh"}[stack] -%}
+{%- set check_cmd = {"typescript": "npm run check", "angular": "npm run check", "python": "make check", "dotnet": "bash .ai-standards/check.sh", "flutter": "bash .ai-standards/check.sh"}[stack] -%}

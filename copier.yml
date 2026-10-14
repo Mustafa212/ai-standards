@@ -19,6 +19,8 @@ _skip_if_exists:
   # can't collide with what the project added. Anything that changes between standards versions
   # lives in managed files instead (.ai-standards/run.mjs, Makefile, tool configs).
   - package.json
+  - angular.json
+  - pubspec.yaml
   - pyproject.toml
   - "**/*.csproj"
   - "*.slnx"
@@ -34,16 +36,18 @@ _message_after_copy: |
 
   Next:
     1. git init && pre-commit install --install-hooks -t pre-commit -t commit-msg
-    2. {% if stack == "typescript" %}npm install{% elif stack == "dotnet" %}dotnet restore{% else %}uv sync{% endif %}
-    3. {% if stack == "typescript" %}npm run check{% elif stack == "dotnet" %}bash .ai-standards/check.sh{% else %}make check{% endif %}
+    2. {% if stack in ["typescript", "angular"] %}npm install{% elif stack == "dotnet" %}dotnet restore{% elif stack == "flutter" %}flutter pub get{% else %}uv sync{% endif %}
+    3. {% if stack in ["typescript", "angular"] %}npm run check{% elif stack in ["dotnet", "flutter"] %}bash .ai-standards/check.sh{% else %}make check{% endif %}
 
 stack:
   type: str
   help: Tech stack
   choices:
     TypeScript (Node): typescript
+    Angular: angular
     Python: python
     .NET (C#): dotnet
+    Flutter: flutter
   default: typescript
 
 architecture:
@@ -76,9 +80,9 @@ dotnet_name:
 
 package_name:
   type: str
-  help: Python import name
+  help: Python or Dart package name
   default: "{{ project_slug | replace('-', '_') }}"
-  when: "{{ stack == 'python' }}"
+  when: "{{ stack in ['python', 'flutter'] }}"
 
 description:
   type: str

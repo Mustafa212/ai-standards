@@ -1,0 +1,72 @@
+{#- The TypeScript rules (TS-*, RDB-*, SUP-1), shared by the typescript and angular ESLint configs. -#}
+{# The import outputs nothing, so the first rule keeps its indentation. -#}
+{% import "config/settings.jinja" as cfg with context %}      // RDB-1 / RDB-2: size and complexity limits
+      complexity: ["error", {{ cfg.max_complexity }}],
+      "max-depth": ["error", {{ cfg.max_depth }}],
+      "max-params": ["error", {{ cfg.max_params }}],
+      "max-lines-per-function": ["error", { max: {{ cfg.max_function_lines }}, skipBlankLines: true, skipComments: true }],
+      "max-lines": ["error", { max: {{ cfg.max_file_lines }}, skipBlankLines: true, skipComments: true }],
+      "no-nested-ternary": "error",
+      "no-else-return": ["error", { allowElseIf: false }],
+      // RDB-8: exported functions and classes say what they are for
+      "jsdoc/require-jsdoc": [
+        "error",
+        {
+          publicOnly: true,
+          require: {
+            FunctionDeclaration: true,
+            ClassDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true,
+          },
+        },
+      ],
+      "jsdoc/require-description": "error",
+      // TS-6: no unclear one-letter names (loop counters and coordinates excepted)
+      "id-length": [
+        "error",
+        { min: 2, exceptions: ["i", "j", "k", "x", "y", "_"], properties: "never" },
+      ],
+      // RDB-4: no magic numbers
+      "@typescript-eslint/no-magic-numbers": [
+        "error",
+        {
+          ignore: [-1, 0, 1, 2],
+          ignoreEnums: true,
+          ignoreNumericLiteralTypes: true,
+          ignoreReadonlyClassProperties: true,
+          ignoreTypeIndexes: true,
+        },
+      ],
+      // RDB-3: naming
+      "@typescript-eslint/naming-convention": [
+        "error",
+        { selector: "default", format: ["camelCase"], leadingUnderscore: "allow" },
+        { selector: "variable", format: ["camelCase", "UPPER_CASE", "PascalCase"] },
+        { selector: "typeLike", format: ["PascalCase"] },
+        { selector: "enumMember", format: ["PascalCase", "UPPER_CASE"] },
+        { selector: "objectLiteralProperty", format: null },
+        { selector: "import", format: null },
+      ],
+      // TS-2: correctness
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/explicit-module-boundary-types": "error",
+      eqeqeq: ["error", "always"],
+      "no-console": ["error", { allow: ["warn", "error"] }],
+      // SUP-1: suppressions must be specific and explained
+      "@eslint-community/eslint-comments/require-description": "error",
+      "@eslint-community/eslint-comments/no-unlimited-disable": "error",
+{%- if cfg.banned_ts %}
+      // Org rule: banned imports
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+{%- for name, message in cfg.banned_ts.items() %}
+            { name: "{{ name }}", message: "{{ message }}" },
+{%- endfor %}
+          ],
+        },
+      ],
+{%- endif -%}

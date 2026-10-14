@@ -7,7 +7,7 @@ readable, typed, tested and secure. Rules are **enforced by tools**, not by memo
 ```
           base rules            (everyone)
               ▼
-   stack: typescript │ python │ dotnet   (per technology)
+   stack: typescript │ angular │ python │ dotnet │ flutter   (per technology)
               ▼
    architecture: simple │ clean │ vertical-slice   (.NET; each has its own rules)
               ▼
@@ -23,10 +23,10 @@ clear names, and a doc comment on every exported function and class (enforced by
 
 | Layer | What enforces it |
 | --- | --- |
-| Formatting | Prettier / Ruff format / `dotnet format` |
-| Readability limits (function size, complexity, params, nesting, file size, magic numbers, naming) | ESLint / Ruff / Roslyn analyzers + SonarAnalyzer, thresholds from base or org |
-| Types | TypeScript `strict` + type-checked lint / mypy `--strict` / C# nullable, warnings as errors |
-| Tests | Vitest / pytest / xUnit with a coverage threshold |
+| Formatting | Prettier / Ruff format / `dotnet format` / `dart format` |
+| Readability limits (function size, complexity, params, nesting, file size, magic numbers, naming) | ESLint (+ angular-eslint) / Ruff / Roslyn analyzers + SonarAnalyzer / `very_good_analysis`, thresholds from base or org |
+| Types | TypeScript `strict` + type-checked lint (+ Angular `strictTemplates`) / mypy `--strict` / C# nullable, warnings as errors / Dart strict analyzer |
+| Tests | Vitest / pytest / xUnit / `flutter test` with a coverage threshold |
 | Architecture (.NET) | Architecture tests (NetArchTest): Clean Architecture's dependency direction, no slice reaching into another feature |
 | Secrets, commit format | pre-commit (gitleaks, Conventional Commits) |
 | The gate | GitHub Actions CI running the same `check` command |
@@ -47,7 +47,7 @@ clear names, and a doc comment on every exported function and class (enforced by
 ### 2. Install the plugin (once per machine)
 
 Prerequisites: `git` and Node 22 (TypeScript stack); `uv` and `make` (Python stack); the .NET 10
-SDK (.NET stack). On Windows:
+SDK (.NET stack); the Flutter SDK (Flutter stack). On Windows:
 `winget install astral-sh.uv` and `winget install ezwinports.make`. Without `uv`, the Claude hooks of a
 Python project block edits and say why, instead of silently not checking anything.
 

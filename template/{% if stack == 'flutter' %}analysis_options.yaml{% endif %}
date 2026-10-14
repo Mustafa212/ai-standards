@@ -1,0 +1,37 @@
+# Managed by ai-standards. Do not edit: propose changes upstream. Rule IDs refer to AGENTS.md.
+# DART-1: the strict analyzer set from Very Good Ventures, plus the rules below.
+include: package:very_good_analysis/analysis_options.yaml
+
+# RDB-6: the same 100-column lines as the other stacks.
+formatter:
+  page_width: 100
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  exclude:
+    - build/**
+    - .dart_tool/**
+    - .ai-session/**
+    - android/**
+    - ios/**
+    - web/**
+    - linux/**
+    - macos/**
+    - windows/**
+
+linter:
+  rules:
+    lines_longer_than_80_chars: false # RDB-6: lines are 100 columns, set by the formatter above
+    public_member_api_docs: true # RDB-8: public classes and members say what they are for
+    avoid_positional_boolean_parameters: true # RDB-9: no boolean flag arguments
+    avoid_dynamic_calls: true # DART-1
+    unawaited_futures: true # DART-2
+    discarded_futures: true # DART-2
+    avoid_print: true # DART-2
+    prefer_const_constructors: true # DART-3
+    use_build_context_synchronously: true # DART-3
+    exhaustive_cases: true # DART-4, DES-7
+    no_default_cases: true # DART-4, DES-7

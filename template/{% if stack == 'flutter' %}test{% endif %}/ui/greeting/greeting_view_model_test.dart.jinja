@@ -1,0 +1,27 @@
+{% for uri in ["package:flutter_test/flutter_test.dart", "package:" ~ package_name ~ "/ui/greeting/view_models/greeting_view_model.dart"] | sort -%}
+import '{{ uri }}';
+{% endfor %}
+import '../../fakes/fake_clock.dart';
+
+void main() {
+  final morning = DateTime(2026, 1, 1, 9);
+  final afternoon = DateTime(2026, 1, 1, 15);
+
+  test('says good morning before noon', () {
+    final viewModel = GreetingViewModel(clock: FakeClock(morning))..updateName('Mostafa');
+
+    expect(viewModel.greeting, 'Good morning, Mostafa!');
+  });
+
+  test('says hello from noon on', () {
+    final viewModel = GreetingViewModel(clock: FakeClock(afternoon))..updateName('Mostafa');
+
+    expect(viewModel.greeting, 'Hello, Mostafa!');
+  });
+
+  test('greets the world when the name is blank', () {
+    final viewModel = GreetingViewModel(clock: FakeClock(afternoon))..updateName('   ');
+
+    expect(viewModel.greeting, 'Hello, world!');
+  });
+}

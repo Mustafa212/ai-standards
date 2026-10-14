@@ -1,0 +1,33 @@
+{% for uri in ["package:flutter/material.dart", "package:" ~ package_name ~ "/ui/greeting/view_models/greeting_view_model.dart"] | sort -%}
+import '{{ uri }}';
+{% endfor %}
+/// Asks for a name and greets it. Holds no logic: it shows [viewModel] and forwards input to it.
+class GreetingScreen extends StatelessWidget {
+  /// Creates the screen for [viewModel].
+  const new({required this.viewModel, super.key});
+
+  /// The state this screen shows.
+  final GreetingViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsetsDirectional.all(16),
+        child: Column(
+          children: [
+            TextField(
+              key: const Key('name'),
+              decoration: const InputDecoration(labelText: 'Your name'),
+              onChanged: viewModel.updateName,
+            ),
+            ListenableBuilder(
+              listenable: viewModel,
+              builder: (context, _) => Text(viewModel.greeting, key: const Key('greeting')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
