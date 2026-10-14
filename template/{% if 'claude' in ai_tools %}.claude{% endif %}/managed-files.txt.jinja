@@ -17,6 +17,15 @@ tsconfig.build.json
 vitest.config.ts
 .prettierrc.json
 eslint-suppressions.json
+{%- elif stack == "angular" %}
+.ai-standards/*
+eslint.config.mjs
+tsconfig.json
+tsconfig.app.json
+tsconfig.spec.json
+vitest-base.config.mts
+.prettierrc.json
+eslint-suppressions.json
 {%- elif stack == "python" %}
 Makefile
 ruff.toml
@@ -27,4 +36,7 @@ pytest.ini
 Directory.Build.props
 global.json
 tests/*.ArchitectureTests/*
+{%- elif stack == "flutter" %}
+.ai-standards/*
+analysis_options.yaml
 {%- endif %}

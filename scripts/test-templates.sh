@@ -39,9 +39,12 @@ printf '## Project: fixture
 
 lint_rule_ids() { # <stack> <project dir> <file> -> one fired rule id per line
   local stack="$1" dir="$2" file="$3"
-  if [[ "$stack" == typescript ]]; then
+  if [[ "$stack" == typescript || "$stack" == angular ]]; then
     (cd "$dir" && { npx --no-install eslint --format json "$file" || true; }) |
       jq -r '.[].messages[].ruleId // empty'
+  elif [[ "$stack" == flutter ]]; then
+    # One line per finding: SEVERITY|TYPE|CODE|file|...; the code is the lint name in capitals.
+    (cd "$dir" && { dart analyze --format=machine 2>&1 || true; }) | awk -F'|' 'NF > 3 { print tolower($3) }'
   elif [[ "$stack" == dotnet ]]; then
     # Analyzers, code style and Sonar all report through the build; warnings are errors.
     (cd "$dir" && { dotnet build --nologo 2>&1 || true; }) |
@@ -55,8 +58,10 @@ check_violations() { # <stack> <org> <project dir> <dest folder for violation fi
   local stack="$1" org="$2" dir="$3" dest="$4" file expected fired rule
   local -a files=()
   shopt -s nullglob
-  files+=("$work/src/tests/violations/$stack"/*.{ts,py,cs})
-  files+=("$work/src/tests/violations/$stack/$org"/*.{ts,py,cs})
+  files+=("$work/src/tests/violations/$stack"/*.{ts,py,cs,dart})
+  # Angular projects are TypeScript projects too: every TypeScript rule must fire there as well.
+  [[ "$stack" == angular ]] && files+=("$work/src/tests/violations/typescript"/*.ts)
+  files+=("$work/src/tests/violations/$stack/$org"/*.{ts,py,cs,dart})
   shopt -u nullglob
   for file in "${files[@]}"; do
     cp "$file" "$dest/"
@@ -116,7 +121,8 @@ for stack in $stacks; do
       "$work/src" "$dir"
 
     # shellcheck disable=SC2016  # literal ${{ is GitHub Actions syntax, allowed in workflows
-    if leftovers="$(grep -rn --exclude-dir=node_modules -e '{%' -e '{{' "$dir" | grep -v '\${{')"; then
+    # Angular templates (*.html) use {{ }} themselves, so they are left out.
+    if leftovers="$(grep -rn --exclude-dir=node_modules --exclude='*.html' -e '{%' -e '{{' "$dir" | grep -v '\${{')"; then
       fail "$name: unrendered template syntax"; echo "$leftovers"
     fi
 
@@ -125,6 +131,16 @@ for stack in $stacks; do
       (cd "$dir" && npm install --no-audit --no-fund --silent)
       (cd "$dir" && npm run --silent check) || fail "$name: npm run check"
       check_violations "$stack" "$org" "$dir" "$dir/src"
+      bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
+    elif [[ "$stack" == angular ]]; then
+      (cd "$dir" && npm install --no-audit --no-fund --silent)
+      (cd "$dir" && npm run --silent check) || fail "$name: npm run check"
+      check_violations "$stack" "$org" "$dir" "$dir/src/app"
+      bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
+    elif [[ "$stack" == flutter ]]; then
+      (cd "$dir" && flutter pub get >/dev/null)
+      (cd "$dir" && bash .ai-standards/check.sh) || fail "$name: check.sh"
+      check_violations "$stack" "$org" "$dir" "$dir/lib"
       bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
     elif [[ "$stack" == dotnet ]]; then
       grep -q "^## Architecture" "$dir/AGENTS.md" || fail "$name: no architecture rules in AGENTS.md"
@@ -235,7 +251,8 @@ expect "second adopt refuses" grep -q 'already on ai-standards' \
   <(python3 "$work/src/scripts/adopt.py" "$work/legacy-rendered" "$legacy")
 
 for stack in $stacks; do
-  [[ "$stack" == dotnet ]] && continue # adopting existing .NET projects arrives in 0.7.0
+  # Adopting existing projects is covered for TypeScript and Python; the other stacks come later.
+  [[ "$stack" == typescript || "$stack" == python ]] || continue
   log "adopt end to end: $stack (baseline, debt plan, ratchet via copier update)"
   bash "$work/src/scripts/test-adopt.sh" "$work/src" "$work/e2e" "$stack" || fail "adopt e2e: $stack"
 done

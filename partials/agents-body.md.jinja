@@ -1,6 +1,8 @@
 {% include "rules/base.md" %}
 
-{% include "rules/stacks/" ~ stack ~ ".md" %}
+{% if stack == "angular" %}{% include "rules/stacks/typescript.md" %}
+
+{% endif %}{% include "rules/stacks/" ~ stack ~ ".md" %}
 
 {% if architecture is defined %}{% include ["rules/architectures/" ~ stack ~ "-" ~ architecture ~ ".md"] ignore missing %}{% endif %}
 

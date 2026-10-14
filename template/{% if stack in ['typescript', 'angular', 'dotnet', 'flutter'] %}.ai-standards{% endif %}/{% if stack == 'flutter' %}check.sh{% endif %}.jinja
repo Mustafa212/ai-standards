@@ -1,0 +1,38 @@
+{% import "config/settings.jinja" as cfg with context -%}
+#!/usr/bin/env bash
+# Managed by ai-standards. Everything CI runs, cheapest feedback first (DONE-1).
+# Usage: bash .ai-standards/check.sh
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+MAX_FILE_LINES={{ cfg.max_file_lines }}
+COVERAGE_THRESHOLD={{ cfg.coverage }}
+
+step() { printf '[ai-standards] %s\n' "$*" >&2; }
+
+step "dart format --set-exit-if-changed (RDB-6)"
+dart format --output=none --set-exit-if-changed lib test
+
+step "flutter analyze --fatal-infos (lints, types, doc comments)"
+flutter analyze --fatal-infos
+
+step "files <= $MAX_FILE_LINES non-blank lines (RDB-2)"
+too_long=0
+while IFS= read -r -d '' file; do
+  lines="$(grep -cve '^[[:space:]]*$' "$file" || true)"
+  if ((lines > MAX_FILE_LINES)); then
+    step "  $file has $lines lines"
+    too_long=1
+  fi
+done < <(find lib -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' -print0)
+((too_long == 0)) || exit 1
+
+step "flutter test --coverage (>= $COVERAGE_THRESHOLD% of lines, TST-1)"
+flutter test --coverage
+coverage="$(awk -F: '/^LF:/ { found += $2 } /^LH:/ { hit += $2 }
+  END { printf "%d", found ? hit * 100 / found : 0 }' coverage/lcov.info)"
+if ((coverage < COVERAGE_THRESHOLD)); then
+  step "Coverage is $coverage%, below $COVERAGE_THRESHOLD%: see coverage/lcov.info for the uncovered lines."
+  exit 1
+fi
+step "Coverage: $coverage%"

@@ -14,13 +14,13 @@ Every rule has an ID and an enforcement level:
 ## 1. Readability first
 
 - **RDB-7 [review]** Write code a new teammate understands on first read: plain steps over clever one-liners, one idea per line. If code needs a comment to say what it does, simplify the code first.
-- **RDB-1 [tool]** {% if stack == "python" %}Functions ≤ {{ cfg.max_statements }} statements{% else %}Functions ≤ {{ cfg.max_function_lines }} lines{% endif %}, cyclomatic complexity ≤ {{ cfg.max_complexity }}, ≤ {{ cfg.max_params }} parameters (use an options object beyond that), nesting depth ≤ {{ cfg.max_depth }}. Use early returns and guard clauses.
+- **RDB-1 {% if stack == "flutter" %}[review]{% else %}[tool]{% endif %}** {% if stack == "python" %}Functions ≤ {{ cfg.max_statements }} statements{% else %}Functions ≤ {{ cfg.max_function_lines }} lines{% endif %}, cyclomatic complexity ≤ {{ cfg.max_complexity }}, ≤ {{ cfg.max_params }} parameters (use an options object beyond that), nesting depth ≤ {{ cfg.max_depth }}. Use early returns and guard clauses.
 - **RDB-2 [tool]** Files ≤ {{ cfg.max_file_lines }} lines. A file past that has more than one responsibility.
 - **RDB-3 [review]** Names say what, not how: `unpaidInvoices` not `list2`, `isExpired` for booleans, verbs for functions. No abbreviations except universal ones (id, url, http).
-- **RDB-4 [tool]** No magic numbers. Name them as constants.
+- **RDB-4 {% if stack == "flutter" %}[review]{% else %}[tool]{% endif %}** No magic numbers. Name them as constants.
 - **RDB-5 [review]** Comments explain *why*, not *what*. Delete commented-out code; git remembers.
 - **RDB-6 [tool]** Formatting is automatic. Never hand-format.
-- **RDB-8 [tool]** Every exported function and class starts with a doc comment ({% if stack == "typescript" %}JSDoc `/** … */`{% elif stack == "dotnet" %}an XML doc comment, `/// <summary>`{% else %}a docstring{% endif %}) saying what it is for and anything a caller must know. One sentence is enough; tests are exempt.
+- **RDB-8 [tool]** Every exported function and class starts with a doc comment ({% if stack in ["typescript", "angular"] %}JSDoc `/** … */`{% elif stack == "dotnet" %}an XML doc comment, `/// <summary>`{% elif stack == "flutter" %}a dartdoc comment, `///`{% else %}a docstring{% endif %}) saying what it is for and anything a caller must know. One sentence is enough; tests are exempt.
 - **RDB-9 [review]** Names a reader understands: single letters only for short loop counters. No boolean flag arguments (`send(user, true)`): use an options object or two functions.
 - **RDB-10 [review]** A file is named after what it holds. No dumping-ground names such as `utils`, `helpers` or `common`: name it for its job (`date-format`, `tax`).
 
@@ -37,9 +37,9 @@ Every rule has an ID and an enforcement level:
 - **DES-2 [review]** Inject dependencies at boundaries instead of reaching for globals deep inside logic.
 - **DES-3 [review]** Make illegal states unrepresentable: precise types over boolean flags and bags of optional fields.
 - **DES-4 [ai]** YAGNI. No abstractions for hypothetical futures; wait for three real cases before extracting.
-- **DES-5 [review]** Data is immutable by default ({% if stack == "typescript" %}`readonly`, `as const`{% elif stack == "dotnet" %}records, `init`, `readonly`{% else %}frozen dataclasses, tuples{% endif %}). Change data by making a new value.
+- **DES-5 [review]** Data is immutable by default ({% if stack in ["typescript", "angular"] %}`readonly`, `as const`{% elif stack == "dotnet" %}records, `init`, `readonly`{% elif stack == "flutter" %}`final` fields, `copyWith`{% else %}frozen dataclasses, tuples{% endif %}). Change data by making a new value.
 - **DES-6 [review]** The UI shows state and forwards events; business logic lives below it (view models, services, handlers).
-- **DES-7 [review]** A switch over an enum or union handles every case, with no catch-all default, so a new value fails the build{% if stack == "typescript" %} (TS-2 enforces it){% elif stack == "dotnet" %} (use a switch expression without a `_` arm: a missing case is build error CS8509){% else %} (end a `match` with `assert_never`){% endif %}.
+- **DES-7 [review]** A switch over an enum or union handles every case, with no catch-all default, so a new value fails the build{% if stack in ["typescript", "angular"] %} (TS-2 enforces it){% elif stack == "dotnet" %} (use a switch expression without a `_` arm: a missing case is build error CS8509){% elif stack == "flutter" %} (DART-4 enforces it){% else %} (end a `match` with `assert_never`){% endif %}.
 
 ## 4. Errors and security
 

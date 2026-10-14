@@ -1,7 +1,7 @@
-{%- if stack == "typescript" -%}
+{%- if stack in ["typescript", "angular"] -%}
 {%- set protect_cmd = 'node \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.mjs\\"' -%}
 {%- set check_cmd = 'node \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.mjs\\"' -%}
-{%- elif stack == "dotnet" -%}
+{%- elif stack in ["dotnet", "flutter"] -%}
 {%- set protect_cmd = 'bash \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.sh\\"' -%}
 {%- set check_cmd = 'bash \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.sh\\"' -%}
 {%- else -%}

@@ -1,0 +1,48 @@
+{% import "config/settings.jinja" as cfg with context -%}
+{
+  "name": "{{ project_slug }}",
+  "version": "0.1.0",
+  "description": "{{ description }}",
+  "private": true,
+  "engines": {
+    "node": ">={{ cfg.node_version }}"
+  },
+  "scripts": {
+    "start": "ng serve",
+    "build": "ng build",
+    "check": "node .ai-standards/run.mjs check",
+    "fix": "node .ai-standards/run.mjs fix",
+    "format": "node .ai-standards/run.mjs format",
+    "format:check": "node .ai-standards/run.mjs format:check",
+    "lint": "node .ai-standards/run.mjs lint",
+    "test": "node .ai-standards/run.mjs test",
+    "typecheck": "node .ai-standards/run.mjs typecheck"
+  },
+  "dependencies": {
+    "@angular/common": "^22.2.0",
+    "@angular/compiler": "^22.2.0",
+    "@angular/core": "^22.2.0",
+    "@angular/forms": "^22.2.0",
+    "@angular/platform-browser": "^22.2.0",
+    "@angular/router": "^22.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.2",
+    "@angular/cli": "^22.2.2",
+    "@angular/compiler-cli": "^22.2.0",
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.4.1",
+    "@eslint/js": "^9.15.0",
+    "@vitest/coverage-v8": "^5.0.0",
+    "angular-eslint": "^22.6.0",
+    "eslint": "^9.24.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jsdoc": "^65.3.2",
+    "jsdom": "^30.0.0",
+    "prettier": "^3.3.3",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.0"
+  }
+}

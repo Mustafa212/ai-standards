@@ -1,0 +1,28 @@
+{% for uri in ["package:flutter/foundation.dart", "package:" ~ package_name ~ "/data/services/clock.dart"] | sort -%}
+import '{{ uri }}';
+{% endfor %}
+/// UI state of the greeting screen: the name typed so far, and its greeting.
+class GreetingViewModel extends ChangeNotifier {
+  /// Creates the view model; the clock decides between morning and the rest of the day.
+  new({required this._clock});
+
+  static const _noonHour = 12;
+  static const _defaultName = 'world';
+
+  final Clock _clock;
+  String _name = '';
+
+  /// "Good morning" before noon, "Hello" after, and "world" for a blank name.
+  String get greeting {
+    final trimmedName = _name.trim();
+    final who = trimmedName.isEmpty ? _defaultName : trimmedName;
+    final salutation = _clock.now().hour < _noonHour ? 'Good morning' : 'Hello';
+    return '$salutation, $who!';
+  }
+
+  /// Stores the name the user typed and tells the screen to rebuild.
+  void updateName(String name) {
+    _name = name;
+    notifyListeners();
+  }
+}

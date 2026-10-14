@@ -1,0 +1,75 @@
+// Managed by ai-standards. Do not edit: propose changes upstream.
+// Rule IDs in comments refer to AGENTS.md.
+import js from "@eslint/js";
+import comments from "@eslint-community/eslint-plugin-eslint-comments/configs";
+import angular from "angular-eslint";
+import prettier from "eslint-config-prettier";
+import jsdoc from "eslint-plugin-jsdoc";
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
+  {
+    ignores: [
+      "dist/",
+      "coverage/",
+      "node_modules/",
+      ".angular/",
+      ".ai-session/",
+      ".claude/",
+      ".ai-standards/",
+    ],
+  },
+  {
+    files: ["**/*.ts"],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.strictTypeChecked,
+      tseslint.configs.stylisticTypeChecked,
+      comments.recommended,
+      angular.configs.tsRecommended,
+    ],
+    processor: angular.processInlineTemplates,
+    plugins: { jsdoc },
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+{% include "partials/eslint-typescript-rules.jinja" %}
+      // Angular classes are configured by their decorator, so they may look "empty"
+      "@typescript-eslint/no-extraneous-class": ["error", { allowWithDecorator: true }],
+      // NG-1..NG-3: OnPush, inject() at the top, signals
+      "@angular-eslint/prefer-on-push-component-change-detection": "error",
+      "@angular-eslint/prefer-inject": "error",
+      "@angular-eslint/prefer-signals": "error",
+      "@angular-eslint/component-selector": [
+        "error",
+        { type: "element", prefix: "app", style: "kebab-case" },
+      ],
+      "@angular-eslint/directive-selector": [
+        "error",
+        { type: "attribute", prefix: "app", style: "camelCase" },
+      ],
+    },
+  },
+  {
+    // NG-4: templates use @if / @for / @switch
+    files: ["**/*.html"],
+    extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
+    rules: { "@angular-eslint/template/prefer-control-flow": "error" },
+  },
+  {
+    files: ["**/*.spec.ts"],
+    rules: {
+      "max-lines-per-function": "off",
+      "@typescript-eslint/no-magic-numbers": "off",
+      "jsdoc/require-jsdoc": "off",
+      "jsdoc/require-description": "off",
+    },
+  },
+  {
+    files: ["*.config.js", "*.config.ts", "*.config.mjs", "*.config.mts"],
+    extends: [tseslint.configs.disableTypeChecked],
+    rules: { "@typescript-eslint/no-magic-numbers": "off" },
+  },
+  prettier,
+);

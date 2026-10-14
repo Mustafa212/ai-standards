@@ -15,13 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-{%- if stack == "typescript" %}
+{%- if stack in ["typescript", "angular"] %}
       - uses: actions/setup-node@v4
         with:
           node-version: "{{ cfg.node_version }}"
           cache: npm
       - run: npm ci
       - run: npm run check
+{%- elif stack == "flutter" %}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: bash .ai-standards/check.sh
 {%- elif stack == "dotnet" %}
       - uses: actions/setup-dotnet@v4
         with:

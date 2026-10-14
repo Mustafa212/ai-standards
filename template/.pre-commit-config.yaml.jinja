@@ -25,7 +25,7 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-{% if stack == "typescript" %}
+{% if stack in ["typescript", "angular"] %}
   - repo: local
     hooks:
       - id: prettier
@@ -37,7 +37,15 @@ repos:
         name: eslint
         entry: npx --no-install eslint --fix --max-warnings=0
         language: system
-        files: \.(ts|tsx|js|mjs|cjs)$
+        files: \.(ts|tsx|js|mjs|cjs{% if stack == "angular" %}|html{% endif %})$
+{%- elif stack == "flutter" %}
+  - repo: local
+    hooks:
+      - id: dart-format
+        name: dart format
+        entry: dart format --output=none --set-exit-if-changed
+        language: system
+        types: [dart]
 {%- elif stack == "dotnet" %}
   - repo: local
     hooks:
