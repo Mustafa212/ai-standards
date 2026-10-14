@@ -11,6 +11,9 @@ Each entry names the rule ID, the layer (base / stack / org) and the enforcement
 
 ## Unreleased
 
+- **CI (no project impact):** the release job skips a tag whose release already exists, instead of
+  failing the run (v0.7.0 was published by hand first, so its run went red with every test green).
+
 ## 0.7.0
 
 New stacks for new projects (adopting existing ones comes later): **Angular** and **Flutter**.
