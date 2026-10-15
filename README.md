@@ -77,8 +77,24 @@ uvx copier copy --trust gh:Mustafa212/ai-standards my-project
 ### Existing projects
 
 Open Claude Code in a project that isn't on the standards yet and it offers, once, to register it
-(`/ai-standards:onboard`): it asks the org, adopts the project, and proposes project rules from the
-code (see below). Say no for good and it creates `.ai-standards-skip`. Adoption:
+(`/ai-standards:onboard`): it asks the org, proposes project rules from the code (see below), and
+audits the project. Nothing in the project changes. Say no for good and it creates
+`.ai-standards-skip`.
+
+| Stack | New project | Rules and audit (existing code) | Full adoption (existing code) |
+|---|---|---|---|
+| typescript | yes | yes | yes |
+| python | yes | yes | yes |
+| angular | yes | yes | later |
+| dotnet | yes | yes | later |
+| flutter | yes | yes | later |
+
+**Rules and audit** change nothing in the project. The rules stay in your private copy.
+`/ai-standards:audit` runs the stack's analyzers in a temporary worktree, AI agents check the
+`[review]` rules, and the report goes to `~/.claude/ai-standards/reports/<org>/<project>/`.
+
+**Full adoption** (`/ai-standards:adopt-project`, typescript and python today) adds the tools to the
+repository:
 
 1. **Audits** read-only: stack, existing configs, tests, coverage, type errors. Failing tests stop it.
 2. **Merges** without overwriting (`scripts/adopt.py`): missing files are added, `package.json` and
