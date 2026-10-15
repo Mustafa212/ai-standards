@@ -5,15 +5,17 @@
 set -uo pipefail
 
 # A registered project's rules are re-analyzed once the code has moved on this much since the
-# last analysis (the "rules analyzed: <date> (<sha>)" line in AGENTS.md).
-REFRESH_DAYS=30
-REFRESH_COMMITS=10
+# last analysis (the "rules analyzed: <date> (<sha>)" marker).
+REFRESH_DAYS=7
+REFRESH_COMMITS=5
 
 project_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 # Windows (Git Bash): turn C:\Users\... into /c/Users/... so file tests work.
 command -v cygpath >/dev/null 2>&1 && project_dir="$(cygpath -u "$project_dir")"
 answers="$project_dir/.copier-answers.yml"
 source_hint="${CLAUDE_PLUGIN_OPTION_STANDARDS_SOURCE:-}"
+standards_home="${AI_STANDARDS_HOME:-$HOME/.claude/ai-standards}"
+command -v cygpath >/dev/null 2>&1 && standards_home="$(cygpath -u "$standards_home")"
 # Claude Code passes {"source": "startup|clear|compact", ...} on stdin.
 hook_input=""
 [[ -t 0 ]] || hook_input="$(cat)"
@@ -45,6 +47,41 @@ refresh_due() { # <date> <sha or none>: succeeds when the project rules should b
   ((commits >= REFRESH_COMMITS))
 }
 
+normalize_url() { # stdin: a git remote URL -> lowercase, without user@ and a trailing .git or /
+  sed -E 's#^(https?://)[^@/]+@#\1#; s#\.git$##; s#/$##' | tr '[:upper:]' '[:lower:]'
+}
+
+registration() { # prints this project's registration file in the private copy, if there is one
+  local clone remote file url
+  clone="$(sed -n 's/^Clone: *//p' "$standards_home/config.md" 2>/dev/null | head -n 1 | tr -d '\r')"
+  [[ -n "$clone" ]] || return 1
+  command -v cygpath >/dev/null 2>&1 && clone="$(cygpath -u "$clone")"
+  remote="$(git -C "$project_dir" remote get-url origin 2>/dev/null | normalize_url)"
+  [[ -n "$remote" ]] || return 1
+  for file in "$clone"/orgs/*/projects/*.md; do
+    [[ -f "$file" ]] || continue
+    url="$(grep -m 1 -oE 'repo: [^ ]+' "$file" | cut -d ' ' -f 2 | normalize_url)"
+    if [[ "$url" == "$remote" ]]; then
+      echo "$file"
+      return 0
+    fi
+  done
+  return 1
+}
+
+offer_refresh() { # <file holding the "rules analyzed:" marker>
+  local marker
+  marker="$(grep -m 1 -oE 'rules analyzed: [0-9]{4}-[0-9]{2}-[0-9]{2} \((none|[0-9a-f]+)\)' "$1" 2>/dev/null)"
+  if [[ "$compacted" == false && "$marker" =~ ([0-9-]{10})\ \((none|[0-9a-f]+)\) ]] &&
+    refresh_due "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"; then
+    cat <<EOF
+- The project rules were last analyzed on ${BASH_REMATCH[1]}, and the code has moved on since. At the
+  end of your first reply, add ONE short line offering to refresh them with the ai-standards:onboard
+  skill (refresh mode: only what changed; nothing is saved without the user's OK). Don't repeat it.
+EOF
+  fi
+}
+
 if [[ -f "$answers" ]]; then
   org="$(read_answer org)"
   stack="$(read_answer stack)"
@@ -67,16 +104,27 @@ EOF
   ai-standards:fix-debt skill.
 EOF
   fi
-  marker="$(grep -m 1 -oE 'rules analyzed: [0-9]{4}-[0-9]{2}-[0-9]{2} \((none|[0-9a-f]+)\)' \
-    "$project_dir/AGENTS.md" 2>/dev/null)"
-  if [[ "$compacted" == false && "$marker" =~ ([0-9-]{10})\ \((none|[0-9a-f]+)\) ]] &&
-    refresh_due "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"; then
-    cat <<EOF
-- The project rules were last analyzed on ${BASH_REMATCH[1]}, and the code has moved on since. At the
-  end of your first reply, add ONE short line offering to refresh them with the ai-standards:onboard
-  skill (refresh mode: only what changed; nothing is saved without the user's OK). Don't repeat it.
-EOF
+  offer_refresh "$project_dir/AGENTS.md"
+  exit 0
+fi
+
+if file="$(registration)"; then
+  org="$(basename "$(dirname "$(dirname "$file")")")"
+  slug="$(basename "$file" .md)"
+  report="$standards_home/reports/$org/$slug/STANDARDS-DEBT.md"
+  summary="no report yet"
+  if [[ -f "$report" ]]; then
+    total="$(grep -m 1 -oE '\*\*[0-9]+ findings\*\*' "$report" | tr -dc '0-9')"
+    p1="$(grep -m 1 -oE 'P1 [0-9]+' "$report" | cut -d ' ' -f 2)"
+    summary="${total:-?} findings, P1 ${p1:-?}"
   fi
+  cat <<EOF
+[ai-standards] This project is registered with ai-standards (org: $org), but not adopted: its rules
+live in the user's private copy ($file, plus the base, stack and org rules), not in the repo.
+- Follow those rules on new and changed lines. Exceptions (<PREFIX>-EX-n) replace the rule they name.
+- Latest standards report: $summary ($report). /ai-standards:audit refreshes it.
+EOF
+  offer_refresh "$file"
   exit 0
 fi
 
@@ -97,14 +145,17 @@ ai-standards:onboard skill (it asks which org the project belongs to, registers 
 before writing any code or config by hand. Do not hand-write lint, formatter, CI or
 tsconfig/pyproject files; the template provides them.${source_hint:+ Template source: $source_hint.}
 EOF
-elif [[ -f "$project_dir/package.json" || -f "$project_dir/pyproject.toml" || -f "$project_dir/requirements.txt" ]]; then
+elif [[ -f "$project_dir/package.json" || -f "$project_dir/pyproject.toml" || -f "$project_dir/requirements.txt" ||
+  -f "$project_dir/angular.json" || -f "$project_dir/pubspec.yaml" ]] ||
+  [[ -n "$(find "$project_dir" -maxdepth 3 \( -name '*.sln' -o -name '*.slnx' -o -name '*.csproj' \) \
+    -not -path '*/node_modules/*' -not -path '*/bin/*' -not -path '*/obj/*' 2>/dev/null | head -n 1)" ]]; then
   # After a compaction the offer was already made in this session; don't repeat it.
   [[ "$compacted" == true ]] && exit 0
   cat <<EOF
 [ai-standards] This existing project is not on ai-standards yet (no .copier-answers.yml).
 At the end of your first reply in this session, add ONE short line offering to register it with the
-ai-standards:onboard skill: it asks which org the project belongs to, audits first (nothing is
-overwritten), and proposes project rules from the code for the user's OK. Don't repeat the offer in
+ai-standards:onboard skill: it asks which org the project belongs to, proposes project rules from the
+code for the user's OK, and audits the project; nothing in the project changes. Don't repeat the offer in
 this session. If the user says no for good, offer to create an empty .ai-standards-skip file so it
 never asks again. Do the user's actual request first; never start onboarding without their OK.
 EOF

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Exercises the plugin's SessionStart hook on small fixture folders: when it offers onboarding,
-# and when it offers to refresh a registered project's rules (30 days and 10 commits since the
+# and when it offers to refresh a registered project's rules (7 days and 5 commits since the
 # last analysis). Usage: scripts/test-session-start.sh   (prints FAIL lines, exits non-zero on any)
 set -uo pipefail
 
@@ -70,5 +70,36 @@ grep -q 'ai-standards:onboard' <<<"$(hook_output "$dir")" || fail "existing proj
 dir="$work/empty"
 mkdir -p "$dir"
 grep -q 'ai-standards:onboard' <<<"$(hook_output "$dir")" || fail "empty folder: onboard not required"
+
+# A project registered in the private copy but not adopted: summary of its latest report, and the
+# refresh offer once it's due.
+home="$work/ai-home"
+clone="$home/clone"
+mkdir -p "$clone/orgs/personal/projects" "$home/reports/personal/fixture-app"
+printf 'Source: gh:x/y\nClone: %s\n' "$clone" >"$home/config.md"
+dir="$work/registered"
+make_commits "$dir" 1
+git -C "$dir" remote add origin "https://someone@example.com/acme/fixture-app.git"
+printf '## Project: fixture\n\n<!-- prefix: FIX · repo: https://example.com/acme/fixture-app · stack: dotnet · rules analyzed: %s (%s) -->\n' \
+  "$old" "$(git -C "$dir" rev-parse --short HEAD)" >"$clone/orgs/personal/projects/fixture-app.md"
+make_commits "$dir" 6
+printf '**212 findings** in 9 areas — P1 23 · P2 41 · P3 88 · P4 60\n' \
+  >"$home/reports/personal/fixture-app/STANDARDS-DEBT.md"
+output="$(AI_STANDARDS_HOME="$home" hook_output "$dir")"
+grep -q '212 findings, P1 23' <<<"$output" || fail "registered project: no report summary"
+grep -q 'offering to refresh' <<<"$output" || fail "registered project: no refresh offer (40 days, 6 commits)"
+grep -q 'not on ai-standards yet' <<<"$output" && fail "registered project: offered onboarding again"
+
+recent="$(date -d '3 days ago' +%F)"
+sed -i "s/rules analyzed: [0-9-]*/rules analyzed: $recent/" "$clone/orgs/personal/projects/fixture-app.md"
+output="$(AI_STANDARDS_HOME="$home" hook_output "$dir")"
+grep -q 'offering to refresh' <<<"$output" && fail "registered project: refresh offered after 3 days"
+
+for case in "dotnet-nested:backend/App.sln" "angular:angular.json" "flutter:pubspec.yaml"; do
+  dir="$work/${case%%:*}"
+  mkdir -p "$dir/$(dirname "${case#*:}")" && echo '{}' >"$dir/${case#*:}"
+  grep -q 'ai-standards:onboard' <<<"$(AI_STANDARDS_HOME="$home" hook_output "$dir")" ||
+    fail "${case%%:*}: no onboard offer"
+done
 
 exit $((failures > 0))
