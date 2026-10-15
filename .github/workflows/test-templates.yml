@@ -57,8 +57,8 @@ jobs:
       - run: python3 -m unittest discover -s scripts -p 'test_*.py' # audit.py, rule data, exceptions
 
   release:
-    # Tag a release by moving "## Unreleased" in CHANGELOG.md under a version heading and pushing
-    # a vX.Y.Z tag. Projects pick up tags through `copier update`.
+    # Tag a release by moving "## Unreleased" in CHANGELOG.md under a version heading, setting the
+    # same version in plugin.json, and pushing a vX.Y.Z tag. Projects pick up tags through `copier update`.
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [test, plugin, shell]
     runs-on: ubuntu-latest
@@ -66,7 +66,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: The tag matches plugin.json
+        run: |
+          version=$(jq -r .version plugin/.claude-plugin/plugin.json)
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME doesn't match plugin.json version $version"; exit 1; }
+      - name: Release notes from CHANGELOG.md
+        run: |
+          awk -v h="## ${GITHUB_REF_NAME#v} " 'index($0, h) == 1 {on = 1; next} on && /^## / {exit} on' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "CHANGELOG.md has no section for $GITHUB_REF_NAME"; exit 1; }
       # A release published by hand before this job runs is kept, not recreated (that failed v0.7.0).
-      - run: gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --generate-notes
+      - run: gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
         env:
           GH_TOKEN: ${{ github.token }}
