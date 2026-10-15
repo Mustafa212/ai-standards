@@ -9,7 +9,32 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
-## Unreleased
+## Unreleased (0.9.0)
+
+Rules and audit for any existing project, without adoption (part 1 of 3; batch debt fixing and full
+adoption for angular, dotnet and flutter come next).
+
+- **Onboard any stack:** typescript, python, angular, dotnet and flutter projects are registered and
+  their rules extracted from the code without adopting them; nothing in the project changes.
+  Patterns are sorted into rules (at least 80% consistent), inconsistencies, wrong patterns and
+  exception candidates. A project exception (`<PREFIX>-EX-n [exception] → <RULE>`, with a reason)
+  replaces a base or stack rule for that project; `check_rules.py` checks its target exists.
+- **`/ai-standards:audit`:** the stack's real analyzers run with the standard configs in a throwaway
+  git worktree (`scripts/audit.py`), read-only `rule-auditor` agents check the `[review]` rules
+  with evidence and counts, and a prioritized report is written to `~/.claude/ai-standards/reports/`
+  with items per rule and folder and the change since the last audit.
+- **Priorities come from the rule** (`config/rule-priority.json`, via `config/tool-map.json`) in the
+  audit and in the adoption debt plan, so Sonar `S…` IDs are no longer filed as security. A tool ID
+  can have its own priority (`tool_ids`, which an org can override) when its rule mixes concerns:
+  `prefer_const_constructors` and `import type` are P4 inside P1 rules, and "no print" is P4 on
+  every stack.
+- **SessionStart:** offers onboarding for dotnet (a solution up to two levels down), angular and
+  flutter projects; summarizes a registered project's latest report; offers the rule refresh after
+  7 days and 5 commits (was 30 and 10).
+- **Update PR (template, PATCH):** `copier update --conflict inline`, so conflicts show in the PR,
+  and the job fails after opening it; `.rej` files, which `.gitignore` hid, are gone.
+
+## 0.8.0 — 2026-10-14
 
 - **CI (no project impact):** the release job skips a tag whose release already exists, instead of
   failing the run (v0.7.0 was published by hand first, so its run went red with every test green).
@@ -36,7 +61,7 @@ New stacks for new projects (adopting existing ones comes later): **Angular** an
 
 ## 0.6.0
 
-New stack: **.NET (C#)** for new projects. Adopting existing .NET projects comes in 0.7.0.
+New stack: **.NET (C#)** for new projects. Adopting existing .NET projects comes later (rules and audit in 0.9.0, full adoption after).
 
 - `stack=dotnet` scaffolds a .NET 10 solution. A new **architecture** layer sits between the stack
   and the org, chosen at scaffold time, and each architecture has its own rules in `AGENTS.md`:

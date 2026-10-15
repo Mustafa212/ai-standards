@@ -39,7 +39,11 @@ jobs:
         run: |
           git config user.name "ai-standards-bot"
           git config user.email "ai-standards-bot@users.noreply.github.com"
-          copier update --defaults --trust --conflict rej
+          copier update --defaults --trust --conflict inline
+      - name: Look for conflict markers
+        id: conflicts
+        run: |
+          if git grep -qE '^(<<<<<<<|>>>>>>>) ' -- .; then echo "found=true" >> "$GITHUB_OUTPUT"; fi
       - uses: peter-evans/create-pull-request@v7
         with:
           token: {{ "${{ secrets.AI_STANDARDS_TOKEN || github.token }}" }}
@@ -48,4 +52,9 @@ jobs:
           commit-message: "chore: update ai-standards"
           body: |
             Automated update from ai-standards. Read the CHANGELOG of the standards repo for what changed.
-            Resolve any `*.rej` files, run the checks, then merge.
+            Conflicts are left as `<<<<<<<` markers in the files: resolve them, run the checks, then merge.
+      - name: Fail when conflicts are left
+        if: steps.conflicts.outputs.found == 'true'
+        run: |
+          echo "::error::copier update left conflict markers; resolve them in the PR."
+          exit 1

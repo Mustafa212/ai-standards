@@ -120,6 +120,11 @@ for stack in $stacks; do
       "${arch_args[@]}" --data 'ai_tools=["claude","cursor","copilot"]' \
       "$work/src" "$dir"
 
+    update_workflow="$dir/.github/workflows/ai-standards-update.yml"
+    if [[ -f "$update_workflow" ]] && ! grep -q -- '--conflict inline' "$update_workflow"; then
+      fail "$name: the update workflow hides conflicts in .rej files"
+    fi
+
     # shellcheck disable=SC2016  # literal ${{ is GitHub Actions syntax, allowed in workflows
     # Angular templates (*.html) use {{ }} themselves, so they are left out.
     if leftovers="$(grep -rn --exclude-dir=node_modules --exclude='*.html' -e '{%' -e '{{' "$dir" | grep -v '\${{')"; then
@@ -165,6 +170,12 @@ for stack in $stacks; do
       check_violations "$stack" "$org" "$dir" "$dir/src/test_${stack}_${org//-/_}"
       bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
       [[ -z "$RUN" ]] && deactivate
+    fi
+
+    # Once per stack: audit an existing project that has no standards (scripts/test-audit.sh).
+    if [[ "$org" == personal && "$architecture" =~ ^(-|simple)$ ]]; then
+      log "$name: audit an existing project without the standards"
+      bash "$work/src/scripts/test-audit.sh" "$work/src" "$dir" "$stack" "$work" || fail "$name: audit"
     fi
   done
   done

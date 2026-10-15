@@ -20,12 +20,12 @@ Work in four gated steps. Stop at each gate for the user's answer.
 
 1. `git status`: the tree must be clean so every change is reviewable. If it isn't, ask the user to
    commit or stash first.
-2. Detect the stack: `package.json` + `.ts` files → `typescript`; `pyproject.toml` /
-   `requirements*.txt` + `.py` → `python`. A `.sln`/`.slnx`/`.csproj` (dotnet), an `angular.json` (angular) or a
-   `pubspec.yaml` (flutter): new projects on these stacks are supported, adopting existing ones comes
-   later, so say so and stop. Anything else (Dart,
-   Angular-specific, monorepos with several stacks) isn't supported by the template yet: say so,
-   offer `propose-rule` to add the stack, and stop.
+2. Detect the stack. An `angular.json` → `angular`, a `.sln`/`.slnx`/`.csproj` → `dotnet`, a
+   `pubspec.yaml` → `flutter`: these three can't be adopted yet. Say so, say that the rules and
+   `/ai-standards:audit` already work for them (through `/ai-standards:onboard`), and stop.
+   Otherwise `package.json` + `.ts` files → `typescript`; `pyproject.toml` / `requirements*.txt` +
+   `.py` → `python`. Anything else (monorepos with several stacks included) isn't supported yet: say
+   so, offer `propose-rule` to add the stack, and stop.
    - TypeScript: note the module system (`"type": "module"` or CommonJS) and the test runner. The
      standard check runs **Vitest**, and the standard `tsconfig.json` assumes ESM. Jest suites need
      migrating first (usually mechanical: `vi` for `jest`, imports from `vitest`), as their own

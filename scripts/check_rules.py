@@ -15,12 +15,35 @@ from pathlib import Path
 
 # A rule bullet: - **ID [level]** text. Headings, prose and comments are not rules.
 RULE = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-\d+) \[(?:tool|review|ai)\]\*\* (.+)$")
+# A project exception: - **X-EX-1 [exception] → CS-5** text. Its target must be a rule the project sees.
+EXCEPTION = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-EX-\d+) \[exception\] → ([A-Z][A-Z0-9]*-\d+)\*\* (.+)$")
+# Any rule ID, including those whose level is computed by template syntax (RDB-1, RDB-4).
+ANY_ID = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-\d+) ")
 
 
 def rules_in(path: Path) -> list[tuple[str, str]]:
     """Return (ID, text) for every rule bullet in a file."""
     lines = path.read_text(encoding="utf-8").splitlines()
     return [(match.group(1), match.group(2)) for line in lines if (match := RULE.match(line))]
+
+
+def exceptions_in(path: Path) -> list[tuple[str, str, str]]:
+    """Return (ID, target rule, text) for every exception bullet in a file."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return [(m.group(1), m.group(2), m.group(3)) for line in lines if (m := EXCEPTION.match(line))]
+
+
+def unknown_targets(root: Path, files: list[Path]) -> set[str]:
+    """Describe each exception whose target isn't a rule in this scope."""
+    existing = [file for file in files if file.exists()]
+    known = {m.group(1) for file in existing for line in file.read_text(encoding="utf-8").splitlines()
+             if (m := ANY_ID.match(line))}
+    return {
+        f"exception {ex_id} points at unknown rule {target}: {file.relative_to(root).as_posix()}"
+        for file in existing
+        for ex_id, target, _ in exceptions_in(file)
+        if target not in known
+    }
 
 
 def normalized(text: str) -> str:
@@ -50,6 +73,8 @@ def duplicates(root: Path, files: list[Path]) -> set[str]:
         for rule_id, text in rules_in(file):
             places_by_id[rule_id].append(name)
             places_by_text[normalized(text)].append(f"{name} {rule_id}")
+        for ex_id, _, _ in exceptions_in(file):
+            places_by_id[ex_id].append(name)
 
     problems = {
         f"duplicate id {rule_id}: {', '.join(places)}"
@@ -68,7 +93,8 @@ def main() -> int:
     # A set, because a duplicate in base or stack rules shows up in every org's scope.
     problems: set[str] = set()
     for org_dir in sorted(path for path in (root / "orgs").iterdir() if path.is_dir()):
-        problems |= duplicates(root, org_scope(root, org_dir))
+        scope = org_scope(root, org_dir)
+        problems |= duplicates(root, scope) | unknown_targets(root, scope)
     for problem in sorted(problems):
         print(problem)
     return 1 if problems else 0

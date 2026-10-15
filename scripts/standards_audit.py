@@ -19,6 +19,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from rule_data import PRIORITY_TITLES, load_priorities, load_tool_map  # noqa: E402
+from rule_data import priority as rule_priority  # noqa: E402
+
 ANSWERS_FILE = ".copier-answers.yml"
 DEFAULT_OUTPUT = "docs/STANDARDS-DEBT.md"
 TOP_FILES = 5
@@ -145,7 +149,12 @@ def python_debt(project: Path, deferred: str) -> Debt:
     return debt
 
 
-def category(rule: str) -> tuple[str, str]:
+def category(rule: str, stack: str = "") -> tuple[str, str]:
+    """Priority and title: from the rule this tool ID enforces (config/tool-map.json), else by pattern."""
+    mapped = load_tool_map(stack).get(rule) if stack else None
+    if mapped:
+        level = rule_priority(mapped, load_priorities(), rule)
+        return level, PRIORITY_TITLES[level]
     for priority, title, patterns in CATEGORIES:
         if any(re.search(pattern, rule) for pattern in patterns):
             return priority, title
@@ -167,7 +176,7 @@ def show_command(stack: str, rule: str, file: str) -> str:
 def render_backlog(debt: Debt, stack: str) -> list[str]:
     grouped: dict[str, list[str]] = defaultdict(list)
     for rule, count in debt.by_rule.most_common():
-        priority, _ = category(rule)
+        priority, _ = category(rule, stack)
         files = debt.files_by_rule[rule]
         top = ", ".join(f"`{file}` ({n})" for file, n in files.most_common(TOP_FILES))
         more = f" and {len(files) - TOP_FILES} more files" if len(files) > TOP_FILES else ""
