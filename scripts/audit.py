@@ -281,7 +281,70 @@ def run_dotnet(worktree: Path, render: Path, solution: str | None) -> tuple[str,
     return status, found, notes
 
 
-RUNNERS: dict[str, Runner] = {"python": run_ruff, "dotnet": run_dotnet}
+ESLINT_CONFIGS = ("eslint.config.js", "eslint.config.cjs", "eslint.config.ts", "eslint.config.mts",
+                  "eslint.config.cts", ".eslintrc", ".eslintrc.js", ".eslintrc.cjs", ".eslintrc.json",
+                  ".eslintrc.yml", ".eslintrc.yaml")
+
+
+def lint_packages(render: Path) -> list[str]:
+    """The standard's lint packages, at its versions: every devDependency named *eslint*, plus globals."""
+    dev = json.loads((render / "package.json").read_text(encoding="utf-8")).get("devDependencies", {})
+    return [f"{name}@{version}" for name, version in dev.items() if "eslint" in name or name == "globals"]
+
+
+def use_standard_eslint_config(worktree: Path, render: Path) -> None:
+    """ESLint picks eslint.config.js before .mjs, so the project's configs go."""
+    for name in ESLINT_CONFIGS:
+        (worktree / name).unlink(missing_ok=True)
+    shutil.copy(render / "eslint.config.mjs", worktree / "eslint.config.mjs")
+
+
+def run_eslint(worktree: Path, render: Path, _solution: str | None) -> tuple[str, list[Finding], list[str]]:
+    node, npm = shutil.which("node"), shutil.which("npm")
+    if not (node and npm):
+        return "skipped (node not found)", [], []
+    use_standard_eslint_config(worktree, render)
+    notes = [f"installed with npm; the project uses {lock}" for lock in ("pnpm-lock.yaml", "yarn.lock")
+             if (worktree / lock).exists()]
+    flags = ["--ignore-scripts", "--no-audit", "--no-fund"]
+    install = run([npm, "ci" if (worktree / "package-lock.json").exists() else "install", *flags], worktree)
+    if install.returncode != 0:
+        return f"failed ({first_error(install)})", [], notes
+    added = run([npm, "install", "--no-save", *flags, *lint_packages(render)], worktree)
+    if added.returncode != 0:
+        return f"failed ({first_error(added)})", [], notes
+    eslint = str(worktree / "node_modules" / "eslint" / "bin" / "eslint.js")
+    proc = run([node, eslint, ".", "-f", "json"], worktree)
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return f"failed ({first_error(proc)})", [], notes
+    version = run([node, eslint, "--version"], worktree).stdout.strip()
+    return f"ran (eslint {version})", parse_eslint(data), notes
+
+
+def very_good_version(render: Path) -> str:
+    match = re.search(r"very_good_analysis:\s*(\S+)", (render / "pubspec.yaml").read_text(encoding="utf-8"))
+    return match.group(1) if match else "any"
+
+
+def run_dart(worktree: Path, render: Path, _solution: str | None) -> tuple[str, list[Finding], list[str]]:
+    flutter = shutil.which("flutter")
+    if not flutter:
+        return "skipped (flutter not found)", [], []
+    dart = shutil.which("dart") or str(Path(flutter).parent / "dart")
+    shutil.copy(render / "analysis_options.yaml", worktree / "analysis_options.yaml")
+    added = run([flutter, "pub", "add", f"dev:very_good_analysis:{very_good_version(render)}"], worktree)
+    if added.returncode != 0:
+        return f"failed ({first_error(added)})", [], []
+    proc = run([dart, "analyze", "--format=machine", "."], worktree)
+    version = run([dart, "--version"], worktree)
+    return (f"ran ({(version.stdout or version.stderr).strip()})",
+            parse_dart_machine(proc.stdout + "\n" + proc.stderr), [])
+
+
+RUNNERS: dict[str, Runner] = {"python": run_ruff, "dotnet": run_dotnet, "typescript": run_eslint,
+                              "angular": run_eslint, "flutter": run_dart}
 
 
 def tools(args: argparse.Namespace) -> int:

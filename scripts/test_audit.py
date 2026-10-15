@@ -176,5 +176,33 @@ class DotnetTest(unittest.TestCase):
             self.assertTrue((worktree / audit.SARIF_DIR).is_dir())  # the compiler writes the SARIF there
 
 
+class NodeAndDartTest(unittest.TestCase):
+    def test_lint_packages_come_from_the_standard_package_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            render = Path(tmp)
+            (render / "package.json").write_text(json.dumps({"devDependencies": {
+                "eslint": "^9.24.0", "typescript-eslint": "^8.15.0", "@eslint/js": "^9.15.0",
+                "vitest": "^2.0.0", "globals": "^15.0.0"}}), encoding="utf-8")
+            self.assertEqual(sorted(audit.lint_packages(render)),
+                             ["@eslint/js@^9.15.0", "eslint@^9.24.0", "globals@^15.0.0", "typescript-eslint@^8.15.0"])
+
+    def test_standard_eslint_config_replaces_the_projects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
+            worktree.mkdir()
+            render.mkdir()
+            (render / "eslint.config.mjs").write_text("export default [];\n", encoding="utf-8")
+            for old in ("eslint.config.js", ".eslintrc.json"):
+                (worktree / old).write_text("{}", encoding="utf-8")
+            audit.use_standard_eslint_config(worktree, render)
+            self.assertEqual(sorted(path.name for path in worktree.iterdir()), ["eslint.config.mjs"])
+
+    def test_very_good_analysis_version(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            render = Path(tmp)
+            (render / "pubspec.yaml").write_text("dev_dependencies:\n  very_good_analysis: ^11.0.0\n", encoding="utf-8")
+            self.assertEqual(audit.very_good_version(render), "^11.0.0")
+
+
 if __name__ == "__main__":
     unittest.main()
