@@ -2,7 +2,7 @@
   "name": "ai-standards",
   "displayName": "AI Standards",
   "version": "0.9.0",
-  "description": "Forces new projects through the ai-standards template, keeps them updated, and turns repeated feedback into rules",
+  "description": "Shared engineering standards: scaffolds new projects, extracts and audits the rules of existing ones (TypeScript, Python, Angular, .NET, Flutter), and turns repeated feedback into rules",
   "author": {
     "name": "Mostafa Shawkey"
   },
