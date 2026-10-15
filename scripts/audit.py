@@ -180,6 +180,8 @@ def run_ruff(worktree: Path, render: Path, _solution: str | None) -> tuple[str, 
     (worktree / ".ruff.toml").unlink(missing_ok=True)
     shutil.copy(render / "ruff.toml", worktree / "ruff.toml")
     proc = run([uvx, "ruff", "check", ".", "--output-format", "json", "--exit-zero", "--no-cache"], worktree)
+    if proc.returncode != 0:  # --exit-zero: only an error (bad config, no download) lands here
+        return f"failed ({first_error(proc)})", [], []
     try:
         data = json.loads(proc.stdout or "[]")
     except json.JSONDecodeError:
@@ -366,6 +368,12 @@ def use_standard_eslint_config(worktree: Path, render: Path) -> None:
     shutil.copy(render / "eslint.config.mjs", worktree / "eslint.config.mjs")
 
 
+def npm_command(node: str, npm: str) -> list[str]:
+    """npm run by node directly: through npm.cmd, cmd.exe would eat the ^ in "eslint@^9.24.0"."""
+    cli = Path(node).parent / "node_modules" / "npm" / "bin" / "npm-cli.js"
+    return [node, str(cli)] if cli.exists() else [npm]
+
+
 def run_eslint(worktree: Path, render: Path, _solution: str | None) -> tuple[str, list[Finding], list[str]]:
     node, npm = shutil.which("node"), shutil.which("npm")
     if not (node and npm):
@@ -374,10 +382,11 @@ def run_eslint(worktree: Path, render: Path, _solution: str | None) -> tuple[str
     notes = [f"installed with npm; the project uses {lock}" for lock in ("pnpm-lock.yaml", "yarn.lock")
              if (worktree / lock).exists()]
     flags = ["--ignore-scripts", "--no-audit", "--no-fund"]
-    install = run([npm, "ci" if (worktree / "package-lock.json").exists() else "install", *flags], worktree)
+    npm_cmd = npm_command(node, npm)
+    install = run([*npm_cmd, "ci" if (worktree / "package-lock.json").exists() else "install", *flags], worktree)
     if install.returncode != 0:
         return f"failed ({first_error(install)})", [], notes
-    added = run([npm, "install", "--no-save", *flags, *lint_packages(render)], worktree)
+    added = run([*npm_cmd, "install", "--no-save", *flags, *lint_packages(render)], worktree)
     if added.returncode != 0:
         return f"failed ({first_error(added)})", [], notes
     eslint = str(worktree / "node_modules" / "eslint" / "bin" / "eslint.js")
@@ -395,13 +404,31 @@ def very_good_version(render: Path) -> str:
     return match.group(1) if match else "any"
 
 
+def with_dev_dependency(pubspec: str, name: str, version: str) -> str:
+    """The pubspec with `name: version` under dev_dependencies (replacing any other version of it).
+
+    Written into the file, because `flutter pub add` goes through flutter.bat, where cmd.exe eats ^.
+    """
+    lines = pubspec.splitlines()
+    entry = f"  {name}: {version}"
+    if "dev_dependencies:" not in lines:
+        return pubspec.rstrip("\n") + f"\n\ndev_dependencies:\n{entry}\n"
+    start = lines.index("dev_dependencies:")
+    end = next((i for i in range(start + 1, len(lines)) if lines[i] and not lines[i].startswith(" ")), len(lines))
+    section = [line for line in lines[start + 1:end] if not line.strip().startswith(f"{name}:")]
+    return "\n".join([*lines[:start + 1], entry, *section, *lines[end:]]) + "\n"
+
+
 def run_dart(worktree: Path, render: Path, _solution: str | None) -> tuple[str, list[Finding], list[str]]:
     flutter = shutil.which("flutter")
     if not flutter:
         return "skipped (flutter not found)", [], []
     dart = shutil.which("dart") or str(Path(flutter).parent / "dart")
     shutil.copy(render / "analysis_options.yaml", worktree / "analysis_options.yaml")
-    added = run([flutter, "pub", "add", f"dev:very_good_analysis:{very_good_version(render)}"], worktree)
+    pubspec = worktree / "pubspec.yaml"
+    pubspec.write_text(with_dev_dependency(pubspec.read_text(encoding="utf-8"), "very_good_analysis",
+                                           very_good_version(render)), encoding="utf-8")
+    added = run([flutter, "pub", "get"], worktree)
     if added.returncode != 0:
         return f"failed ({first_error(added)})", [], []
     proc = run([dart, "analyze", "--format=machine", "."], worktree)

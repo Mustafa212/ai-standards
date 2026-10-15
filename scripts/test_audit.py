@@ -244,6 +244,42 @@ class NodeAndDartTest(unittest.TestCase):
             self.assertEqual(audit.very_good_version(render), "^11.0.0")
 
 
+class RunnerFailureTest(unittest.TestCase):
+    def test_a_ruff_error_is_failed_not_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
+            worktree.mkdir()
+            render.mkdir()
+            (render / "ruff.toml").write_text("", encoding="utf-8")
+            failed = subprocess.CompletedProcess([], 2, "", "ruff failed: unknown rule selector")
+            original_which, original_run = audit.shutil.which, audit.run
+            audit.shutil.which = lambda name: "uvx"
+            audit.run = lambda args, cwd: failed
+            try:
+                status, findings, _ = audit.run_ruff(worktree, render, None)
+            finally:
+                audit.shutil.which, audit.run = original_which, original_run
+            self.assertEqual((status, findings), ("failed (ruff failed: unknown rule selector)", []))
+
+    def test_npm_runs_through_node_so_cmd_never_eats_a_caret(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            node_dir = Path(tmp)
+            cli = node_dir / "node_modules" / "npm" / "bin" / "npm-cli.js"
+            cli.parent.mkdir(parents=True)
+            cli.write_text("", encoding="utf-8")
+            node = str(node_dir / "node.exe")
+            self.assertEqual(audit.npm_command(node, str(node_dir / "npm.cmd")), [node, str(cli)])
+            cli.unlink()
+            self.assertEqual(audit.npm_command(node, str(node_dir / "npm.cmd")), [str(node_dir / "npm.cmd")])
+
+    def test_dev_dependency_goes_into_the_pubspec(self) -> None:
+        with_section = "name: app\ndev_dependencies:\n  very_good_analysis: ^5.0.0\n  test: any\n"
+        self.assertEqual(audit.with_dev_dependency(with_section, "very_good_analysis", "^11.0.0"),
+                         "name: app\ndev_dependencies:\n  very_good_analysis: ^11.0.0\n  test: any\n")
+        self.assertEqual(audit.with_dev_dependency("name: app\n", "very_good_analysis", "^11.0.0"),
+                         "name: app\n\ndev_dependencies:\n  very_good_analysis: ^11.0.0\n")
+
+
 class ReportTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
