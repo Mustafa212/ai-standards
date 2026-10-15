@@ -1,0 +1,36 @@
+{
+  "typescript": {
+    "max-params": "RDB-1", "max-depth": "RDB-1", "max-lines-per-function": "RDB-1", "complexity": "RDB-1",
+    "max-lines": "RDB-2", "@typescript-eslint/no-magic-numbers": "RDB-4", "no-nested-ternary": "RDB-7",
+    "no-console": "RDB-7", "jsdoc/require-jsdoc": "RDB-8", "eqeqeq": "TS-1",
+    "@typescript-eslint/no-explicit-any": "TS-1", "@typescript-eslint/no-non-null-assertion": "TS-1",
+    "@typescript-eslint/no-floating-promises": "TS-2", "@typescript-eslint/switch-exhaustiveness-check": "TS-2",
+    "@typescript-eslint/consistent-type-imports": "TS-2", "id-length": "TS-6", "no-empty": "ERR-1",
+    "@eslint-community/eslint-comments/require-description": "SUP-1",
+    "@eslint-community/eslint-comments/no-unlimited-disable": "SUP-1"
+  },
+  "angular": {
+    "@angular-eslint/prefer-standalone": "NG-1",
+    "@angular-eslint/prefer-on-push-component-change-detection": "NG-1",
+    "@angular-eslint/prefer-inject": "NG-2", "@angular-eslint/prefer-signals": "NG-3",
+    "@angular-eslint/template/prefer-control-flow": "NG-4"
+  },
+  "python": {
+    "PLR0913": "RDB-1", "PLR0915": "RDB-1", "C901": "RDB-1", "PLR1702": "RDB-1", "PLR2004": "RDB-4",
+    "ERA001": "RDB-5", "D103": "RDB-8", "ANN001": "PY-1", "ANN201": "PY-1", "E722": "ERR-1", "S110": "ERR-1",
+    "BLE001": "ERR-1", "T201": "PY-2", "PTH118": "PY-2", "PGH004": "SUP-1", "PLW1514": "PY-5", "B006": "PY-5",
+    "FBT001": "PY-6"
+  },
+  "dotnet": {
+    "S107": "RDB-1", "S138": "RDB-1", "S1541": "RDB-1", "S134": "RDB-1", "S104": "RDB-2", "S109": "RDB-4",
+    "S125": "RDB-5", "CS1591": "RDB-8", "IDE0055": "RDB-6", "IDE0161": "CS-2", "IDE0065": "CS-2",
+    "IDE0040": "CS-2", "IDE1006": "CS-2", "IDE0007": "CS-3", "IDE0008": "CS-3", "CA1031": "CS-4",
+    "CA2200": "CS-4", "CA2016": "CS-5", "CA1852": "CS-6", "CA1822": "CS-6", "CA1507": "CS-7"
+  },
+  "flutter": {
+    "public_member_api_docs": "RDB-8", "avoid_positional_boolean_parameters": "RDB-9",
+    "avoid_dynamic_calls": "DART-1", "unawaited_futures": "DART-2", "discarded_futures": "DART-2",
+    "avoid_print": "DART-2", "prefer_const_constructors": "DART-3", "use_build_context_synchronously": "DART-3",
+    "exhaustive_cases": "DART-4", "no_default_cases": "DART-4"
+  }
+}

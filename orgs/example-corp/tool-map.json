@@ -1,0 +1,5 @@
+{
+  "typescript": {"no-restricted-imports": "EC-1"},
+  "python": {"TID251": "EC-1"},
+  "dotnet": {"RS0030": "EC-1"}
+}
