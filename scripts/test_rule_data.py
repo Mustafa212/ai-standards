@@ -67,5 +67,40 @@ class PriorityTest(unittest.TestCase):
         self.assertEqual(priority("ZZZ-9", priorities), "P3")  # org and project rules default to P3
 
 
+import shutil
+import subprocess
+import tempfile
+
+
+class ExceptionRuleTest(unittest.TestCase):
+    def check(self, project_text: str) -> tuple[int, str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shutil.copytree(ROOT / "rules", root / "rules")
+            shutil.copytree(ROOT / "orgs", root / "orgs")
+            projects = root / "orgs" / "personal" / "projects"
+            projects.mkdir(exist_ok=True)
+            (projects / "x.md").write_text(project_text, encoding="utf-8")
+            done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_rules.py"), str(root)],
+                                  capture_output=True, text=True, check=False)
+            return done.returncode, done.stdout
+
+    def test_valid_exception_passes(self) -> None:
+        text = "## Project: x\n\n- **X-EX-1 [exception] → CS-5** Calls skip the token. Reason: a legacy API.\n"
+        self.assertEqual(self.check(text), (0, ""))
+
+    def test_exception_to_an_unknown_rule_fails(self) -> None:
+        code, out = self.check("- **X-EX-1 [exception] → NOPE-1** Something. Reason: none.\n")
+        self.assertEqual(code, 1)
+        self.assertIn("points at unknown rule NOPE-1", out)
+
+    def test_duplicate_exception_id_fails(self) -> None:
+        text = ("- **X-EX-1 [exception] → CS-5** A. Reason: b.\n"
+                "- **X-EX-1 [exception] → CS-4** C. Reason: d.\n")
+        code, out = self.check(text)
+        self.assertEqual(code, 1)
+        self.assertIn("duplicate id X-EX-1", out)
+
+
 if __name__ == "__main__":
     unittest.main()
