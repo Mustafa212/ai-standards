@@ -166,6 +166,12 @@ for stack in $stacks; do
       bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
       [[ -z "$RUN" ]] && deactivate
     fi
+
+    # Once per stack: audit an existing project that has no standards (scripts/test-audit.sh).
+    if [[ "$org" == personal && "$architecture" =~ ^(-|simple)$ ]]; then
+      log "$name: audit an existing project without the standards"
+      bash "$work/src/scripts/test-audit.sh" "$work/src" "$dir" "$stack" "$work" || fail "$name: audit"
+    fi
   done
   done
 done
