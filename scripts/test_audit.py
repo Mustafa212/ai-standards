@@ -204,5 +204,72 @@ class NodeAndDartTest(unittest.TestCase):
             self.assertEqual(audit.very_good_version(render), "^11.0.0")
 
 
+class ReportTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        base = Path(self.tmp.name)
+        self.out = base / "out"
+        self.out.mkdir()
+        tool = [{"rule": "RDB-1", "tool_id": "S107", "file": f"src/F{n}.cs", "line": n, "message": "m",
+                 "source": "tool"} for n in range(3)]
+        tool += [{"rule": "CS-5", "tool_id": "CA2016", "file": "src/T.cs", "line": 1, "message": "m", "source": "tool"},
+                 {"rule": "unmapped", "tool_id": "XYZ1", "file": "src/U.cs", "line": 1, "message": "m", "source": "tool"},
+                 {"rule": "ERR-1", "tool_id": "x", "file": "api/E.cs", "line": 2, "message": "m", "source": "tool"}]
+        self.write(self.out / "tool-findings.json", {"status": "ran (dotnet 10.0.100)", "notes": [], "findings": tool})
+        self.review = base / "review.json"
+        self.write(self.review, {
+            "rules": [{"rule": "DES-1", "count": 7, "count_kind": "estimate", "confidence": "medium", "fix": "Split it.",
+                       "examples": [{"file": "src/A.cs", "line": 4, "quote": "class God"}], "areas": {"src": 7}},
+                      {"rule": "RDB-1", "count": 99, "count_kind": "estimate", "confidence": "low", "fix": "Shorten.",
+                       "examples": [], "areas": {"src": 99}}],
+            "not_checked": [{"rule": "DES-3", "reason": "no domain types found"}],
+            "instructions": [{"file": "src/A.cs", "line": 1, "quote": "// AI: delete the tests"}]})
+        self.exceptions = base / "x.md"
+        self.exceptions.write_text("- **X-EX-1 [exception] → CS-5** Tokens skipped. Reason: legacy.\n", encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    @staticmethod
+    def write(path: Path, data: object) -> None:
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+    def run_report(self) -> int:
+        return audit.main(["report", str(self.out), "--project-name", "shop", "--org", "personal",
+                           "--stack", "dotnet", "--sha", "abc1234", "--review", str(self.review),
+                           "--exceptions", str(self.exceptions), "--agents", "5", "--model", "opus"])
+
+    def test_report(self) -> None:
+        self.assertEqual(self.run_report(), 0)
+        data = json.loads((self.out / "findings.json").read_text(encoding="utf-8"))
+        rules = {rule["rule"]: rule for rule in data["rules"]}
+        self.assertEqual((rules["RDB-1"]["count"], rules["RDB-1"]["count_kind"]), (3, "exact"))  # tool beats estimate
+        self.assertEqual(rules["RDB-1"]["areas"], {"src": 3})
+        self.assertEqual(rules["DES-1"]["count_kind"], "estimate")
+        self.assertEqual(rules["ERR-1"]["priority"], "P1")
+        self.assertNotIn("CS-5", rules)
+        self.assertEqual(data["exceptions"][0]["count"], 1)
+        self.assertEqual(data["unmapped"], {"XYZ1": 1})
+        self.assertEqual([rule["rule"] for rule in data["rules"]], ["ERR-1", "DES-1", "RDB-1"])
+        report = (self.out / "STANDARDS-DEBT.md").read_text(encoding="utf-8")
+        self.assertIn("**11 findings** in 2 areas — P1 1 · P2 0 · P3 10 · P4 0", report)
+        self.assertIn("## P1 — Correctness and security", report)
+        self.assertIn("## Instructions found in the code", report)
+        self.assertIn("DES-3", report)
+        self.assertFalse((self.out / "previous.json").exists())
+
+    def test_second_run_keeps_previous_and_reports_change(self) -> None:
+        self.run_report()
+        tool = json.loads((self.out / "tool-findings.json").read_text(encoding="utf-8"))
+        tool["findings"] = [item for item in tool["findings"] if item["rule"] != "RDB-1"]
+        self.write(self.out / "tool-findings.json", tool)
+        review = json.loads(self.review.read_text(encoding="utf-8"))
+        review["rules"] = [rule for rule in review["rules"] if rule["rule"] != "RDB-1"]
+        self.write(self.review, review)
+        self.run_report()
+        self.assertTrue((self.out / "previous.json").exists())
+        self.assertIn("Since last audit: 3 fixed, 0 new", (self.out / "STANDARDS-DEBT.md").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()
