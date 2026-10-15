@@ -346,6 +346,20 @@ class ReportTest(unittest.TestCase):
         self.assertTrue((self.out / "previous.json").exists())
         self.assertIn("Since last audit: 3 fixed, 0 new", (self.out / "STANDARDS-DEBT.md").read_text(encoding="utf-8"))
 
+    def test_a_tool_id_override_splits_a_rule_by_priority(self) -> None:
+        tool = [{"rule": "DART-3", "tool_id": "prefer_const_constructors", "file": f"lib/w{n}.dart", "line": n,
+                 "message": "m", "source": "tool"} for n in range(2)]
+        tool.append({"rule": "DART-3", "tool_id": "use_build_context_synchronously", "file": "lib/p.dart", "line": 1,
+                     "message": "m", "source": "tool"})
+        self.write(self.out / "tool-findings.json", {"status": "ran", "notes": [], "findings": tool})
+        self.write(self.review, {})
+        self.run_report()
+        data = json.loads((self.out / "findings.json").read_text(encoding="utf-8"))
+        self.assertEqual([(rule["rule"], rule["priority"], rule["count"]) for rule in data["rules"]],
+                         [("DART-3", "P1", 1), ("DART-3", "P4", 2)])
+        self.run_report()  # the same findings again: nothing fixed, nothing new
+        self.assertIn("Since last audit: 0 fixed, 0 new", (self.out / "STANDARDS-DEBT.md").read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

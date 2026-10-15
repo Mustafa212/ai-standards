@@ -491,18 +491,19 @@ def area(file: str) -> str:
     return parts[0] if len(parts) > 1 else "(root)"
 
 
-def aggregate(tool_findings: list[dict], review: dict) -> dict[str, dict]:
-    rules: dict[str, dict] = {}
+def aggregate(tool_findings: list[dict], review: dict, priorities: dict) -> dict[tuple[str, str], dict]:
+    """Findings per rule and priority: a tool ID with its own priority splits its rule in two."""
+    rules: dict[tuple[str, str], dict] = {}
 
-    def entry(rule: str) -> dict:
-        return rules.setdefault(rule, {"rule": rule, "kind": "violation", "count": 0, "count_kind": "exact",
-                                       "sources": [], "confidence": "high", "fix": "", "examples": [],
-                                       "areas": Counter()})
+    def entry(rule: str, level: str) -> dict:
+        return rules.setdefault((rule, level), {"rule": rule, "priority": level, "kind": "violation", "count": 0,
+                                                "count_kind": "exact", "sources": [], "confidence": "high",
+                                                "fix": "", "examples": [], "areas": Counter()})
 
     for finding in tool_findings:
         if finding["rule"] == "unmapped":
             continue
-        item = entry(finding["rule"])
+        item = entry(finding["rule"], priority(finding["rule"], priorities, finding["tool_id"]))
         item["count"] += 1
         item["areas"][area(finding["file"])] += 1
         if "tool" not in item["sources"]:
@@ -510,7 +511,7 @@ def aggregate(tool_findings: list[dict], review: dict) -> dict[str, dict]:
         if len(item["examples"]) < EXAMPLES:
             item["examples"].append({"file": finding["file"], "line": finding["line"], "quote": finding["message"]})
     for reported in review.get("rules", []):
-        item = entry(reported["rule"])
+        item = entry(reported["rule"], priority(reported["rule"], priorities))
         item["kind"] = reported.get("kind", item["kind"])
         if "review" not in item["sources"]:
             item["sources"].append("review")
@@ -524,14 +525,17 @@ def aggregate(tool_findings: list[dict], review: dict) -> dict[str, dict]:
         for example in reported.get("examples", []):
             if len(item["examples"]) < EXAMPLES and (example.get("file"), example.get("line")) not in seen:
                 item["examples"].append(example)
-    return {rule: item for rule, item in rules.items() if item["count"] > 0}
+    return {key: item for key, item in rules.items() if item["count"] > 0}
 
 
 def change(previous: dict, current: list[dict]) -> dict[str, int]:
-    before = {rule["rule"]: rule["count"] for rule in previous.get("rules", [])}
-    after = {rule["rule"]: rule["count"] for rule in current}
-    return {"fixed": sum(max(0, n - after.get(rule, 0)) for rule, n in before.items()),
-            "new": sum(max(0, n - before.get(rule, 0)) for rule, n in after.items())}
+    before: Counter[str] = Counter()
+    after: Counter[str] = Counter()
+    for rule in previous.get("rules", []):
+        before[rule["rule"]] += rule["count"]
+    for rule in current:
+        after[rule["rule"]] += rule["count"]
+    return {"fixed": sum((before - after).values()), "new": sum((after - before).values())}
 
 
 def rule_lines(rule: dict) -> list[str]:
@@ -592,10 +596,10 @@ def report(args: argparse.Namespace) -> int:
     priorities = load_priorities(args.org)
     exceptions = exceptions_in(args.exceptions)
     targets = {exception["target"] for exception in exceptions}
-    rules = aggregate(tool["findings"], review)
+    rules = aggregate(tool["findings"], review, priorities)
     for exception in exceptions:
-        exception["count"] = rules.get(exception["target"], {}).get("count", 0)
-    active = [{**item, "areas": dict(item["areas"].most_common()), "priority": priority(item["rule"], priorities)}
+        exception["count"] = sum(item["count"] for item in rules.values() if item["rule"] == exception["target"])
+    active = [{**item, "areas": dict(item["areas"].most_common())}
               for item in rules.values() if item["rule"] not in targets]
     active.sort(key=lambda item: (item["priority"], -item["count"], item["rule"]))
     previous = read_json(out / FINDINGS, None)

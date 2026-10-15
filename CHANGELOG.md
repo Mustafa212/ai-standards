@@ -24,7 +24,10 @@ adoption for angular, dotnet and flutter come next).
   with evidence and counts, and a prioritized report is written to `~/.claude/ai-standards/reports/`
   with items per rule and folder and the change since the last audit.
 - **Priorities come from the rule** (`config/rule-priority.json`, via `config/tool-map.json`) in the
-  audit and in the adoption debt plan, so Sonar `S…` IDs are no longer filed as security.
+  audit and in the adoption debt plan, so Sonar `S…` IDs are no longer filed as security. A tool ID
+  can have its own priority (`tool_ids`, which an org can override) when its rule mixes concerns:
+  `prefer_const_constructors` and `import type` are P4 inside P1 rules, and "no print" is P4 on
+  every stack.
 - **SessionStart:** offers onboarding for dotnet (a solution up to two levels down), angular and
   flutter projects; summarizes a registered project's latest report; offers the rule refresh after
   7 days and 5 commits (was 30 and 10).

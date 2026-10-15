@@ -46,16 +46,21 @@ def load_priorities(org: str | None = None, root: Path = ROOT) -> dict:
         "default": data.get("default", "P3"),
         "prefixes": dict(data.get("prefixes", {})),
         "ids": dict(data.get("ids", {})),
+        "tool_ids": dict(data.get("tool_ids", {})),
     }
     if org:
         extra = _read(root / "orgs" / org / "rule-priority.json")
         merged["prefixes"].update(extra.get("prefixes", {}))
         merged["ids"].update(extra.get("ids", {}))
+        merged["tool_ids"].update(extra.get("tool_ids", {}))
     return merged
 
 
-def priority(rule: str, priorities: dict) -> str:
-    """P1-P4 for a rule ID. Findings that no rule claims are P4."""
+def priority(rule: str, priorities: dict, tool_id: str | None = None) -> str:
+    """P1-P4 for a rule ID. A tool ID with its own entry wins (a style lint inside a broader rule).
+    Findings that no rule claims are P4."""
+    if tool_id in priorities["tool_ids"]:
+        return priorities["tool_ids"][tool_id]
     if rule == "unmapped":
         return "P4"
     if rule in priorities["ids"]:

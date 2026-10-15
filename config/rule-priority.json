@@ -6,5 +6,9 @@
     "CS-1": "P2", "CS-2": "P4", "CS-3": "P4", "CS-4": "P1", "CS-5": "P1", "CS-8": "P1", "CS-10": "P1",
     "CS-11": "P1", "CS-14": "P4", "DART-1": "P2", "DART-2": "P1", "DART-3": "P1", "DART-4": "P1",
     "NG-10": "P1", "RDB-6": "P4", "RDB-8": "P4", "TST-1": "P2"
+  },
+  "tool_ids": {
+    "prefer_const_constructors": "P4", "@typescript-eslint/consistent-type-imports": "P4",
+    "avoid_print": "P4", "no-console": "P4", "T201": "P4"
   }
 }

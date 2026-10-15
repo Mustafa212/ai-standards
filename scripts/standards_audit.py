@@ -153,7 +153,7 @@ def category(rule: str, stack: str = "") -> tuple[str, str]:
     """Priority and title: from the rule this tool ID enforces (config/tool-map.json), else by pattern."""
     mapped = load_tool_map(stack).get(rule) if stack else None
     if mapped:
-        level = rule_priority(mapped, load_priorities())
+        level = rule_priority(mapped, load_priorities(), rule)
         return level, PRIORITY_TITLES[level]
     for priority, title, patterns in CATEGORIES:
         if any(re.search(pattern, rule) for pattern in patterns):

@@ -66,11 +66,26 @@ class PriorityTest(unittest.TestCase):
         self.assertEqual(priority("unmapped", priorities), "P4")
         self.assertEqual(priority("ZZZ-9", priorities), "P3")  # org and project rules default to P3
 
+    def test_a_tool_id_override_beats_its_rule(self) -> None:
+        priorities = load_priorities()
+        self.assertEqual(priority("DART-3", priorities, "prefer_const_constructors"), "P4")  # style inside a P1 rule
+        self.assertEqual(priority("DART-3", priorities, "use_build_context_synchronously"), "P1")
+        no_print = {priority(load_tool_map(stack)[tool_id], priorities, tool_id)
+                    for stack, tool_id in [("flutter", "avoid_print"), ("python", "T201"), ("typescript", "no-console")]}
+        self.assertEqual(len(no_print), 1)
+
+    def test_every_tool_id_override_is_mapped_and_valid(self) -> None:
+        mapped = {tool_id for stack in STACKS for tool_id in load_tool_map(stack)}
+        for tool_id, level in load_priorities()["tool_ids"].items():
+            self.assertIn(tool_id, mapped)
+            self.assertIn(level, ("P1", "P2", "P3", "P4"))
+
     def test_standards_audit_uses_the_rule_priority(self) -> None:
         import standards_audit
         self.assertEqual(standards_audit.category("FBT001", "python")[0], "P3")  # PY-6 (the old patterns said P4)
         self.assertEqual(standards_audit.category("E722", "python")[0], "P1")  # ERR-1
         self.assertEqual(standards_audit.category("S324", "python")[0], "P1")  # unmapped: old pattern still applies
+        self.assertEqual(standards_audit.category("prefer_const_constructors", "flutter")[0], "P4")  # tool-ID override
 
 
 import shutil
