@@ -22,11 +22,16 @@ For Python scripts use `python3`, or `python` where `python3` is the Windows Sto
 
 Compare `git remote get-url origin` with the `repo:` value in each `<clone>/orgs/*/projects/*.md`
 header, ignoring a `user@` part and a trailing `.git`. The match gives `<org>` (the folder),
-`<slug>` (the file name), the stack, and for dotnet the architecture (`architecture:`, else
-`simple`). No match: say the project isn't registered, offer `/ai-standards:onboard`, and stop. With
-uncommitted changes, say the audit covers the last commit (`git rev-parse --short HEAD`) and go on.
+`<slug>` (the file name), `<project name>` (its `## Project:` heading), the stack, and for dotnet the
+architecture (`architecture:`, else `simple`). No match: say the project isn't registered, offer
+`/ai-standards:onboard`, and stop. With uncommitted changes, say the audit covers the last commit
+(`git rev-parse --short HEAD`) and go on.
 
 ## 2. Render the rules and configs
+
+Pick a runner for copier: `uvx copier` if `uv` exists, else `pipx run copier`, else
+`pip install --user copier` and `copier`. With none of them, say so (Windows: `winget install
+astral-sh.uv`) and stop. Below, `uvx copier` stands for the runner you picked.
 
 ```bash
 uvx copier copy --trust --defaults --quiet --vcs-ref HEAD \
@@ -47,6 +52,8 @@ python3 <clone>/scripts/audit.py tools <project> --stack <stack> --org <org> \
 
 - **Exit 3:** show the candidate solutions with AskUserQuestion, and run again with
   `--solution <choice>`.
+- **Exit 2:** a bad argument, or the project isn't a git repository with a commit. Show the message
+  and stop.
 - **Status** in `<out>/tool-findings.json`: `ran`, `skipped` or `failed`. When it isn't `ran`, the
   `[tool]` rules go to the auditors too (step 4), and the report says why.
 

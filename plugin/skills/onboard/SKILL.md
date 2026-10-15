@@ -70,7 +70,8 @@ org yet fails.
    published when it's adopted later.
 2. Ask for the project's rule prefix (suggest the first 4 letters of the slug, in capitals). For a
    dotnet project, ask its architecture (simple, clean or vertical-slice).
-3. Create `orgs/<org>/projects/<slug>.md`:
+3. Create `orgs/<org>/projects/<slug>.md`. `<slug>` is the repository's name in lowercase
+   kebab-case, starting with a letter (`^[a-z][a-z0-9-]*$`, which copier's `project_slug` requires):
 
 ```markdown
 ## Project: <project name>
