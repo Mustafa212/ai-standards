@@ -120,6 +120,11 @@ for stack in $stacks; do
       "${arch_args[@]}" --data 'ai_tools=["claude","cursor","copilot"]' \
       "$work/src" "$dir"
 
+    update_workflow="$dir/.github/workflows/ai-standards-update.yml"
+    if [[ -f "$update_workflow" ]] && ! grep -q -- '--conflict inline' "$update_workflow"; then
+      fail "$name: the update workflow hides conflicts in .rej files"
+    fi
+
     # shellcheck disable=SC2016  # literal ${{ is GitHub Actions syntax, allowed in workflows
     # Angular templates (*.html) use {{ }} themselves, so they are left out.
     if leftovers="$(grep -rn --exclude-dir=node_modules --exclude='*.html' -e '{%' -e '{{' "$dir" | grep -v '\${{')"; then
