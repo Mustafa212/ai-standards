@@ -14,6 +14,8 @@ Each entry names the rule ID, the layer (base / stack / org) and the enforcement
 - **Docs (PATCH):** the README describes onboarding of existing code (rule sorting, exceptions), the
   audit files, the 7-day refresh and choosing a source; `user-level/CLAUDE.md` points to `onboard`;
   the plugin description covers existing projects.
+- **CI (no project impact):** a release fails when its tag doesn't match `plugin.json`, and its notes
+  are the version's CHANGELOG section instead of GitHub's generated list.
 
 ## 0.9.0 — 2026-10-15
 
