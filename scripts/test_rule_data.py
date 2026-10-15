@@ -66,6 +66,12 @@ class PriorityTest(unittest.TestCase):
         self.assertEqual(priority("unmapped", priorities), "P4")
         self.assertEqual(priority("ZZZ-9", priorities), "P3")  # org and project rules default to P3
 
+    def test_standards_audit_uses_the_rule_priority(self) -> None:
+        import standards_audit
+        self.assertEqual(standards_audit.category("FBT001", "python")[0], "P3")  # PY-6 (the old patterns said P4)
+        self.assertEqual(standards_audit.category("E722", "python")[0], "P1")  # ERR-1
+        self.assertEqual(standards_audit.category("S324", "python")[0], "P1")  # unmapped: old pattern still applies
+
 
 import shutil
 import subprocess
