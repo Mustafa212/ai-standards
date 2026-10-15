@@ -9,7 +9,13 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
-## Unreleased (0.9.0)
+## Unreleased
+
+- **Docs (PATCH):** the README describes onboarding of existing code (rule sorting, exceptions), the
+  audit files, the 7-day refresh and choosing a source; `user-level/CLAUDE.md` points to `onboard`;
+  the plugin description covers existing projects.
+
+## 0.9.0 — 2026-10-15
 
 Rules and audit for any existing project, without adoption (part 1 of 3; batch debt fixing and full
 adoption for angular, dotnet and flutter come next).
