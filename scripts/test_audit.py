@@ -116,6 +116,20 @@ class WorktreeTest(unittest.TestCase):
         self.assertEqual(data["status"], "failed (boom)")
         self.assert_untouched()
 
+    def test_other_worktrees_and_hooks_are_left_alone(self) -> None:
+        # Another worktree whose folder is gone (an unplugged drive): its metadata must survive.
+        other = Path(self.tmp.name) / "other"
+        git("worktree", "add", "-q", "-b", "feature", str(other), cwd=self.project)
+        other.rename(Path(self.tmp.name) / "other-moved")
+        # A hook that would write into the project if git ran it.
+        marker = self.project / "HOOK-RAN.txt"
+        hook = self.project / ".git" / "hooks" / "post-checkout"
+        hook.write_text(f'#!/bin/sh\ntouch "{marker.as_posix()}"\n', encoding="utf-8")
+        hook.chmod(0o755)
+        self.assertEqual(audit.main(self.args()), 0)
+        self.assertTrue((self.project / ".git" / "worktrees" / "other").is_dir(), "another worktree's metadata was pruned")
+        self.assertFalse(marker.exists(), "a project hook ran during the audit")
+
     def test_not_a_git_repository_is_a_bad_argument(self) -> None:
         remove_tree(self.project / ".git")
         self.assertEqual(audit.main(self.args()), 2)
@@ -145,33 +159,59 @@ class DotnetTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
             (render / ".ai-standards").mkdir(parents=True)
-            worktree.mkdir()
+            (worktree / "Legacy").mkdir(parents=True)
             (render / "Directory.Build.props").write_text(
                 '<Project>\n'
                 '    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" PrivateAssets="all" />\n'
                 '    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" PrivateAssets="all" />\n'
                 '    <PackageReference Include="xunit.v3" Version="4.0.2" />\n</Project>\n', encoding="utf-8")
+            # The template's real form: option suffixes, rule-ID severities, and a tests section.
             (render / ".editorconfig").write_text(
-                "root = true\n\n[*]\nindent_style = space\n\n[*.cs]\ndotnet_diagnostic.IDE0161.severity = warning\n\n"
+                "root = true\n\n[*]\nindent_style = space\n\n[*.cs]\n"
+                "csharp_style_namespace_declarations = file_scoped:warning\n"
+                "dotnet_diagnostic.CA1031.severity = warning\n\n"
+                "[tests/**.cs]\ndotnet_diagnostic.S109.severity = none\n\n"
                 "[*.md]\ntrim_trailing_whitespace = false\n", encoding="utf-8")
             for name in ("SonarLint.xml", "BannedSymbols.txt"):
                 (render / ".ai-standards" / name).write_text("x", encoding="utf-8")
+            # The project fights the standard: its own props and targets, a rule silenced by ID at the
+            # root and in a nested .editorconfig.
             (worktree / "Directory.Build.props").write_text(
-                "<Project><PropertyGroup><LangVersion>12</LangVersion></PropertyGroup></Project>", encoding="utf-8")
-            (worktree / "Directory.Packages.props").write_text(
                 "<Project><PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>"
                 "</PropertyGroup></Project>", encoding="utf-8")
+            (worktree / "Directory.Build.targets").write_text("<Project />", encoding="utf-8")
             (worktree / ".editorconfig").write_text("root = true\n[*.cs]\ndotnet_diagnostic.IDE0161.severity = none\n",
                                                     encoding="utf-8")
+            (worktree / "Legacy" / ".editorconfig").write_text("[*.cs]\ndotnet_diagnostic.CA2016.severity = none\n",
+                                                               encoding="utf-8")
             audit.overlay_dotnet(worktree, render)
+
             props = (worktree / "Directory.Build.props").read_text(encoding="utf-8")
             self.assertIn("Directory.Build.project.props", props)
             self.assertTrue((worktree / "Directory.Build.project.props").exists())
+            # Central package management is decided by MSBuild, wherever the project turns it on.
+            self.assertIn('Include="SonarAnalyzer.CSharp" Version="10.35.0.4138"', props)
             self.assertIn('Include="SonarAnalyzer.CSharp" VersionOverride="10.35.0.4138"', props)
+            self.assertIn("'$(ManagePackageVersionsCentrally)' == 'true'", props)
+            self.assertIn("!$(MSBuildProjectName.EndsWith('Tests'))", props)  # no banned-API checks in tests
             self.assertNotIn("xunit", props)
-            editorconfig = (worktree / ".editorconfig").read_text(encoding="utf-8")
-            self.assertLess(editorconfig.index("severity = none"), editorconfig.index("IDE0161.severity = warning"))
-            self.assertNotIn("[*.md]", editorconfig)
+
+            targets = (worktree / "Directory.Build.targets").read_text(encoding="utf-8")
+            self.assertTrue((worktree / "Directory.Build.project.targets").exists())
+            self.assertIn("Directory.Build.project.targets", targets)
+            for setting in ("<RunAnalyzers>true</RunAnalyzers>", "<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>",
+                            "<WarningsAsErrors></WarningsAsErrors>"):
+                self.assertIn(setting, targets)
+            exclude = targets.split('Exclude="')[1].split('"')[0].split(";")
+            self.assertIn("CA1031", exclude)  # a project's NoWarn can't hide a standard rule
+            self.assertIn("1591", exclude)  # NoWarn also accepts the number alone
+
+            root = (worktree / ".editorconfig").read_text(encoding="utf-8")
+            self.assertLess(root.index("IDE0161.severity = none"), root.rindex("dotnet_diagnostic.IDE0161.severity = warning"))
+            self.assertIn("[tests/**.cs]", root)
+            self.assertNotIn("[*.md]", root)
+            nested = (worktree / "Legacy" / ".editorconfig").read_text(encoding="utf-8")
+            self.assertLess(nested.index("CA2016.severity = none"), nested.index("ai-standards audit"))
             self.assertTrue((worktree / ".ai-standards" / "SonarLint.xml").exists())
             self.assertTrue((worktree / audit.SARIF_DIR).is_dir())  # the compiler writes the SARIF there
 

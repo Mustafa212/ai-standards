@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -68,10 +69,18 @@ def first_error(proc: subprocess.CompletedProcess[str]) -> str:
 
 
 def make_worktree(project: Path) -> Path:
-    """A detached worktree of HEAD in a new temporary folder, outside the project."""
+    """A detached worktree of HEAD in a new temporary folder, outside the project.
+
+    The project's hooks don't run (an empty hooks folder), and Git LFS doesn't download anything.
+    """
     parent = Path(tempfile.mkdtemp(prefix="ai-standards-audit-"))
-    worktree = parent / "wt"
-    proc = run(["git", "-C", str(project), "worktree", "add", "--detach", str(worktree), "HEAD"], project)
+    worktree, no_hooks = parent / "wt", parent / "no-hooks"
+    no_hooks.mkdir()
+    proc = subprocess.run(  # noqa: S603  # fixed argument list, no shell
+        ["git", "-c", f"core.hooksPath={no_hooks}", "-C", str(project), "worktree", "add", "--detach",
+         str(worktree), "HEAD"],
+        cwd=project, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+        env={**os.environ, "GIT_LFS_SKIP_SMUDGE": "1"})
     if proc.returncode != 0:
         shutil.rmtree(parent, ignore_errors=True)
         raise RuntimeError(f"git worktree add failed: {first_error(proc)}")
@@ -79,9 +88,15 @@ def make_worktree(project: Path) -> Path:
 
 
 def remove_worktree(project: Path, worktree: Path) -> None:
-    """Remove the worktree this script created, and only that one, even after a failure."""
-    run(["git", "-C", str(project), "worktree", "remove", "--force", str(worktree)], project)
-    run(["git", "-C", str(project), "worktree", "prune"], project)
+    """Remove the worktree this script created, and only that one, even after a failure.
+
+    Never `git worktree prune`: it would also drop the metadata of the user's other worktrees whose
+    folders are missing for now.
+    """
+    admin = run(["git", "-C", str(worktree), "rev-parse", "--absolute-git-dir"], worktree).stdout.strip()
+    removed = run(["git", "-C", str(project), "worktree", "remove", "--force", str(worktree)], project)
+    if removed.returncode != 0 and admin and Path(admin).parent.name == "worktrees":
+        shutil.rmtree(admin, ignore_errors=True)  # this worktree's own metadata, nothing else
     shutil.rmtree(worktree.parent, ignore_errors=True)
 
 
@@ -175,14 +190,15 @@ def run_ruff(worktree: Path, render: Path, _solution: str | None) -> tuple[str, 
 
 SARIF_DIR = ".ai-standards-audit"
 # Written in the worktree only. The project's own root props are imported first, so its settings
-# stay; ours come after them. The command line turns warnings-as-errors off for every project.
+# stay; ours come after them. Analyzer packages are added both ways, and MSBuild keeps the one that
+# matches central package management, wherever the project turns it on. Test projects get the same
+# exemptions as in the template (no banned-API checks, no doc comments).
 AUDIT_PROPS = """<Project>
   <!-- ai-standards audit: temporary worktree only. -->
   <Import Project="$(MSBuildThisFileDirectory)Directory.Build.project.props"
           Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.project.props')" />
   <PropertyGroup>
     <AnalysisLevel>latest-Recommended</AnalysisLevel>
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
     <ErrorLog>$(MSBuildThisFileDirectory){sarif_dir}/$(MSBuildProjectName)-$(TargetFramework).sarif,version=2.1</ErrorLog>
@@ -194,7 +210,33 @@ AUDIT_PROPS = """<Project>
   </ItemGroup>
 </Project>
 """
-ANALYZERS = re.compile(r'PackageReference Include="(SonarAnalyzer\.CSharp|Microsoft\.CodeAnalysis\.BannedApiAnalyzers)"')
+# Imported after each project file, so a project can't switch the analyzers off, turn warnings into
+# errors, or hide a standard rule with NoWarn.
+AUDIT_TARGETS = """<Project>
+  <!-- ai-standards audit: temporary worktree only. -->
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.project.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.project.targets')" />
+  <PropertyGroup>
+    <RunAnalyzers>true</RunAnalyzers>
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+    <WarningsAsErrors></WarningsAsErrors>
+  </PropertyGroup>
+  <Target Name="AiStandardsAuditKeepStandardWarnings" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <_AiStandardsNoWarn Include="$(NoWarn)" Exclude="{standard_ids}" />
+      <_AiStandardsNoWarn Include="CS1591;CA1707" Condition="$(MSBuildProjectName.EndsWith('Tests'))" />
+    </ItemGroup>
+    <PropertyGroup>
+      <NoWarn>@(_AiStandardsNoWarn)</NoWarn>
+    </PropertyGroup>
+  </Target>
+</Project>
+"""
+PACKAGE = re.compile(
+    r'<PackageReference Include="(SonarAnalyzer\.CSharp|Microsoft\.CodeAnalysis\.BannedApiAnalyzers)" Version="([^"]+)"')
 
 
 def project_count(solution: Path) -> int:
@@ -226,46 +268,63 @@ def pick_solution(root: Path) -> Path | None:
     return best[0]
 
 
-def analyzer_packages(render: Path, central: bool) -> str:
-    """The standard's analyzer PackageReferences, VersionOverride under central package management."""
-    lines = [line.strip() for line in (render / "Directory.Build.props").read_text(encoding="utf-8").splitlines()
-             if ANALYZERS.search(line)]
-    if central:
-        lines = [line.replace(' Version="', ' VersionOverride="') for line in lines]
-    return "\n".join(f"    {line}" for line in lines)
+def analyzer_packages(render: Path) -> str:
+    """The standard's analyzer packages, once with Version and once with VersionOverride."""
+    lines: list[str] = []
+    text = (render / "Directory.Build.props").read_text(encoding="utf-8")
+    for name, version in PACKAGE.findall(text):
+        not_tests = " and !$(MSBuildProjectName.EndsWith('Tests'))" if "BannedApi" in name else ""
+        for attribute, central in (("Version", "!="), ("VersionOverride", "==")):
+            condition = f"'$(ManagePackageVersionsCentrally)' {central} 'true'{not_tests}"
+            lines.append(f'    <PackageReference Include="{name}" {attribute}="{version}" PrivateAssets="all"'
+                         f' Condition="{condition}" />')
+    return "\n".join(lines)
 
 
-def cs_section(text: str) -> str:
-    """The [*.cs] section of an .editorconfig."""
+def cs_sections(text: str) -> str:
+    """Every C# section of an .editorconfig ([*.cs], [tests/**.cs], …)."""
     lines: list[str] = []
     inside = False
     for line in text.splitlines():
         if line.startswith("["):
-            inside = line.strip() == "[*.cs]"
+            inside = ".cs" in line
         if inside:
             lines.append(line)
     return "\n".join(lines)
 
 
+def standard_ids() -> list[str]:
+    """The diagnostic IDs the standard maps to rules, plus the bare number NoWarn also accepts for CS IDs."""
+    ids = sorted(load_tool_map("dotnet"))
+    return ids + [rule_id[2:] for rule_id in ids if rule_id.startswith("CS")]
+
+
 def overlay_dotnet(worktree: Path, render: Path) -> None:
-    props = worktree / "Directory.Build.props"
-    if props.exists():
-        props.rename(worktree / "Directory.Build.project.props")
-    packages_file = worktree / "Directory.Packages.props"
-    central = packages_file.exists() and "<ManagePackageVersionsCentrally>true" in packages_file.read_text(
-        encoding="utf-8", errors="replace")
-    props.write_text(AUDIT_PROPS.format(sarif_dir=SARIF_DIR, packages=analyzer_packages(render, central)),
-                     encoding="utf-8")
+    for name, renamed in (("Directory.Build.props", "Directory.Build.project.props"),
+                          ("Directory.Build.targets", "Directory.Build.project.targets")):
+        if (worktree / name).exists():
+            (worktree / name).rename(worktree / renamed)
+    (worktree / "Directory.Build.props").write_text(
+        AUDIT_PROPS.format(sarif_dir=SARIF_DIR, packages=analyzer_packages(render)), encoding="utf-8")
+    (worktree / "Directory.Build.targets").write_text(
+        AUDIT_TARGETS.format(standard_ids=";".join(standard_ids())), encoding="utf-8")
     (worktree / SARIF_DIR).mkdir(exist_ok=True)  # the compiler won't create the ErrorLog's folder
     (worktree / ".ai-standards").mkdir(exist_ok=True)
     for name in ("SonarLint.xml", "BannedSymbols.txt"):
         shutil.copy(render / ".ai-standards" / name, worktree / ".ai-standards" / name)
-    # Appended last, so the standard severities win over the project's own [*.cs] settings.
-    editorconfig = worktree / ".editorconfig"
-    existing = editorconfig.read_text(encoding="utf-8") if editorconfig.exists() else "root = true\n"
-    standard = cs_section((render / ".editorconfig").read_text(encoding="utf-8"))
-    editorconfig.write_text(f"{existing.rstrip()}\n\n# ai-standards audit (temporary worktree only)\n{standard}\n",
-                            encoding="utf-8")
+    # A rule silenced by ID beats an option's ":warning" suffix, so the standard's IDE rules are set by
+    # ID too. The block goes last in every .editorconfig, nested ones included: later entries win.
+    explicit = "\n".join(f"dotnet_diagnostic.{rule_id}.severity = warning"
+                         for rule_id in sorted(load_tool_map("dotnet")) if rule_id.startswith("IDE"))
+    block = (f"\n\n# ai-standards audit (temporary worktree only)\n"
+             f"{cs_sections((render / '.editorconfig').read_text(encoding='utf-8'))}\n\n[*.cs]\n{explicit}\n")
+    editorconfigs = [path for path in worktree.rglob(".editorconfig")
+                     if not SKIP.search(path.relative_to(worktree).as_posix())]
+    if worktree / ".editorconfig" not in editorconfigs:
+        (worktree / ".editorconfig").write_text("root = true\n", encoding="utf-8")
+        editorconfigs.append(worktree / ".editorconfig")
+    for path in editorconfigs:
+        path.write_text(path.read_text(encoding="utf-8").rstrip() + block, encoding="utf-8")
 
 
 def run_dotnet(worktree: Path, render: Path, solution: str | None) -> tuple[str, list[Finding], list[str]]:
