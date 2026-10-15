@@ -25,7 +25,8 @@
     "S107": "RDB-1", "S138": "RDB-1", "S1541": "RDB-1", "S134": "RDB-1", "S104": "RDB-2", "S109": "RDB-4",
     "S125": "RDB-5", "CS1591": "RDB-8", "IDE0055": "RDB-6", "IDE0161": "CS-2", "IDE0065": "CS-2",
     "IDE0040": "CS-2", "IDE1006": "CS-2", "IDE0007": "CS-3", "IDE0008": "CS-3", "CA1031": "CS-4",
-    "CA2200": "CS-4", "CA2016": "CS-5", "CA1852": "CS-6", "CA1822": "CS-6", "CA1507": "CS-7"
+    "CA2200": "CS-4", "CA2016": "CS-5", "CA1852": "CS-6", "CA1822": "CS-6", "CA1507": "CS-7",
+    "S108": "ERR-1", "S2486": "ERR-1", "S2325": "CS-6"
   },
   "flutter": {
     "public_member_api_docs": "RDB-8", "avoid_positional_boolean_parameters": "RDB-9",

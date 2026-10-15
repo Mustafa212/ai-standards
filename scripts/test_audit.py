@@ -121,5 +121,60 @@ class WorktreeTest(unittest.TestCase):
         self.assertEqual(audit.main(self.args()), 2)
 
 
+class DotnetTest(unittest.TestCase):
+    def test_pick_solution_prefers_the_one_with_most_projects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "A.sln").write_text('Project("{x}") = "One", "One\\One.csproj"\n', encoding="utf-8")
+            (root / "B.slnx").write_text('<Project Path="src/One/One.csproj" /><Project Path="src/Two/Two.csproj" />',
+                                         encoding="utf-8")
+            self.assertEqual(audit.pick_solution(root).name, "B.slnx")
+            (root / "C.sln").write_text("src/X/X.csproj src/Y/Y.csproj", encoding="utf-8")
+            with self.assertRaises(audit.Ambiguous):
+                audit.pick_solution(root)
+
+    def test_pick_solution_nested_and_none(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.assertIsNone(audit.pick_solution(root))
+            (root / "backend").mkdir()
+            (root / "backend" / "App.sln").write_text("", encoding="utf-8")
+            self.assertEqual(audit.pick_solution(root), root / "backend" / "App.sln")
+
+    def test_overlay_keeps_project_settings_and_adds_the_standard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
+            (render / ".ai-standards").mkdir(parents=True)
+            worktree.mkdir()
+            (render / "Directory.Build.props").write_text(
+                '<Project>\n'
+                '    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" PrivateAssets="all" />\n'
+                '    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" PrivateAssets="all" />\n'
+                '    <PackageReference Include="xunit.v3" Version="4.0.2" />\n</Project>\n', encoding="utf-8")
+            (render / ".editorconfig").write_text(
+                "root = true\n\n[*]\nindent_style = space\n\n[*.cs]\ndotnet_diagnostic.IDE0161.severity = warning\n\n"
+                "[*.md]\ntrim_trailing_whitespace = false\n", encoding="utf-8")
+            for name in ("SonarLint.xml", "BannedSymbols.txt"):
+                (render / ".ai-standards" / name).write_text("x", encoding="utf-8")
+            (worktree / "Directory.Build.props").write_text(
+                "<Project><PropertyGroup><LangVersion>12</LangVersion></PropertyGroup></Project>", encoding="utf-8")
+            (worktree / "Directory.Packages.props").write_text(
+                "<Project><PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>"
+                "</PropertyGroup></Project>", encoding="utf-8")
+            (worktree / ".editorconfig").write_text("root = true\n[*.cs]\ndotnet_diagnostic.IDE0161.severity = none\n",
+                                                    encoding="utf-8")
+            audit.overlay_dotnet(worktree, render)
+            props = (worktree / "Directory.Build.props").read_text(encoding="utf-8")
+            self.assertIn("Directory.Build.project.props", props)
+            self.assertTrue((worktree / "Directory.Build.project.props").exists())
+            self.assertIn('Include="SonarAnalyzer.CSharp" VersionOverride="10.35.0.4138"', props)
+            self.assertNotIn("xunit", props)
+            editorconfig = (worktree / ".editorconfig").read_text(encoding="utf-8")
+            self.assertLess(editorconfig.index("severity = none"), editorconfig.index("IDE0161.severity = warning"))
+            self.assertNotIn("[*.md]", editorconfig)
+            self.assertTrue((worktree / ".ai-standards" / "SonarLint.xml").exists())
+            self.assertTrue((worktree / audit.SARIF_DIR).is_dir())  # the compiler writes the SARIF there
+
+
 if __name__ == "__main__":
     unittest.main()

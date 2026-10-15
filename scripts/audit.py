@@ -165,7 +165,123 @@ def run_ruff(worktree: Path, render: Path, _solution: str | None) -> tuple[str, 
     return f"ran ({version})", parse_ruff(data), []
 
 
-RUNNERS: dict[str, Runner] = {"python": run_ruff}
+SARIF_DIR = ".ai-standards-audit"
+# Written in the worktree only. The project's own root props are imported first, so its settings
+# stay; ours come after them. The command line turns warnings-as-errors off for every project.
+AUDIT_PROPS = """<Project>
+  <!-- ai-standards audit: temporary worktree only. -->
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.project.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.project.props')" />
+  <PropertyGroup>
+    <AnalysisLevel>latest-Recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
+    <ErrorLog>$(MSBuildThisFileDirectory){sarif_dir}/$(MSBuildProjectName)-$(TargetFramework).sarif,version=2.1</ErrorLog>
+  </PropertyGroup>
+  <ItemGroup>
+{packages}
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory).ai-standards/SonarLint.xml" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory).ai-standards/BannedSymbols.txt" />
+  </ItemGroup>
+</Project>
+"""
+ANALYZERS = re.compile(r'PackageReference Include="(SonarAnalyzer\.CSharp|Microsoft\.CodeAnalysis\.BannedApiAnalyzers)"')
+
+
+def project_count(solution: Path) -> int:
+    text = solution.read_text(encoding="utf-8", errors="replace")
+    return len(set(re.findall(r"[\w./\\-]+\.csproj", text)))
+
+
+def pick_solution(root: Path) -> Path | None:
+    """The root's solution (or the one two levels down at most) with the most projects; else a lone csproj."""
+    candidates: list[Path] = []
+    for depth in range(3):
+        pattern = "/".join(["*"] * depth + ["*.sln*"])
+        candidates = sorted(path for path in root.glob(pattern)
+                            if path.suffix in (".sln", ".slnx")
+                            and not SKIP.search(path.relative_to(root).as_posix()))
+        if candidates:
+            break
+    if not candidates:
+        projects = sorted(root.glob("*.csproj"))
+        if len(projects) > 1:
+            raise Ambiguous([path.name for path in projects])
+        return projects[0] if projects else None
+    if len(candidates) == 1:
+        return candidates[0]
+    counts = {path: project_count(path) for path in candidates}
+    best = [path for path, count in counts.items() if count == max(counts.values())]
+    if len(best) > 1:
+        raise Ambiguous([path.relative_to(root).as_posix() for path in best])
+    return best[0]
+
+
+def analyzer_packages(render: Path, central: bool) -> str:
+    """The standard's analyzer PackageReferences, VersionOverride under central package management."""
+    lines = [line.strip() for line in (render / "Directory.Build.props").read_text(encoding="utf-8").splitlines()
+             if ANALYZERS.search(line)]
+    if central:
+        lines = [line.replace(' Version="', ' VersionOverride="') for line in lines]
+    return "\n".join(f"    {line}" for line in lines)
+
+
+def cs_section(text: str) -> str:
+    """The [*.cs] section of an .editorconfig."""
+    lines: list[str] = []
+    inside = False
+    for line in text.splitlines():
+        if line.startswith("["):
+            inside = line.strip() == "[*.cs]"
+        if inside:
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def overlay_dotnet(worktree: Path, render: Path) -> None:
+    props = worktree / "Directory.Build.props"
+    if props.exists():
+        props.rename(worktree / "Directory.Build.project.props")
+    packages_file = worktree / "Directory.Packages.props"
+    central = packages_file.exists() and "<ManagePackageVersionsCentrally>true" in packages_file.read_text(
+        encoding="utf-8", errors="replace")
+    props.write_text(AUDIT_PROPS.format(sarif_dir=SARIF_DIR, packages=analyzer_packages(render, central)),
+                     encoding="utf-8")
+    (worktree / SARIF_DIR).mkdir(exist_ok=True)  # the compiler won't create the ErrorLog's folder
+    (worktree / ".ai-standards").mkdir(exist_ok=True)
+    for name in ("SonarLint.xml", "BannedSymbols.txt"):
+        shutil.copy(render / ".ai-standards" / name, worktree / ".ai-standards" / name)
+    # Appended last, so the standard severities win over the project's own [*.cs] settings.
+    editorconfig = worktree / ".editorconfig"
+    existing = editorconfig.read_text(encoding="utf-8") if editorconfig.exists() else "root = true\n"
+    standard = cs_section((render / ".editorconfig").read_text(encoding="utf-8"))
+    editorconfig.write_text(f"{existing.rstrip()}\n\n# ai-standards audit (temporary worktree only)\n{standard}\n",
+                            encoding="utf-8")
+
+
+def run_dotnet(worktree: Path, render: Path, solution: str | None) -> tuple[str, list[Finding], list[str]]:
+    dotnet = shutil.which("dotnet")
+    if not dotnet:
+        return "skipped (dotnet not found)", [], []
+    target = worktree / solution if solution else pick_solution(worktree)
+    if target is None:
+        return "failed (no solution or project found)", [], []
+    overlay_dotnet(worktree, render)
+    notes = [f"{path.relative_to(worktree).as_posix()} doesn't import the root props: its projects may be missed"
+             for path in worktree.rglob("Directory.Build.props")
+             if path.parent != worktree and not SKIP.search(path.relative_to(worktree).as_posix())
+             and "GetPathOfFileAbove" not in path.read_text(encoding="utf-8", errors="replace")]
+    proc = run([dotnet, "build", str(target), "--nologo",
+                "-p:TreatWarningsAsErrors=false", "-p:CodeAnalysisTreatWarningsAsErrors=false"], worktree)
+    found = [finding for sarif in sorted((worktree / SARIF_DIR).glob("*.sarif"))
+             for finding in parse_sarif(sarif.read_text(encoding="utf-8"))]
+    version = run([dotnet, "--version"], worktree).stdout.strip()
+    status = f"ran (dotnet {version})" if proc.returncode == 0 else f"failed ({first_error(proc)})"
+    return status, found, notes
+
+
+RUNNERS: dict[str, Runner] = {"python": run_ruff, "dotnet": run_dotnet}
 
 
 def tools(args: argparse.Namespace) -> int:
