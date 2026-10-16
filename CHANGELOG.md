@@ -21,6 +21,8 @@ MINOR: new plugin behavior; nothing that fails existing code.
   - the fix, an after run, and the analyzer re-run showing the item gone with nothing new;
   - a verdict computed by `scripts/fix_debt.py` from the runners' own result files (TRX, JUnit,
     jest JSON, flutter JSON, or a summary line), never from the agent's account;
+  - every run tied to the commit it ran on: a stale or uncommitted run, a canary that only broke
+    the build, a suppression or a changed analyzer setting stops the item;
   - senior-dev's blind reviewer when it's installed.
 
   Why: the proof method of Anthropic's code-modernization plugin, re-implemented in our scripts

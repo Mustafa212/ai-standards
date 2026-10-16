@@ -21,7 +21,7 @@ The script's verdict (below) proves AC-1 to AC-4. Judge whether the change itsel
 behavior kept, the rule really followed (not just silenced in another way), nothing else changed.
 
 ## The change
-`git diff <start>..HEAD` in <project path>.
+`<dir>/change.diff` (`git diff <start>..HEAD` in <project path>). Read it from that file.
 
 ## The verdict
 <the contents of verdict.md>

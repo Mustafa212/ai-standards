@@ -53,6 +53,15 @@ def _unique(tests: dict[str, str], name: str) -> str:
     return f"{name}#{n}"
 
 
+def merge(results: list[dict]) -> dict:
+    """One result from the several files of one run (dotnet writes a TRX per test project)."""
+    tests: dict[str, str] = {}
+    for result in results:
+        for name, outcome in result["tests"].items():
+            tests[_unique(tests, name)] = outcome
+    return _result(tests)
+
+
 def parse_junit(text: str) -> dict:
     tests: dict[str, str] = {}
     for case in _xml(text).iter("testcase"):
