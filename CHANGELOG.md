@@ -9,7 +9,7 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
-## Unreleased
+## 0.9.2 — 2026-10-16
 
 PATCH: plugin skill text and script checks only; no rule text changes and nothing new in a rendered
 project. Taken from a comparison with similar standards and skill plugins (ideas only, in our own
