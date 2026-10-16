@@ -311,6 +311,146 @@ def cmd_verify_adopted(args: argparse.Namespace) -> int:
     return 0
 
 
+# Markers that silence a finding instead of fixing it (ADOPT-3), on lines a fix adds.
+SUPPRESSION = re.compile(
+    r"eslint-disable|#\s*noqa|#\s*type:\s*ignore|#\s*pragma\s+warning\s+disable|\[SuppressMessage"
+    r"|<NoWarn>|//\s*ignore(?:_for_file)?:|severity\s*=\s*none", re.IGNORECASE)
+BASELINES = ("eslint-suppressions.json",)
+CLOCK_SLACK = 2.0  # seconds: file and commit times are compared across processes
+
+
+def _commits(project: Path, start: str) -> list[tuple[str, str, list[str]]]:
+    """(sha, subject, files) for each commit after start, oldest first."""
+    shas = git(project, "rev-list", "--reverse", f"{start}..HEAD").split()
+    return [(sha, git(project, "log", "-1", "--format=%s", sha).strip(),
+             [f for f in git(project, "show", "--name-only", "--format=", sha).splitlines() if f])
+            for sha in shas]
+
+
+def _baseline_total(project: Path, ref: str, path: str) -> int:
+    proc = subprocess.run(["git", "-C", str(project), "show", f"{ref}:{path}"],  # noqa: S603
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
+    if proc.returncode != 0:
+        return 0
+    try:
+        data = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError:
+        return 0
+    return sum(int(info.get("count", 1)) for rules in data.values() for info in rules.values())
+
+
+def compute_verdict(project: Path, folder: Path) -> dict:
+    item = read_json(folder / "item.json")
+    clean, after = read_json(folder / "clean.json"), read_json(folder / "after.json")
+    canary_run, verify = read_json(folder / "canary.json"), read_json(folder / "verify.json")
+    pinned, red = read_json(folder / "pinned.json"), read_json(folder / "red.json")
+    commits = _commits(project, item["start"])
+    checks: dict[str, dict] = {}
+
+    def check(name: str, ok: bool | None, reason: str) -> None:
+        checks[name] = {"ok": ok, "reason": reason}
+
+    last_commit = float(git(project, "log", "-1", "--format=%ct").strip() or 0)
+    if after is None or after["source"] == "missing":
+        check("tests ran", False, f"no readable result from the after run{': ' + after['error'] if after else ''}")
+    elif after["executed"] == 0:
+        check("tests ran", False, "no test executed in the after run")
+    elif after["finished_at"] + CLOCK_SLACK < last_commit:
+        check("tests ran", False, "the after run is older than the item's last commit")
+    else:
+        check("tests ran", True, f"{after['executed']} executed, {after['failed']} failed")
+
+    if clean is None or after is None:
+        check("nothing lost", False, "the clean or the after run is missing")
+    elif clean["failed"]:
+        check("nothing lost", False, f"the clean run already had {clean['failed']} failing tests")
+    elif clean["source"] == after["source"] == "file":
+        lost = sorted(t for t, o in clean["tests"].items() if o == "passed" and after["tests"].get(t) != "passed")
+        check("nothing lost", not lost, f"no longer passing: {', '.join(lost)}" if lost else "every passing test still passes")
+    else:
+        worse = after["passed"] < clean["passed"] or after["failed"] > 0 or after["skipped"] > clean["skipped"]
+        check("nothing lost", not worse, f"counts: {clean['passed']} passed before, {after['passed']} after"
+              + (f", {after['failed']} failed" if after["failed"] else ""))
+
+    if item["formatter_only"]:
+        check("canary", None, "formatter only: no canary")
+    elif canary_run is None:
+        check("canary", False, "no canary was run")
+    elif not canary_run["restored"]:
+        check("canary", False, f"{canary_run['file']} wasn't restored after the canary")
+    else:
+        saw = canary_run["failed_delta"] > 0
+        check("canary", saw, f"{canary_run['failed_delta']} new failures from the break in "
+              f"{canary_run.get('file')}:{canary_run.get('line')}" if saw else "the break caused no new failure")
+
+    pin = next(((sha, files) for sha, subject, files in commits if subject.startswith("test: pin")), None)
+    if pin is None:
+        check("pinned tests", None, "no pin commit")
+    else:
+        later = {f for sha, _, files in commits[[c[0] for c in commits].index(pin[0]) + 1:] for f in files}
+        touched_pins = sorted(set(pin[1]) & later)
+        ok = bool(pinned) and pinned["executed"] > 0 and pinned["failed"] == 0 and not touched_pins
+        check("pinned tests", ok, "pinned tests passed on the unfixed code and stayed unchanged" if ok else
+              (f"pinned tests changed after pinning: {', '.join(touched_pins)}" if touched_pins
+               else "the pinned tests didn't pass on the unfixed code"))
+
+    if not item["p1"]:
+        check("red first", None, "not a P1 item")
+    else:
+        ok = bool(red) and red["failed"] > 0
+        check("red first", ok, f"{red['failed']} failing before the fix" if ok else "no test was seen failing before the fix")
+
+    if verify is None or verify.get("remaining") is None:
+        check("item gone", False, f"not verified: {verify['status'] if verify else 'no verify run'}")
+    elif verify["status"] == "check failed":
+        check("item gone", False, "the project's check failed")
+    else:
+        ok = verify["remaining"] == 0 and not verify["new"]
+        check("item gone", ok, f"{verify['remaining']} left, {len(verify['new'])} new in touched files ({verify['evidence']})")
+
+    allowed = item["allow"] + (pin[1] if pin else [])
+    changed = sorted({f for _, _, files in commits for f in files})
+    outside = [f for f in changed if not any(in_area(f, a) or f == a for a in allowed)]
+    added = [line[1:] for line in git(project, "diff", "-U0", f"{item['start']}..HEAD").splitlines()
+             if line.startswith("+") and not line.startswith("+++")]
+    marks = [line.strip() for line in added if SUPPRESSION.search(line)]
+    grown = [b for b in BASELINES if _baseline_total(project, "HEAD", b) > _baseline_total(project, item["start"], b)]
+    problems = ([f"outside the item: {', '.join(outside)}"] if outside else []) + \
+               ([f"suppression added: {marks[0]}"] if marks else []) + ([f"baseline grew: {', '.join(grown)}"] if grown else [])
+    check("scope", not problems, "; ".join(problems) or f"{len(changed)} files, all inside the item")
+
+    failing = [f"{name}: {c['reason']}" for name, c in checks.items() if c["ok"] is False]
+    does_not_prove = ["the canary shows the tests see one spot, not every changed line"]
+    if item.get("kind") == "review":
+        does_not_prove.append("the item's absence rests on an AI rule auditor")
+    if any(run and run.get("source") == "summary" for run in (clean, after)):
+        does_not_prove.append("summary-line evidence has no per-test ids")
+    return {"item": item["id"], "verdict": "STOPPED" if failing else "DONE", "checks": checks,
+            "reasons": failing, "does_not_prove": does_not_prove}
+
+
+def render_verdict(verdict: dict) -> str:
+    rows = [f"| {name} | {'pass' if c['ok'] else 'n/a' if c['ok'] is None else 'FAIL'} | {c['reason']} |"
+            for name, c in verdict["checks"].items()]
+    return "\n".join([f"## {verdict['item']} — {verdict['verdict']}", "", "| Check | Result | Why |",
+                      "|---|---|---|", *rows, "", "Does not prove:",
+                      *[f"- {line}" for line in verdict["does_not_prove"]]]) + "\n"
+
+
+def cmd_verdict(args: argparse.Namespace) -> int:
+    folder = args.item_dir.resolve()
+    verdict = compute_verdict(args.project.resolve(), folder)
+    write_json(folder / "verdict.json", verdict)
+    (folder / "verdict.md").write_text(render_verdict(verdict), encoding="utf-8")
+    print(render_verdict(verdict))
+    if verdict["verdict"] != "DONE":
+        return 1
+    done_file = folder.parent.parent / DONE
+    done = read_json(done_file, [])
+    write_json(done_file, sorted({*done, verdict["item"]}))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -360,10 +500,13 @@ def main(argv: list[str] | None = None) -> int:
     vad.add_argument("--stack", required=True, choices=("typescript", "python"))
     vad.add_argument("--before", required=True, type=Path)
     vad.add_argument("--check", required=True)
+    ver_d = commands.add_parser("verdict", help="compute the item's verdict from its evidence")
+    ver_d.add_argument("project", type=Path)
+    ver_d.add_argument("--item-dir", required=True, type=Path)
     args = parser.parse_args(argv)
     return {"items": cmd_items, "start": cmd_start, "test": cmd_test, "canary": cmd_canary,
             "verify": cmd_verify, "verify-review": cmd_verify_review, "baseline": cmd_baseline,
-            "verify-adopted": cmd_verify_adopted}[args.command](args)
+            "verify-adopted": cmd_verify_adopted, "verdict": cmd_verdict}[args.command](args)
 
 
 if __name__ == "__main__":

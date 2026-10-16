@@ -234,5 +234,134 @@ class VerifyTest(unittest.TestCase):
             self.assertEqual((verify["status"], verify["remaining"], verify["evidence"]), ("review", 0, "rule auditor"))
 
 
+class VerdictTest(unittest.TestCase):
+    """Each test builds one item: a start commit, then evidence files and commits, then a verdict."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.repo = make_repo(self.root)
+        (self.repo / "tests").mkdir()
+        (self.repo / "tests" / "test_calc.py").write_text("def test_adds():\n    assert True\n", encoding="utf-8")
+        git_q("add", ".", cwd=self.repo)
+        git_q("commit", "-qm", "tests", cwd=self.repo)
+        self.batch = self.root / "out" / "fix-debt" / "2026-10-16-1"
+        self.folder = self.batch / "RDB-1@src"
+        start = git_q("rev-parse", "HEAD", cwd=self.repo).strip()
+        fix_debt.write_json(self.folder / "item.json", {
+            "id": "RDB-1@src", "rule": "RDB-1", "area": "src", "kind": "tool", "tool_ids": ["PLR0913"],
+            "start": start, "allow": ["src"], "formatter_only": False, "p1": False})
+        self.passing = {"executed": 2, "passed": 2, "failed": 0, "skipped": 0, "source": "file",
+                        "tests": {"t::a": "passed", "t::b": "passed"}, "finished_at": 0}
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def fix(self, text: str = "def add(a, b):\n    return b + a\n", path: str = "src/calc.py") -> None:
+        (self.repo / path).write_text(text, encoding="utf-8")
+        git_q("add", "-A", cwd=self.repo)
+        git_q("commit", "-qm", "refactor: pay RDB-1 debt in src", cwd=self.repo)
+
+    def evidence(self, **overrides: dict) -> None:
+        files = {"clean": self.passing, "after": {**self.passing, "finished_at": time.time() + 5},
+                 "canary": {"new_failures": ["t::a"], "failed_delta": 1, "restored": True, "source": "file"},
+                 "verify": {"status": "ran (ruff 0.13)", "remaining": 0, "new": [], "evidence": "analyzer"}}
+        files.update(overrides)
+        for name, data in files.items():
+            if data is not None:
+                fix_debt.write_json(self.folder / f"{name}.json", data)
+
+    def verdict(self) -> dict:
+        return fix_debt.compute_verdict(self.repo, self.folder)
+
+    def test_done_when_every_check_passes(self) -> None:
+        self.fix()
+        self.evidence()
+        result = self.verdict()
+        self.assertEqual(result["verdict"], "DONE", result["reasons"])
+        self.assertTrue(result["does_not_prove"])
+
+    def test_zero_tests_executed_stops(self) -> None:
+        self.fix()
+        self.evidence(after={**self.passing, "executed": 0, "passed": 0, "tests": {}, "finished_at": time.time() + 5})
+        self.assertIn("tests ran", self.verdict()["checks"])
+        self.assertFalse(self.verdict()["checks"]["tests ran"]["ok"])
+
+    def test_an_after_run_older_than_the_last_commit_stops(self) -> None:
+        self.fix()
+        self.evidence(after={**self.passing, "finished_at": time.time() - 3600})
+        self.assertEqual(self.verdict()["verdict"], "STOPPED")
+
+    def test_a_lost_or_flaky_test_stops_and_is_named(self) -> None:
+        self.fix()
+        self.evidence(after={**self.passing, "tests": {"t::a": "passed", "t::b": "failed"},
+                             "passed": 1, "failed": 1, "finished_at": time.time() + 5})
+        result = self.verdict()
+        self.assertEqual(result["verdict"], "STOPPED")
+        self.assertIn("t::b", result["checks"]["nothing lost"]["reason"])
+
+    def test_a_canary_with_no_new_failures_stops(self) -> None:
+        self.fix()
+        self.evidence(canary={"new_failures": [], "failed_delta": 0, "restored": True, "source": "file"})
+        self.assertFalse(self.verdict()["checks"]["canary"]["ok"])
+
+    def test_formatter_only_skips_the_canary(self) -> None:
+        item = json.loads((self.folder / "item.json").read_text(encoding="utf-8"))
+        fix_debt.write_json(self.folder / "item.json", {**item, "formatter_only": True})
+        self.fix()
+        self.evidence(canary=None)
+        result = self.verdict()
+        self.assertEqual(result["verdict"], "DONE", result["reasons"])
+        self.assertIsNone(result["checks"]["canary"]["ok"])
+
+    def test_remaining_findings_stop(self) -> None:
+        self.fix()
+        self.evidence(verify={"status": "ran", "remaining": 2, "new": [], "evidence": "analyzer"})
+        self.assertFalse(self.verdict()["checks"]["item gone"]["ok"])
+
+    def test_an_analyzer_that_did_not_run_stops(self) -> None:
+        self.fix()
+        self.evidence(verify={"status": "skipped (uv not found)", "remaining": None, "new": [], "evidence": "analyzer"})
+        self.assertFalse(self.verdict()["checks"]["item gone"]["ok"])
+
+    def test_a_file_outside_the_item_stops(self) -> None:
+        self.fix(path="README.md", text="changed\n")
+        self.evidence()
+        self.assertFalse(self.verdict()["checks"]["scope"]["ok"])
+
+    def test_an_added_suppression_stops(self) -> None:
+        self.fix(text="def add(a, b):  # noqa: PLR0913\n    return a + b\n")
+        self.evidence()
+        self.assertIn("suppression", self.verdict()["checks"]["scope"]["reason"])
+
+    def test_pinned_tests_must_pass_on_the_unfixed_code_and_stay_untouched(self) -> None:
+        (self.repo / "tests" / "test_pin.py").write_text("def test_pin():\n    assert True\n", encoding="utf-8")
+        git_q("add", ".", cwd=self.repo)
+        git_q("commit", "-qm", "test: pin src before RDB-1", cwd=self.repo)
+        item = json.loads((self.folder / "item.json").read_text(encoding="utf-8"))
+        fix_debt.write_json(self.folder / "item.json", {**item, "allow": ["src", "tests"]})
+        self.fix()
+        self.evidence(pinned={**self.passing})
+        self.assertTrue(self.verdict()["checks"]["pinned tests"]["ok"])
+        (self.repo / "tests" / "test_pin.py").write_text("def test_pin():\n    pass\n", encoding="utf-8")
+        git_q("commit", "-qam", "refactor: tweak", cwd=self.repo)
+        self.assertFalse(self.verdict()["checks"]["pinned tests"]["ok"])
+
+    def test_p1_needs_a_test_seen_failing_first(self) -> None:
+        item = json.loads((self.folder / "item.json").read_text(encoding="utf-8"))
+        fix_debt.write_json(self.folder / "item.json", {**item, "p1": True})
+        self.fix()
+        self.evidence(red={**self.passing})
+        self.assertFalse(self.verdict()["checks"]["red first"]["ok"])
+
+    def test_cli_writes_the_verdict_and_records_done(self) -> None:
+        self.fix()
+        self.evidence()
+        self.assertEqual(fix_debt.main(["verdict", str(self.repo), "--item-dir", str(self.folder)]), 0)
+        self.assertTrue((self.folder / "verdict.md").read_text(encoding="utf-8").startswith("## RDB-1@src — DONE"))
+        done = json.loads((self.root / "out" / "fix-debt" / "done.json").read_text(encoding="utf-8"))
+        self.assertEqual(done, ["RDB-1@src"])
+
+
 if __name__ == "__main__":
     unittest.main()
