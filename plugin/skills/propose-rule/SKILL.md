@@ -43,18 +43,25 @@ project change: work in `<clone>` (pull first). Then edit:
 | New setting | add to `config/defaults.jinja` **and** `config/settings.jinja` |
 | Lint rule | `template/...eslint.config.mjs...jinja` or `template/...ruff.toml...jinja` |
 | Project rule | `orgs/<org>/projects/<slug>.md` (private copy) |
+| Break shape (`[review]` rules) | `rules/examples/<rule file's name>`, e.g. `rules/examples/dotnet.md`; org and project rules: `orgs/<org>/examples.md` |
 | New org | the `onboard` skill does it: `orgs/<org>/` from `orgs/personal/`, plus a choice in `orgs/orgs.yml` |
 
 Give the rule the next free ID in its section (e.g. `RDB-10`); org and project rules use their
-prefix (`ACME-3`, `BILL-5`), and IDs are never reused. Keep wording short; every line in
+prefix (`ACME-3`, `BILL-5`), and IDs are never reused. A removed org or project rule leaves
+`<!-- removed: <ID> <date>: <reason> -->`, so its ID stays taken. Keep wording short; every line in
 AGENTS.md costs context in every session.
+
+For a `[review]` rule, save the bad example as its break shape: a `## <ID>` heading, then
+`- Search:` (a regex for Grep, or a Glob for file names) and `- Break:` (the bad snippet). The
+audit hands it to its auditors; AGENTS.md never includes it.
 
 Add a CHANGELOG entry under `## Unreleased` with the rule ID, layer and enforcement level, and mark
 it **BREAKING** if existing code may fail the new check.
 
 ## 3. Prove it
 
-Run `python3 scripts/check_rules.py` (no rule written twice in an org) and `scripts/test-templates.sh`
+Run `python3 scripts/check_rules.py` (no rule written twice in an org, no retired ID reused, no
+break shape for a missing rule) and `scripts/test-templates.sh`
 in the standards repo. It generates every stack × org combination
 and runs each project's full check. For a new `[tool]` rule, also confirm it actually fires: add a
 case to `tests/violations/` that breaks the rule (see that folder's README).

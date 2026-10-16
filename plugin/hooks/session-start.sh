@@ -147,10 +147,10 @@ existing_files="$(find "$project_dir" -mindepth 1 -maxdepth 1 \
 if [[ -z "$existing_files" ]]; then
   cat <<EOF
 [ai-standards] This directory has no project yet.
-REQUIRED: when the user asks to create, start, init or scaffold a project here, you MUST use the
-ai-standards:onboard skill (it asks which org the project belongs to, registers it, then scaffolds)
-before writing any code or config by hand. Do not hand-write lint, formatter, CI or
-tsconfig/pyproject files; the template provides them.${source_hint:+ Template source: $source_hint.}
+When the user asks to create, start, init or scaffold a project here, use the ai-standards:onboard
+skill before writing any code or config: it asks which org the project belongs to, registers it,
+then scaffolds. The template provides the lint, formatter, CI and tsconfig/pyproject files, so they
+aren't written by hand.${source_hint:+ Template source: $source_hint.}
 EOF
 elif [[ -f "$project_dir/package.json" || -f "$project_dir/pyproject.toml" || -f "$project_dir/requirements.txt" ||
   -f "$project_dir/angular.json" || -f "$project_dir/pubspec.yaml" ]] ||

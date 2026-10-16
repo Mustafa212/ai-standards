@@ -18,7 +18,8 @@ private copy first: `git -C <clone> pull upstream main --tags`, after asking. Th
 from it.
 
 1. Make sure the working tree is clean (`git status`). If not, ask the user to commit or stash first.
-2. Run `uvx copier update --trust --defaults --conflict rej` (or `pipx run copier ...`).
+2. Run `uvx copier update --trust --defaults --conflict rej` (other runners:
+   `${CLAUDE_PLUGIN_ROOT}/references/runners.md`).
    To preview without writing, add `--pretend`.
 3. Summarize what changed: `git diff --stat`, and read the CHANGELOG of the standards repo for the
    versions between the old and new `_commit` in `.copier-answers.yml`. Call out anything marked

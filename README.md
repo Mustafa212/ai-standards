@@ -169,6 +169,7 @@ your projects (private repos)  AGENTS.md = base + stack + org + project
 | Add a rule for one stack | `rules/stacks/<stack>.md` (+ that stack's lint config) |
 | Add a rule for one org | `orgs/<org>/rules.md` (+ `settings.jinja`, e.g. banned imports) |
 | Add a rule for one project | `orgs/<org>/projects/<project>.md` in your private copy (or let `onboard` propose it) |
+| Show the auditors what breaking a `[review]` rule looks like | `rules/examples/<rule file's name>` (or `orgs/<org>/examples.md`); never rendered into AGENTS.md |
 | Add an org | `/ai-standards:onboard` (it adds `orgs/<org>/` and the choice in `orgs/orgs.yml`) |
 | Change which rule a tool's check belongs to | `config/tool-map.json` (or `orgs/<org>/tool-map.json`) |
 | Change how urgent a rule is in audits (P1–P4) | `config/rule-priority.json` (or `orgs/<org>/rule-priority.json`); `tool_ids` overrides one check |

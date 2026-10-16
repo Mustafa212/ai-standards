@@ -34,7 +34,7 @@ If the user names an org that does not exist, say so and offer `personal`; do no
 
 ## 2. Run the template
 
-Pick a runner: `uvx copier` if `uv` exists, else `pipx run copier`, else `pip install --user copier`.
+Commands use `uvx copier`; when it isn't available, see `${CLAUDE_PLUGIN_ROOT}/references/runners.md`.
 
 New project (current directory empty, or a new subdirectory the user named):
 
@@ -62,9 +62,8 @@ Run inside the project:
 2. Install deps: `npm install` (typescript, angular), `uv sync` (python), `dotnet restore` (dotnet,
    needs the .NET 10 SDK) or `flutter pub get` (flutter). A Flutter scaffold has no platform folders
    yet: `flutter create . --project-name <package>` adds them (android, ios, web…) without touching
-   `lib/`. Python projects need `uv` and
-   `make`; the Claude hooks block edits until `uv` is installed (Windows:
-   `winget install astral-sh.uv`, `winget install ezwinports.make`).
+   `lib/`. Python projects need `uv` and `make` (install commands in `runners.md`); the Claude hooks
+   block edits until `uv` is installed.
 3. `pre-commit install --install-hooks -t pre-commit -t commit-msg` (install pre-commit with
    `uv tool install pre-commit` or `pipx install pre-commit` if missing).
 4. Run the full check: `npm run check` (typescript, angular), `make check` (python) or

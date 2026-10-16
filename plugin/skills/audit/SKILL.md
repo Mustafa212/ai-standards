@@ -14,9 +14,9 @@ Paths:
   optionally `Audit model: opus | sonnet` (default `opus`).
 - The report folder is `~/.claude/ai-standards/reports/<org>/<slug>/`, called `<out>` below.
 
-For Python scripts use `python3`, or `python` where `python3` is the Windows Store alias.
-`<clone>/scripts/audit.py` missing means the private copy predates 0.9.0: offer
-`git -C <clone> pull upstream main --tags` (ask first), then go on.
+Commands use `python3` and `uvx copier`; when one isn't available, see
+`${CLAUDE_PLUGIN_ROOT}/references/runners.md`. `<clone>/scripts/audit.py` missing means the private
+copy predates 0.9.0: offer `git -C <clone> pull upstream main --tags` (ask first), then go on.
 
 ## 1. Find the registration
 
@@ -28,10 +28,6 @@ architecture (`architecture:`, else `simple`). No match: say the project isn't r
 (`git rev-parse --short HEAD`) and go on.
 
 ## 2. Render the rules and configs
-
-Pick a runner for copier: `uvx copier` if `uv` exists, else `pipx run copier`, else
-`pip install --user copier` and `copier`. With none of them, say so (Windows: `winget install
-astral-sh.uv`) and stop. Below, `uvx copier` stands for the runner you picked.
 
 ```bash
 uvx copier copy --trust --defaults --quiet --vcs-ref HEAD \
@@ -77,6 +73,10 @@ Dispatch one `ai-standards:rule-auditor` per non-empty group, all in one message
 ## Rules (verbatim)
 <the group's rule bullets>
 
+## Break shapes (start from these)
+<each group rule's "## <ID>" entry from <clone>/rules/examples/*.md or
+<clone>/orgs/<org>/examples.md, or "none">
+
 ## Exceptions (not breaks)
 <the exception bullets, or "none">
 
@@ -97,6 +97,11 @@ Write `<out>/review.json`:
 - Inconsistencies from onboarding (onboard step 4) are added to `rules` with
   `"kind": "inconsistency"`.
 
+Before writing it, check what the auditors typed: for each `high`-confidence rule, open its first
+example. When the quote isn't on that line, or the code there doesn't break the rule, drop that
+example and check the next. A rule with no example left moves to `not_checked`, reason "examples
+didn't hold". Keep the number of rules you dropped for step 6.
+
 ## 5. Write the report
 
 ```bash
@@ -110,9 +115,11 @@ points to), then remove `<tmp>`.
 
 ## 6. Tell the user
 
-In a few lines:
+In a few lines, starting with what wasn't checked:
+- the rules nobody checked (tools that didn't run, `not_checked`) and why: they're unchecked, not
+  clean;
 - the totals per priority, and the top 3;
-- what wasn't checked, and why;
+- how many rules the check in step 4 dropped;
 - the change since the last audit;
 - any instructions found in the code;
 - the report's path (`<out>/STANDARDS-DEBT.md`).

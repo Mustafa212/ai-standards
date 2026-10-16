@@ -14,8 +14,8 @@ into a feature or bug fix (ADOPT-2).
 1. Make sure the tree is clean and you're on a branch for this work (propose
    `refactor/standards-debt-<rule>` if on the default branch).
 2. Refresh the plan so it reflects the code, not an old snapshot: clone the standards repo to a temp
-   dir and run `python3 <tmp>/standards/scripts/standards_audit.py .` (`python` where `python3` is
-   the Windows Store alias)
+   dir and run `python3 <tmp>/standards/scripts/standards_audit.py .` (another Python:
+   `${CLAUDE_PLUGIN_ROOT}/references/runners.md`).
 3. Take the first unchecked item in priority order (P1 → P4), unless the user named one. A large item
    is split by area: one directory or module per change, small enough to review in one sitting.
 
@@ -26,8 +26,12 @@ change touches behavior (P1 items often do): for those, show the plan and wait f
 
 - See the hidden (baselined) findings with the item's "see them" command. For TypeScript, create the
   empty baseline it needs first: `mkdir -p .ai-session && echo {} > .ai-session/no-baseline.json`.
-- Fix the code. **Behavior must not change** unless the item is a real bug (P1); then add a test that
-  fails without the fix, and say so in the commit.
+- Before the first change, run the related tests and keep the runner's summary line (run, failed,
+  skipped). Zero tests run isn't a pass.
+- Code you touch that no test covers first gets a test of what it does today. It passes before and
+  after the fix.
+- Fix the code. **Behavior must not change** unless the item is a real bug (P1); then write the test
+  first, run it, and quote its failure before fixing. Say so in the commit.
 - Never add suppressions, `noqa`, `eslint-disable` or baseline entries to make it pass (ADOPT-3).
   If a finding is a genuine false positive, use a specific suppression with a written reason (SUP-1)
   and list it in your report.
@@ -58,7 +62,8 @@ uvx copier update --trust --defaults --data coverage_floor=<n> --data 'deferred_
 
 1. Full check (`npm run check` / `make check`) passes.
 2. Regenerate `docs/STANDARDS-DEBT.md` with the audit script.
-3. Report: item fixed, findings before → after, files touched, any behavior change and its test,
-   any ratchet applied. Offer the commit: `refactor: pay <rule> debt in <area>` (or `fix:` for a real
-   bug). Don't commit or push without the user's OK.
+3. Report: item fixed, findings before → after, the test runner's summary line before → after,
+   files touched, any behavior change and its failing-then-passing test, any ratchet applied. Offer
+   the commit: `refactor: pay <rule> debt in <area>` (or `fix:` for a real bug). Don't commit or push
+   without the user's OK.
 4. Offer the next item.
