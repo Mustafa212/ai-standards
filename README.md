@@ -106,11 +106,14 @@ repository:
 4. **Writes the plan**, `docs/STANDARDS-DEBT.md`: the baselined debt ordered by risk (P1 correctness
    and security → P4 style), with commands to see each item.
 
-Then `/ai-standards:fix-debt` pays it down one item per commit. The baseline can only shrink (both
-linters fail on stale entries), and the settings ratchet up with
-`copier update --data coverage_floor=<n> --data 'deferred_checks=[]'`. Debt is never mixed into
-feature work (rule ADOPT-2). The edit hook only reports problems on lines you changed, so old code
-isn't rewritten as a side effect.
+Then `/ai-standards:fix-debt` pays it down in rounds, for adopted and registered projects on every
+stack. You approve a round once. Each item is pinned by tests when its code isn't covered, fixed,
+and proven by a verdict a script computes: test result files, a canary that shows the tests see the
+code, and the analyzer showing the item gone. It gets its own commit, and the round ends in one pull
+request. The baseline can only shrink (both linters fail on stale entries), and the settings ratchet
+up with `copier update --data coverage_floor=<n> --data 'deferred_checks=[]'`. Debt is never mixed
+into feature work (rule ADOPT-2). The edit hook only reports problems on lines you changed, so old
+code isn't rewritten as a side effect.
 
 ## Orgs and projects (private)
 
