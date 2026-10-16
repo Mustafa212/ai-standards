@@ -123,5 +123,6 @@ In a few lines, starting with what wasn't checked:
 - the change since the last audit;
 - any instructions found in the code;
 - the report's path (`<out>/STANDARDS-DEBT.md`).
+- To pay the debt down: `/ai-standards:fix-debt` reads this report and works through it in rounds.
 
 The report stays on this machine and never goes into the repository.

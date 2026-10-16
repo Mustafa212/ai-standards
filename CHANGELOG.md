@@ -9,6 +9,24 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.11.0 — 2026-10-16
+
+MINOR: new plugin behavior; nothing that fails existing code.
+
+- **fix-debt in rounds, for every stack** (part 2 of 3). You approve a round of up to 10 items once
+  (P1 items one by one). Each item gets one commit, and the round ends in one pull request. Per
+  item:
+  - a clean test run, then a canary: one deliberate break must turn a test red;
+  - characterization tests pinned first when no test sees the code;
+  - the fix, an after run, and the analyzer re-run showing the item gone with nothing new;
+  - a verdict computed by `scripts/fix_debt.py` from the runners' own result files (TRX, JUnit,
+    jest JSON, flutter JSON, or a summary line), never from the agent's account;
+  - senior-dev's blind reviewer when it's installed.
+
+  Why: the proof method of Anthropic's code-modernization plugin, re-implemented in our scripts
+  for in-place debt fixes with analyzer proof.
+- **New scripts:** `scripts/fix_debt.py` and `scripts/run_results.py` (standard library only).
+
 ## 0.10.0 — 2026-10-16
 
 MINOR: new [review] rules and a removed [ai] rule; nothing that fails existing code.
