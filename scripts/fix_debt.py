@@ -26,10 +26,14 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 import time
+from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
+import standards_audit  # noqa: E402
 from audit import area  # noqa: E402
 from rule_data import load_priorities, priority  # noqa: E402
 from run_results import Unreadable  # noqa: E402
@@ -222,6 +226,91 @@ def cmd_canary(args: argparse.Namespace) -> int:
     return 0
 
 
+def _new_in_touched(before: Counter, after: Counter) -> list[dict]:
+    return [{"file": file, "tool_id": tool_id, "count": n - before[(file, tool_id)]}
+            for (file, tool_id), n in sorted(after.items()) if n > before[(file, tool_id)]]
+
+
+def compare_findings(item: dict, before: list[dict], after: list[dict], touched: list[str]) -> dict:
+    """The item's findings left after the fix, and findings the fix added to the files it touched."""
+    def mine(finding: dict) -> bool:
+        return (finding["rule"] == item["rule"] and in_area(str(finding["file"]), item["area"])
+                and (not item.get("tool_ids") or str(finding["tool_id"]) in item["tool_ids"]))
+    remaining = [f for f in after if mine(f)]
+    counts_before = Counter((f["file"], f["tool_id"]) for f in before if f["file"] in touched)
+    counts_after = Counter((f["file"], f["tool_id"]) for f in after if f["file"] in touched)
+    return {"remaining": len(remaining), "remaining_examples": remaining[:5],
+            "new": _new_in_touched(counts_before, counts_after)}
+
+
+def compare_baseline(item: dict, before: dict, after: dict, touched: list[str]) -> dict:
+    """The same comparison on an adopted project's baseline ({tool_id: {file: count}})."""
+    remaining = sum(n for file, n in after.get(item["rule"], {}).items() if in_area(file, item["area"]))
+    def counts(baseline: dict) -> Counter:
+        return Counter({(file, tool_id): n for tool_id, files in baseline.items()
+                        for file, n in files.items() if file in touched})
+    return {"remaining": remaining, "remaining_examples": [], "new": _new_in_touched(counts(before), counts(after))}
+
+
+def _touched(project: Path, start: str) -> list[str]:
+    return [line for line in git(project, "diff", "--name-only", f"{start}..HEAD").splitlines() if line]
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    project, folder = args.project.resolve(), args.item_dir.resolve()
+    item = read_json(folder / "item.json")
+    touched = _touched(project, item["start"])
+    with tempfile.TemporaryDirectory() as tmp:
+        argv = ["tools", str(project), "--stack", args.stack, "--org", args.org, "--render", str(args.render),
+                "--out", tmp, *(["--solution", args.solution] if args.solution else [])]
+        code = audit.main(argv)
+        doc = read_json(Path(tmp) / audit.TOOL_FINDINGS, {"status": f"audit exit {code}", "findings": []})
+    data = {"status": doc["status"], "touched": touched, "evidence": "analyzer",
+            "remaining": None, "remaining_examples": [], "new": []}
+    if code == 0 and str(doc["status"]).startswith("ran"):
+        before = read_json(args.before.resolve(), {"findings": []})["findings"]
+        data.update(compare_findings(item, before, doc["findings"], touched))
+    write_json(folder / "verify.json", data)
+    print(f"[fix-debt] verify: {data['status']}; remaining {data['remaining']}; new {len(data['new'])}")
+    return 0
+
+
+def cmd_verify_review(args: argparse.Namespace) -> int:
+    folder = args.item_dir.resolve()
+    item = read_json(folder / "item.json")
+    review = read_json(args.review.resolve(), {"rules": []})
+    remaining = sum(int(r.get("count", 0)) for r in review.get("rules", []) if r.get("rule") == item["rule"])
+    write_json(folder / "verify.json", {"status": "review", "touched": [], "evidence": "rule auditor",
+                                        "remaining": remaining, "remaining_examples": [], "new": []})
+    return 0
+
+
+def adopted_baseline(project: Path, stack: str) -> dict:
+    deferred = standards_audit.read_answers(project).get("deferred_checks", "")
+    debt = (standards_audit.typescript_debt(project, deferred) if stack == "typescript"
+            else standards_audit.python_debt(project, deferred))
+    return {rule: dict(files) for rule, files in debt.files_by_rule.items()}
+
+
+def cmd_baseline(args: argparse.Namespace) -> int:
+    write_json(args.out.resolve(), adopted_baseline(args.project.resolve(), args.stack))
+    return 0
+
+
+def cmd_verify_adopted(args: argparse.Namespace) -> int:
+    project, folder = args.project.resolve(), args.item_dir.resolve()
+    item = read_json(folder / "item.json")
+    touched = _touched(project, item["start"])
+    check = subprocess.run(args.check, shell=True, cwd=project, capture_output=True, text=True,  # noqa: S602
+                           encoding="utf-8", errors="replace", check=False)
+    data = {"status": "check passed" if check.returncode == 0 else "check failed", "touched": touched,
+            "evidence": "baseline",
+            **compare_baseline(item, read_json(args.before.resolve(), {}), adopted_baseline(project, args.stack),
+                               touched)}
+    write_json(folder / "verify.json", data)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -250,8 +339,31 @@ def main(argv: list[str] | None = None) -> int:
     can.add_argument("--format", required=True, choices=sorted(RESULT_SUFFIX))
     can.add_argument("--clean", required=True, type=Path)
     can.add_argument("--out", required=True, type=Path)
+    ver = commands.add_parser("verify", help="re-run the analyzers on HEAD: the item must be gone")
+    ver.add_argument("project", type=Path)
+    ver.add_argument("--item-dir", required=True, type=Path)
+    ver.add_argument("--stack", required=True)
+    ver.add_argument("--org", required=True)
+    ver.add_argument("--render", required=True, type=Path)
+    ver.add_argument("--before", required=True, type=Path)
+    ver.add_argument("--solution")
+    rev = commands.add_parser("verify-review", help="record a rule auditor's recount of a review item")
+    rev.add_argument("--item-dir", required=True, type=Path)
+    rev.add_argument("--review", required=True, type=Path)
+    base = commands.add_parser("baseline", help="an adopted project's baselined findings per tool id and file")
+    base.add_argument("project", type=Path)
+    base.add_argument("--stack", required=True, choices=("typescript", "python"))
+    base.add_argument("--out", required=True, type=Path)
+    vad = commands.add_parser("verify-adopted", help="the check passes and the item left the baseline")
+    vad.add_argument("project", type=Path)
+    vad.add_argument("--item-dir", required=True, type=Path)
+    vad.add_argument("--stack", required=True, choices=("typescript", "python"))
+    vad.add_argument("--before", required=True, type=Path)
+    vad.add_argument("--check", required=True)
     args = parser.parse_args(argv)
-    return {"items": cmd_items, "start": cmd_start, "test": cmd_test, "canary": cmd_canary}[args.command](args)
+    return {"items": cmd_items, "start": cmd_start, "test": cmd_test, "canary": cmd_canary,
+            "verify": cmd_verify, "verify-review": cmd_verify_review, "baseline": cmd_baseline,
+            "verify-adopted": cmd_verify_adopted}[args.command](args)
 
 
 if __name__ == "__main__":

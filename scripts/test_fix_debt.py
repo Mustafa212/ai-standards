@@ -197,5 +197,42 @@ class CanaryTest(unittest.TestCase):
                             self.dir / "clean.json", self.dir / "canary.json")
 
 
+class VerifyTest(unittest.TestCase):
+    ITEM = {"id": "RDB-1@src", "rule": "RDB-1", "area": "src", "tool_ids": ["PLR0913"]}
+
+    def test_item_gone_and_no_new_findings_in_touched_files(self) -> None:
+        before = [tool("RDB-1", "src/a.py", "PLR0913"), tool("RDB-4", "src/a.py", "PLR2004")]
+        after = [tool("RDB-4", "src/a.py", "PLR2004")]
+        result = fix_debt.compare_findings(self.ITEM, before, after, ["src/a.py"])
+        self.assertEqual((result["remaining"], result["new"]), (0, []))
+
+    def test_remaining_findings_and_new_ones_are_reported(self) -> None:
+        before = [tool("RDB-1", "src/a.py", "PLR0913")]
+        after = [tool("RDB-1", "src/a.py", "PLR0913"), tool("RDB-4", "src/a.py", "PLR2004"),
+                 tool("RDB-4", "lib/untouched.py", "PLR2004")]
+        result = fix_debt.compare_findings(self.ITEM, before, after, ["src/a.py"])
+        self.assertEqual(result["remaining"], 1)
+        self.assertEqual(result["new"], [{"file": "src/a.py", "tool_id": "PLR2004", "count": 1}])
+
+    def test_adopted_baseline_must_lose_the_item_in_its_folder(self) -> None:
+        item = {"id": "max-params@src", "rule": "max-params", "area": "src", "tool_ids": ["max-params"]}
+        before = {"max-params": {"src/a.ts": 2, "lib/b.ts": 1}}
+        after = {"max-params": {"lib/b.ts": 1}}
+        self.assertEqual(fix_debt.compare_baseline(item, before, after, ["src/a.ts"])["remaining"], 0)
+        grown = {"max-params": {"lib/b.ts": 1}, "no-console": {"src/a.ts": 1}}
+        self.assertEqual(fix_debt.compare_baseline(item, before, grown, ["src/a.ts"])["new"],
+                         [{"file": "src/a.ts", "tool_id": "no-console", "count": 1}])
+
+    def test_verify_review_reads_the_auditor_count(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            fix_debt.write_json(folder / "item.json", {**self.ITEM, "start": "x"})
+            review = folder / "auditor.json"
+            fix_debt.write_json(review, {"rules": [{"rule": "RDB-1", "count": 0}]})
+            self.assertEqual(fix_debt.main(["verify-review", "--item-dir", str(folder), "--review", str(review)]), 0)
+            verify = json.loads((folder / "verify.json").read_text(encoding="utf-8"))
+            self.assertEqual((verify["status"], verify["remaining"], verify["evidence"]), ("review", 0, "rule auditor"))
+
+
 if __name__ == "__main__":
     unittest.main()
