@@ -1,5 +1,9 @@
 """Reject rules written twice within one org: the same ID, or the same text in two places.
 
+Also rejects an ID that a `<!-- removed: ID ... -->` or `<!-- moved to org: ID → ... -->` marker
+retired (IDs are never reused), and a break shape (rules/examples/*.md, orgs/<org>/examples.md) for a
+rule that doesn't exist.
+
 A project sees base + stack + architecture + its org + its own project rules, so within that scope every rule ID
 and every rule text must appear once. A rule that two projects share belongs in the org file: the
 onboard skill moves it there, and this check is the safety net for exact matches.
@@ -19,6 +23,10 @@ RULE = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-\d+) \[(?:tool|review|ai)\]\*\* (.+)$
 EXCEPTION = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-EX-\d+) \[exception\] → ([A-Z][A-Z0-9]*-\d+)\*\* (.+)$")
 # Any rule ID, including those whose level is computed by template syntax (RDB-1, RDB-4).
 ANY_ID = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-\d+) ")
+# A deleted rule or exception, or one moved up to the org, leaves a marker; its ID stays taken.
+RETIRED = re.compile(r"<!-- (?:removed|moved to org): ([A-Z][A-Z0-9]*-(?:EX-)?\d+)")
+# A break shape for the auditors: a "## <ID>" heading in an examples file.
+EXAMPLE = re.compile(r"^## ([A-Z][A-Z0-9]*-\d+)\s*$", re.MULTILINE)
 
 
 def rules_in(path: Path) -> list[tuple[str, str]]:
@@ -33,16 +41,46 @@ def exceptions_in(path: Path) -> list[tuple[str, str, str]]:
     return [(m.group(1), m.group(2), m.group(3)) for line in lines if (m := EXCEPTION.match(line))]
 
 
+def known_ids(files: list[Path]) -> set[str]:
+    """Every rule ID in these files."""
+    return {m.group(1) for file in files if file.exists()
+            for line in file.read_text(encoding="utf-8").splitlines() if (m := ANY_ID.match(line))}
+
+
 def unknown_targets(root: Path, files: list[Path]) -> set[str]:
     """Describe each exception whose target isn't a rule in this scope."""
     existing = [file for file in files if file.exists()]
-    known = {m.group(1) for file in existing for line in file.read_text(encoding="utf-8").splitlines()
-             if (m := ANY_ID.match(line))}
+    known = known_ids(files)
     return {
         f"exception {ex_id} points at unknown rule {target}: {file.relative_to(root).as_posix()}"
         for file in existing
         for ex_id, target, _ in exceptions_in(file)
         if target not in known
+    }
+
+
+def reused_ids(root: Path, files: list[Path]) -> set[str]:
+    """Describe each retired ID that a rule or exception uses again."""
+    existing = [file for file in files if file.exists()]
+    retired = {m.group(1): file.relative_to(root).as_posix()
+               for file in existing for m in RETIRED.finditer(file.read_text(encoding="utf-8"))}
+    return {
+        f"reused id {item_id}: retired in {retired[item_id]}, used in {file.relative_to(root).as_posix()}"
+        for file in existing
+        for item_id in [rule_id for rule_id, _ in rules_in(file)] + [ex[0] for ex in exceptions_in(file)]
+        if item_id in retired
+    }
+
+
+def unknown_examples(root: Path, org_dir: Path, files: list[Path]) -> set[str]:
+    """Describe each break shape whose rule isn't in this scope."""
+    known = known_ids(files)
+    examples = [*sorted((root / "rules" / "examples").glob("*.md")), org_dir / "examples.md"]
+    return {
+        f"example for unknown rule {rule_id}: {file.relative_to(root).as_posix()}"
+        for file in examples if file.exists()
+        for rule_id in EXAMPLE.findall(file.read_text(encoding="utf-8"))
+        if rule_id not in known
     }
 
 
@@ -94,7 +132,8 @@ def main() -> int:
     problems: set[str] = set()
     for org_dir in sorted(path for path in (root / "orgs").iterdir() if path.is_dir()):
         scope = org_scope(root, org_dir)
-        problems |= duplicates(root, scope) | unknown_targets(root, scope)
+        problems |= duplicates(root, scope) | unknown_targets(root, scope) | reused_ids(root, scope)
+        problems |= unknown_examples(root, org_dir, scope)
     for problem in sorted(problems):
         print(problem)
     return 1 if problems else 0

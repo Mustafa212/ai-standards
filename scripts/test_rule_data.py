@@ -122,6 +122,47 @@ class ExceptionRuleTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("duplicate id X-EX-1", out)
 
+    def test_a_removed_marker_alone_passes(self) -> None:
+        text = "<!-- removed: X-1 2026-10-01: nobody follows it -->\n- **X-2 [review]** Keep it.\n"
+        self.assertEqual(self.check(text), (0, ""))
+
+    def test_a_removed_id_is_never_reused(self) -> None:
+        code, out = self.check("<!-- removed: X-1 2026-10-01: obsolete -->\n- **X-1 [review]** Something new.\n")
+        self.assertEqual(code, 1)
+        self.assertIn("reused id X-1", out)
+
+    def test_an_id_moved_to_the_org_is_never_reused(self) -> None:
+        code, out = self.check("<!-- moved to org: X-3 → ME-1 -->\n- **X-3 [review]** Something new.\n")
+        self.assertEqual(code, 1)
+        self.assertIn("reused id X-3", out)
+
+
+class BreakShapeTest(unittest.TestCase):
+    """rules/examples/ holds break shapes for the auditors; AGENTS.md must never include them."""
+
+    def test_the_template_never_includes_the_examples(self) -> None:
+        for folder in ("template", "partials"):
+            for file in (ROOT / folder).rglob("*"):
+                if file.is_file() and file.suffix in (".jinja", ".md", ".mdc", ".txt"):
+                    self.assertNotIn("rules/examples", file.read_text(encoding="utf-8"), file)
+
+    def test_the_repo_has_examples_and_they_name_known_rules(self) -> None:
+        self.assertTrue(list((ROOT / "rules" / "examples").glob("*.md")))
+        done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_rules.py"), str(ROOT)],
+                              capture_output=True, text=True, check=False)
+        self.assertEqual((done.returncode, done.stdout), (0, ""))
+
+    def test_an_example_for_an_unknown_rule_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shutil.copytree(ROOT / "rules", root / "rules")
+            shutil.copytree(ROOT / "orgs", root / "orgs")
+            (root / "orgs" / "personal" / "examples.md").write_text("## NOPE-1\n\n- Search: `x`\n", encoding="utf-8")
+            done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_rules.py"), str(root)],
+                                  capture_output=True, text=True, check=False)
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("example for unknown rule NOPE-1", done.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

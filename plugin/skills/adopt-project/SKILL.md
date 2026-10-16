@@ -25,12 +25,9 @@ Work in four gated steps. Stop at each gate for the user's answer.
    `/ai-standards:audit` already work for them (through `/ai-standards:onboard`), and stop.
    Otherwise `package.json` + `.ts` files → `typescript`; `pyproject.toml` / `requirements*.txt` +
    `.py` → `python`. Anything else (monorepos with several stacks included) isn't supported yet: say
-   so, offer `propose-rule` to add the stack, and stop.
-   - TypeScript: note the module system (`"type": "module"` or CommonJS) and the test runner. The
-     standard check runs **Vitest**, and the standard `tsconfig.json` assumes ESM. Jest suites need
-     migrating first (usually mechanical: `vi` for `jest`, imports from `vitest`), as their own
-     commit before adoption, or the user stops here. CommonJS projects keep their own `tsconfig.json`.
-   - Python: note the layout. The standard configs assume `src/<package>/` and `tests/`.
+   so, offer `propose-rule` to add the stack, and stop. For typescript and python, read the stack's
+   section of `references/stacks.md`: what the standard configs assume, and what can stop adoption
+   here.
 3. Read what the project already has: existing lint/format/type/test configs, CI workflows,
    `CLAUDE.md`/`AGENTS.md`/`CODING_RULES.md`, test command and whether tests pass today.
 4. Measure, with the project's own tools: do the tests pass? current coverage %? does the type
@@ -56,11 +53,8 @@ Propose, with a recommendation for each:
 
 ## 3. Apply
 
-Pick a runner: `uvx copier` if `uv` exists, else `pipx run copier`, else `pip install --user copier`.
-For the Python scripts below use `python3`, or `python` where `python3` isn't a real interpreter
-(on Windows it is often the Microsoft Store alias, which prints "Python was not found"), or
-`uv run --no-project python`. Python projects also need `uv` and `make` (Windows:
-`winget install astral-sh.uv`, `winget install ezwinports.make`).
+Commands use `python3` and `uvx copier`; when one isn't available, and for the tools Python projects
+need, see `${CLAUDE_PLUGIN_ROOT}/references/runners.md`.
 
 1. Clone the standards repo to a temp dir for its scripts:
    `git clone --depth 1 https://github.com/<owner>/<repo> <tmp>/standards`.

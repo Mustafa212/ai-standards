@@ -9,6 +9,39 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## Unreleased
+
+PATCH: plugin skill text and script checks only; no rule text changes and nothing new in a rendered
+project. Taken from a comparison with similar standards and skill plugins (ideas only, in our own
+words).
+
+- **onboard:** a row's evidence is the search, 2–3 `file:line` hits and the places that differ;
+  cited lines are reopened before the table is shown, and the rows they don't support are dropped
+  (with a count). Comment-only patterns aren't rules. At most 10 rows per round, highest count
+  first. Decisions are asked per row with AskUserQuestion (up to 4 per call); a typed answer is
+  saved in the user's words, a yes to the whole table isn't a decision, and without the tool nothing
+  is saved. A deleted project rule leaves `<!-- removed: <ID> <date>: <reason> -->`, which counts
+  when choosing the next ID. The private-copy and new-org setup moved to `references/setup.md`, and
+  the old step 8 (general rules go to the public repo) is now part of step 6.
+- **Break shapes for `[review]` rules:** new `rules/examples/<rule file>.md` (org and project rules:
+  `orgs/<org>/examples.md`), with a search and a bad snippet per rule ID. The template never renders
+  them into AGENTS.md. propose-rule saves them, the audit puts them in the auditor brief, and
+  `rule-auditor` starts from them. Seeded for RDB-5, RDB-9, RDB-10, TST-4, ERR-4 (base), CS-8, CS-14
+  (dotnet), CLEAN-2 (dotnet clean), TS-5 (typescript), NG-7, NG-9, NG-10 (angular), PY-3 (python),
+  DART-7 and DART-8 (flutter).
+- **`check_rules.py`:** rejects an ID that a `removed:` or `moved to org:` marker retired, and a
+  break shape for a rule that doesn't exist.
+- **audit:** before writing `review.json`, the first example of each high-confidence finding is
+  reopened. A rule whose examples don't hold moves to `not_checked`, and the summary says how many
+  were dropped. The summary starts with what wasn't checked, which is unchecked, not clean.
+- **fix-debt:** code with no test gets a test of today's behavior first; a P1 fix shows its new
+  test failing before the fix; the test runner's run/failed/skipped line is reported before and
+  after, and zero tests run isn't a pass.
+- **SessionStart:** the empty-folder message is calmer (no "REQUIRED… MUST"); it still points to
+  `ai-standards:onboard`.
+- **Shorter skills:** the Python and copier runner notes are in one shared
+  `plugin/references/runners.md`, and adopt-project's stack notes are in `references/stacks.md`.
+
 ## 0.9.1 — 2026-10-16
 
 - **Rules in effect for a registered, not adopted project:** the audit keeps the rendered rules as
