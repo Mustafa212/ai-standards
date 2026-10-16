@@ -83,5 +83,79 @@ class ItemsTest(unittest.TestCase):
             self.assertEqual(data["items"][0]["id"], "RDB-1@src")
 
 
+def git_q(*args: str, cwd: Path) -> str:
+    return subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false",
+                           "-c", "core.autocrlf=false", *args],
+                          cwd=cwd, check=True, capture_output=True, text=True).stdout
+
+
+def make_repo(root: Path) -> Path:
+    repo = root / "my project"  # a space, as real paths have
+    (repo / "src").mkdir(parents=True)
+    (repo / "src" / "calc.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+    git_q("init", "-q", cwd=repo)
+    git_q("config", "core.autocrlf", "false", cwd=repo)  # plain git calls then see the committed bytes
+    git_q("add", ".", cwd=repo)
+    git_q("commit", "-qm", "init", cwd=repo)
+    return repo
+
+
+# A stand-in test runner, kept in a file so no shell quoting touches it: writes a JUnit file whose
+# test passes while src/calc.py still says "a + b".
+FAKE_RUNNER = """import pathlib, sys
+ok = "a + b" in pathlib.Path("src/calc.py").read_text()
+pathlib.Path(sys.argv[1]).write_text(
+    '<testsuite><testcase classname="t" name="adds">' + ("" if ok else "<failure/>") + "</testcase></testsuite>")
+"""
+RUNNER = Path(tempfile.gettempdir()) / "fix-debt-test-runner.py"
+
+
+def fake_command() -> str:
+    RUNNER.write_text(FAKE_RUNNER, encoding="utf-8")
+    return f'"{sys.executable}" "{RUNNER}" {{result}}'
+
+
+class StartAndTestTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.repo = make_repo(self.root)
+        self.batch = self.root / "out" / "fix-debt" / "2026-10-16-1"
+        items = {"items": [{"id": "RDB-1@src", "rule": "RDB-1", "area": "src", "priority": "P3", "count": 1,
+                            "kind": "tool", "tool_ids": ["PLR0913"], "files": ["src/calc.py"],
+                            "behavior": "preserves"}], "p1": []}
+        self.items_file = self.root / "out" / "fix-debt" / "items.json"
+        fix_debt.write_json(self.items_file, items)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_start_records_the_item_and_its_start_commit(self) -> None:
+        folder = fix_debt.start_item(self.repo, self.batch, "RDB-1@src", self.items_file, ["tests"], False)
+        item = json.loads((folder / "item.json").read_text(encoding="utf-8"))
+        self.assertEqual(item["start"], git_q("rev-parse", "HEAD", cwd=self.repo).strip())
+        self.assertEqual(item["allow"], ["src", "tests"])
+        self.assertFalse(item["p1"])
+
+    def test_start_refuses_a_dirty_tree(self) -> None:
+        (self.repo / "src" / "calc.py").write_text("changed\n", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            fix_debt.start_item(self.repo, self.batch, "RDB-1@src", self.items_file, [], False)
+
+    def test_run_tests_parses_the_runner_file(self) -> None:
+        result = fix_debt.run_tests(self.repo, fake_command(), "junit", self.batch / "x" / "clean.json")
+        self.assertEqual((result["executed"], result["passed"], result["source"]), (1, 1, "file"))
+        saved = json.loads((self.batch / "x" / "clean.json").read_text(encoding="utf-8"))
+        self.assertEqual(saved["tests"], {"t::adds": "passed"})
+
+    def test_a_stale_result_file_never_counts(self) -> None:
+        out = self.batch / "x" / "after.json"
+        stale = out.with_suffix(".xml")
+        stale.parent.mkdir(parents=True)
+        stale.write_text('<testsuite><testcase classname="t" name="old"/></testsuite>', encoding="utf-8")
+        result = fix_debt.run_tests(self.repo, f'"{sys.executable}" -c "pass"', "junit", out)
+        self.assertEqual((result["executed"], result["source"]), (0, "missing"))
+
+
 if __name__ == "__main__":
     unittest.main()

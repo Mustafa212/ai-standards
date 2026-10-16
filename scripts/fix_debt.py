@@ -26,11 +26,14 @@ import json
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit import area  # noqa: E402
 from rule_data import load_priorities, priority  # noqa: E402
+from run_results import Unreadable  # noqa: E402
+from run_results import read as read_result  # noqa: E402
 
 SPLIT_AT = 30
 ITEMS, DONE = "items.json", "done.json"
@@ -120,6 +123,64 @@ def cmd_items(args: argparse.Namespace) -> int:
     return 0
 
 
+RESULT_SUFFIX = {"trx": ".trx", "junit": ".xml", "jest": ".jest.json", "flutter": ".jsonl", "summary": ".log"}
+
+
+def start_item(project: Path, batch: Path, item_id: str, items_file: Path, allow: list[str],
+               formatter_only: bool) -> Path:
+    data = read_json(items_file, {"items": [], "p1": []})
+    item = next((i for i in data["items"] + data["p1"] if i["id"] == item_id), None)
+    if item is None:
+        sys.stderr.write(f"no item {item_id} in {items_file}\n")
+        raise SystemExit(2)
+    if git(project, "status", "--porcelain").strip():
+        sys.stderr.write("the working tree has uncommitted changes: commit or stash them first\n")
+        raise SystemExit(2)
+    folder = batch / safe_name(item_id)
+    write_json(folder / "item.json", {**item, "start": git(project, "rev-parse", "HEAD").strip(),
+                                      "allow": [item["area"], *allow], "formatter_only": formatter_only,
+                                      "p1": item["behavior"] == "changes"})
+    return folder
+
+
+def run_tests(project: Path, command: str, kind: str, out: Path) -> dict:
+    """Run the test command; the result comes only from the file the runner writes this time."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    result_file = out.with_name(out.stem + RESULT_SUFFIX[kind])
+    result_file.unlink(missing_ok=True)  # a file from an earlier run never counts
+    expanded = (command.replace("{result}", f'"{result_file}"').replace("{dir}", f'"{result_file.parent}"')
+                .replace("{name}", result_file.name))
+    proc = subprocess.run(expanded, shell=True, cwd=project, capture_output=True, text=True,  # noqa: S602
+                          encoding="utf-8", errors="replace", check=False)
+    output = proc.stdout + "\n" + proc.stderr
+    out.with_name(out.stem + ".output.log").write_text(output, encoding="utf-8")
+    if kind == "summary":
+        result_file.write_text(output, encoding="utf-8")
+    try:
+        result = read_result(result_file, kind)
+        error = ""
+    except Unreadable as problem:
+        result = {"executed": 0, "passed": 0, "failed": 0, "skipped": 0, "tests": {}, "source": "missing"}
+        error = str(problem)
+    result.update(command=expanded, exit_code=proc.returncode, finished_at=time.time(),
+                  result_file=str(result_file), error=error)
+    write_json(out, result)
+    return result
+
+
+def cmd_start(args: argparse.Namespace) -> int:
+    print(start_item(args.project.resolve(), args.batch.resolve(), args.item, args.items.resolve(),
+                     args.allow, args.formatter_only))
+    return 0
+
+
+def cmd_test(args: argparse.Namespace) -> int:
+    result = run_tests(args.project.resolve(), args.command, args.format, args.out.resolve())
+    print(f"[fix-debt] tests: {result['executed']} executed, {result['failed']} failed, "
+          f"{result['skipped']} skipped ({result['source']}){' — ' + result['error'] if result['error'] else ''}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -127,8 +188,20 @@ def main(argv: list[str] | None = None) -> int:
     items.add_argument("out", type=Path)
     items.add_argument("--org", required=True)
     items.add_argument("--max", type=int, default=10)
+    start = commands.add_parser("start", help="record an item's start commit and allowed paths")
+    start.add_argument("project", type=Path)
+    start.add_argument("batch", type=Path)
+    start.add_argument("--item", required=True)
+    start.add_argument("--items", required=True, type=Path)
+    start.add_argument("--allow", action="append", default=[])
+    start.add_argument("--formatter-only", action="store_true")
+    test = commands.add_parser("test", help="run the tests and keep their result file")
+    test.add_argument("project", type=Path)
+    test.add_argument("--command", required=True)
+    test.add_argument("--format", required=True, choices=sorted(RESULT_SUFFIX))
+    test.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
-    return {"items": cmd_items}[args.command](args)
+    return {"items": cmd_items, "start": cmd_start, "test": cmd_test}[args.command](args)
 
 
 if __name__ == "__main__":
