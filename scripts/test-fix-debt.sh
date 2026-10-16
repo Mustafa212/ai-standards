@@ -18,7 +18,8 @@ tar -C "$rendered" --exclude=.git --exclude=.venv -cf - . | tar -C "$project" -x
 
 case "$stack" in
   python)
-    pkg="$(cd "$project/src" && ls -d */ | head -1)"; pkg="${pkg%/}"
+    pkg_init="$(find "$project/src" -mindepth 2 -maxdepth 2 -name __init__.py | head -1)"
+    pkg="$(basename "$(dirname "$pkg_init")")"
     code="src/$pkg/shipping.py"
     cat >"$project/$code" <<'PY'
 """Shipping costs."""
@@ -185,6 +186,7 @@ code_done="$(pay good "$fixed" "$fixed_test" true)"
 
 git_q -C "$project" reset -q --hard "$base"
 rm -f "$out/fix-debt/done.json"
+# shellcheck disable=SC2317  # bad_step runs through pay's fourth argument
 bad_step() { # drop a test and silence a rule instead of fixing it
   sed -i '/adds five\|extras_add_five/,+2d' "$project/$test_file"
   if [[ "$stack" == python ]]; then echo "x = 1  # noqa: PLR2004" >>"$project/$code"; else echo "// eslint-disable-next-line" >>"$project/$code"; fi

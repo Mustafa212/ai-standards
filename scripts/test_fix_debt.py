@@ -148,6 +148,16 @@ class StartAndTestTest(unittest.TestCase):
         saved = json.loads((self.batch / "x" / "clean.json").read_text(encoding="utf-8"))
         self.assertEqual(saved["tests"], {"t::adds": "passed"})
 
+    def test_the_test_and_canary_commands_run_from_the_cli(self) -> None:
+        clean = self.batch / "x" / "clean.json"
+        self.assertEqual(fix_debt.main(["test", str(self.repo), "--command", fake_command(), "--format", "junit",
+                                        "--out", str(clean)]), 0)
+        self.assertEqual(json.loads(clean.read_text(encoding="utf-8"))["executed"], 1)
+        self.assertEqual(fix_debt.main(["canary", str(self.repo), "--file", "src/calc.py", "--line", "2",
+                                        "--replace", "    return a - b", "--command", fake_command(),
+                                        "--format", "junit", "--clean", str(clean),
+                                        "--out", str(self.batch / "x" / "canary.json")]), 0)
+
     def test_a_stale_result_file_never_counts(self) -> None:
         out = self.batch / "x" / "after.json"
         stale = out.with_suffix(".xml")

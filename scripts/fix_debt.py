@@ -453,7 +453,8 @@ def cmd_verdict(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    commands = parser.add_subparsers(dest="command", required=True)
+    # "action", not "command": the test and canary commands have a --command option of their own.
+    commands = parser.add_subparsers(dest="action", required=True)
     items = commands.add_parser("items", help="debt items for the next round")
     items.add_argument("out", type=Path)
     items.add_argument("--org", required=True)
@@ -506,7 +507,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     return {"items": cmd_items, "start": cmd_start, "test": cmd_test, "canary": cmd_canary,
             "verify": cmd_verify, "verify-review": cmd_verify_review, "baseline": cmd_baseline,
-            "verify-adopted": cmd_verify_adopted, "verdict": cmd_verdict}[args.command](args)
+            "verify-adopted": cmd_verify_adopted, "verdict": cmd_verdict}[args.action](args)
 
 
 if __name__ == "__main__":
