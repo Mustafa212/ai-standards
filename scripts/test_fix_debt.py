@@ -157,5 +157,45 @@ class StartAndTestTest(unittest.TestCase):
         self.assertEqual((result["executed"], result["source"]), (0, "missing"))
 
 
+class CanaryTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.repo = make_repo(self.root)
+        self.dir = self.root / "evidence"
+        fix_debt.run_tests(self.repo, fake_command(), "junit", self.dir / "clean.json")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_a_break_the_tests_see_counts_and_the_file_is_restored(self) -> None:
+        result = fix_debt.canary(self.repo, "src/calc.py", 2, "    return a - b", fake_command(), "junit",
+                                 self.dir / "clean.json", self.dir / "canary.json")
+        self.assertEqual(result["new_failures"], ["t::adds"])
+        self.assertTrue(result["restored"])
+        self.assertEqual((self.repo / "src" / "calc.py").read_text(encoding="utf-8"),
+                         "def add(a, b):\n    return a + b\n")
+
+    def test_a_break_nothing_sees_has_no_new_failures(self) -> None:
+        result = fix_debt.canary(self.repo, "src/calc.py", 1, "def add(a, b):  # same", fake_command(), "junit",
+                                 self.dir / "clean.json", self.dir / "canary.json")
+        self.assertEqual((result["new_failures"], result["failed_delta"]), ([], 0))
+
+    def test_crlf_files_are_restored_byte_for_byte(self) -> None:
+        path = self.repo / "src" / "calc.py"
+        path.write_bytes(b"def add(a, b):\r\n    return a + b\r\n")
+        git_q("commit", "-qam", "crlf", "--allow-empty", cwd=self.repo)  # already CRLF on Windows
+        before = path.read_bytes()
+        fix_debt.canary(self.repo, "src/calc.py", 2, "    return a - b", fake_command(), "junit",
+                        self.dir / "clean.json", self.dir / "canary.json")
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_a_dirty_file_is_refused(self) -> None:
+        (self.repo / "src" / "calc.py").write_text("def add(a, b):\n    return b + a\n", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            fix_debt.canary(self.repo, "src/calc.py", 2, "x", fake_command(), "junit",
+                            self.dir / "clean.json", self.dir / "canary.json")
+
+
 if __name__ == "__main__":
     unittest.main()

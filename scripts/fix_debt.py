@@ -181,6 +181,47 @@ def cmd_test(args: argparse.Namespace) -> int:
     return 0
 
 
+def canary(project: Path, file: str, line: int, replace: str, command: str, kind: str, clean: Path,
+           out: Path) -> dict:
+    """Break one line on purpose, run the tests, restore the file: new failures mean the tests see it."""
+    if git(project, "status", "--porcelain", "--", file).strip():
+        sys.stderr.write(f"{file} has uncommitted changes: the canary needs a clean file\n")
+        raise SystemExit(2)
+    target = project / file
+    original = target.read_bytes()
+    lines = original.decode("utf-8").splitlines(keepends=True)
+    if not 1 <= line <= len(lines):
+        sys.stderr.write(f"{file} has no line {line}\n")
+        raise SystemExit(2)
+    old = lines[line - 1]
+    ending = "\r\n" if old.endswith("\r\n") else "\n" if old.endswith("\n") else ""
+    lines[line - 1] = replace + ending
+    target.write_bytes("".join(lines).encode("utf-8"))
+    try:
+        result = run_tests(project, command, kind, out.with_name(out.stem + "-run.json"))
+    finally:
+        target.write_bytes(original)
+    restored = not git(project, "status", "--porcelain", "--", file).strip()
+    before = read_json(clean, {"tests": {}, "failed": 0, "source": "missing"})
+    if result["source"] == "file" and before["source"] == "file":
+        known = {test for test, outcome in before["tests"].items() if outcome == "failed"}
+        new = sorted(t for t, outcome in result["tests"].items() if outcome == "failed" and t not in known)
+        delta = len(new)
+    else:
+        new, delta = [], result["failed"] - before["failed"]
+    data = {"file": file, "line": line, "replace": replace, "new_failures": new, "failed_delta": delta,
+            "restored": restored, "source": result["source"], "executed": result["executed"]}
+    write_json(out, data)
+    return data
+
+
+def cmd_canary(args: argparse.Namespace) -> int:
+    data = canary(args.project.resolve(), args.file, args.line, args.replace, args.command, args.format,
+                  args.clean.resolve(), args.out.resolve())
+    print(f"[fix-debt] canary: {data['failed_delta']} new failures; restored: {data['restored']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -200,8 +241,17 @@ def main(argv: list[str] | None = None) -> int:
     test.add_argument("--command", required=True)
     test.add_argument("--format", required=True, choices=sorted(RESULT_SUFFIX))
     test.add_argument("--out", required=True, type=Path)
+    can = commands.add_parser("canary", help="break one line, run the tests, restore it")
+    can.add_argument("project", type=Path)
+    can.add_argument("--file", required=True)
+    can.add_argument("--line", required=True, type=int)
+    can.add_argument("--replace", required=True)
+    can.add_argument("--command", required=True)
+    can.add_argument("--format", required=True, choices=sorted(RESULT_SUFFIX))
+    can.add_argument("--clean", required=True, type=Path)
+    can.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
-    return {"items": cmd_items, "start": cmd_start, "test": cmd_test}[args.command](args)
+    return {"items": cmd_items, "start": cmd_start, "test": cmd_test, "canary": cmd_canary}[args.command](args)
 
 
 if __name__ == "__main__":
