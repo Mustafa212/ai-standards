@@ -176,6 +176,9 @@ for stack in $stacks; do
     if [[ "$org" == personal && "$architecture" =~ ^(-|simple)$ ]]; then
       log "$name: audit an existing project without the standards"
       bash "$work/src/scripts/test-audit.sh" "$work/src" "$dir" "$stack" "$work" || fail "$name: audit"
+      if [[ "$stack" == python || "$stack" == typescript ]]; then
+        bash "$work/src/scripts/test-fix-debt.sh" "$work/src" "$dir" "$stack" "$work" || fail "$name: fix-debt"
+      fi
     fi
   done
   done
