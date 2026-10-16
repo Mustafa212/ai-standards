@@ -9,6 +9,24 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.10.0 — 2026-10-16
+
+MINOR: new [review] rules and a removed [ai] rule; nothing that fails existing code.
+
+- **CS-10 split (stack dotnet, [review]):** CS-10 bundled four checks, so an audit count mixed
+  defects with different fixes. Now one idea each: CS-10 never return EF Core entities from an
+  API (map to DTOs); **CS-15** filter, page and project in the database; **CS-16** no N+1
+  queries; **CS-17** reads that don't update use `AsNoTracking()`. CS-15 and CS-16 keep CS-10's
+  P1 priority; CS-17 is P3. A project exception that targeted CS-10 now covers only the
+  entities-over-the-API part: re-check it.
+- **Breaking a rule (base, intro):** when a task can't be done without breaking a [tool] or
+  [review] rule, the agent stops and asks; the outcome is a fix or an approved project exception,
+  never a silent break. Going against an [ai] rule is said, with the reason.
+- **TST-3 removed (base, [ai]):** "first write a test that reproduces the bug" is covered by
+  DONE-2 [review] (every behaviour change ships with a test that fails without it). Its ID stays
+  retired (`<!-- removed: … -->`). The other [ai] rules stay: AGENTS.md is also read by Cursor,
+  Copilot and other agents, so "Claude does it anyway" doesn't hold for them.
+
 ## 0.9.2 — 2026-10-16
 
 PATCH: plugin skill text and script checks only; no rule text changes and nothing new in a rendered

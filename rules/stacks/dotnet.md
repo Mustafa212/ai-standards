@@ -9,7 +9,10 @@
 - **CS-7 [tool]** `nameof(x)` instead of string literals for member names.
 - **CS-8 [review]** Async all the way: no `.Result`, `.Wait()` or `async void` (except event handlers).
 - **CS-9 [review]** Data types are records, or classes with `required` and `init` properties.
-- **CS-10 [review]** Never expose EF Core entities from an API; filter, page and project in the database; no N+1 queries; `AsNoTracking` for reads.
+- **CS-10 [review]** Never return EF Core entities from an API; map them to DTOs.
+- **CS-15 [review]** Filter, page and project in the database, never after loading rows into memory.
+- **CS-16 [review]** No N+1 queries: load related data with `Include` or a projection.
+- **CS-17 [review]** Reads that don't update use `AsNoTracking()`.
 - **CS-11 [review]** Respect DI lifetimes (no scoped service inside a singleton), and read settings through `IOptions<T>`.
 - **CS-12 [review]** Tests are named `Method_Scenario_Expected`, and test behavior against a real database where data matters (Testcontainers or Respawn).
 - **CS-13 [review]** One public type per file, and the file is named after it.

@@ -59,7 +59,7 @@ Take the bullets from `<tmp>/rendered/AGENTS.md`: rules `- **ID [level]** text`,
 `- **ID [exception] → TARGET** text`. `[ai]` rules are guidance and aren't audited. Group the
 `[review]` rules (and the `[tool]` rules when the tools didn't run) by ID:
 
-1. **Design and architecture:** DES, API, CLEAN, VSA, TS-3, TS-4, PY-3, CS-9, CS-10, CS-11, NG-5,
+1. **Design and architecture:** DES, API, CLEAN, VSA, TS-3, TS-4, PY-3, CS-9, CS-10, CS-11, CS-15, CS-16, CS-17, NG-5,
    DART-5, DART-6, DART-7.
 2. **Errors and security:** ERR, CS-8, NG-10.
 3. **Readability:** RDB, READ-4, CS-13, CS-14, NG-6, NG-7, NG-8, NG-9, DART-8.
