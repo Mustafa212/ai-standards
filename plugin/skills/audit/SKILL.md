@@ -105,7 +105,8 @@ python3 <clone>/scripts/audit.py report <out> --project-name "<project name>" --
   --exceptions <clone>/orgs/<org>/projects/<slug>.md --agents <n> --model <model>
 ```
 
-Remove `<tmp>`.
+Copy `<tmp>/rendered/AGENTS.md` to `<out>/RULES.md` (the rules in effect, which the session-start hook
+points to), then remove `<tmp>`.
 
 ## 6. Tell the user
 

@@ -9,8 +9,16 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
-## Unreleased
+## 0.9.1 — 2026-10-16
 
+- **Rules in effect for a registered, not adopted project:** the audit keeps the rendered rules as
+  `RULES.md` in the report folder, and the session-start hook tells Claude to read that file before
+  the first edit (or says no rendered rules exist yet, and that the audit renders them). Why: the
+  hook said to follow the base, stack and org rules but gave no file Claude could read, and the
+  audit deleted its rendered copy.
+- **adopt-project vs audit:** adopt-project's description now says it writes to the repository and
+  sends read-only checks to audit. Why: both claimed "audit", so "audit my project" could start the
+  skill that writes.
 - **Docs (PATCH):** the README describes onboarding of existing code (rule sorting, exceptions), the
   audit files, the 7-day refresh and choosing a source; `user-level/CLAUDE.md` points to `onboard`;
   the plugin description covers existing projects.

@@ -112,15 +112,22 @@ if file="$(registration)"; then
   org="$(basename "$(dirname "$(dirname "$file")")")"
   slug="$(basename "$file" .md)"
   report="$standards_home/reports/$org/$slug/STANDARDS-DEBT.md"
+  rules="$standards_home/reports/$org/$slug/RULES.md"
   summary="no report yet"
   if [[ -f "$report" ]]; then
     total="$(grep -m 1 -oE '\*\*[0-9]+ findings\*\*' "$report" | tr -dc '0-9')"
     p1="$(grep -m 1 -oE 'P1 [0-9]+' "$report" | cut -d ' ' -f 2)"
     summary="${total:-?} findings, P1 ${p1:-?}"
   fi
+  if [[ -f "$rules" ]]; then
+    where="Before your first edit, read the rules in effect: $rules (rendered by the last audit)."
+  else
+    where="Read $file before your first edit; no rendered rules yet for the base, stack and org rules: /ai-standards:audit renders them."
+  fi
   cat <<EOF
 [ai-standards] This project is registered with ai-standards (org: $org), but not adopted: its rules
-live in the user's private copy ($file, plus the base, stack and org rules), not in the repo.
+live in the user's private copy, not in the repo.
+- $where
 - Follow those rules on new and changed lines. Exceptions (<PREFIX>-EX-n) replace the rule they name.
 - Latest standards report: $summary ($report). /ai-standards:audit refreshes it.
 EOF
