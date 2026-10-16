@@ -5,6 +5,10 @@ Every rule has an ID and an enforcement level:
 - **[review]** checked in code review (human or AI reviewer).
 - **[ai]** guidance on how to work.
 
+When a task can't be done without breaking a [tool] or [review] rule, stop and ask: the outcome is
+a fix, or a project exception the user approves, never a silent break. When you go against an [ai]
+rule, say so and why.
+
 ## 0. Definition of done
 
 - **DONE-1 [tool]** Run `{{ cfg.check_cmd }}` and make it pass before saying a task is done. Report the real result; never claim success without running it.
@@ -53,7 +57,7 @@ Every rule has an ID and an enforcement level:
 
 - **TST-1 [tool]** Coverage ≥ {{ cfg.coverage_target }}%. CI fails below it{% if cfg.ratcheting %} (this project: ≥ {{ cfg.coverage }}% today, see Adoption status){% endif %}.
 - **TST-2 [review]** Test behaviour, not implementation. Name tests as sentences describing the behaviour.
-- **TST-3 [ai]** When fixing a bug, first write a test that reproduces it.
+<!-- removed: TST-3 2026-10-16: covered by DONE-2 (a bug fix is a behaviour change, so it ships with a test that fails without it) -->
 - **TST-4 [review]** Tests never rely on timing (no sleeps or timeouts): wait for the event. Prefer fakes to mocks.
 
 ## 6. Git
