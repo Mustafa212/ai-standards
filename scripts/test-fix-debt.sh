@@ -196,4 +196,5 @@ verdict_bad="$(cat "$out/fix-debt/bad/"*/verdict.out)"
 grep -q "nothing lost.*FAIL" <<<"$verdict_bad" || fail "the dropped test wasn't reported"
 grep -q "suppression added" <<<"$verdict_bad" || fail "the suppression wasn't reported"
 
+[[ "$failed" == 1 ]] || echo "fix-debt $stack: the correct fix is DONE, the bad one STOPPED"
 exit "$failed"
