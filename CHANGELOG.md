@@ -9,12 +9,14 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
-## Unreleased
+## 0.13.0 — 2026-10-17
 
-MINOR: two new `[review]` rules for API stacks (typescript, python, dotnet); nothing fails existing code.
+MINOR: three new `[review]` rules for API stacks (typescript, python, dotnet); nothing fails existing code.
+An audit run after updating can report new findings for them.
 
-- **DES-10 [review]** (base) A collection endpoint is paged from its first release, with a server-capped page size and an opaque cursor or next link left out on the last page. Sources: Google AIP-158, Microsoft Azure REST API guidelines, Zalando #160, OWASP API4:2023.
-- **ERR-10 [review]** (base) Uploads: size caps, an extension allow-list checked against the magic bytes, a generated storage name outside the web root, a malware scan before others can download, `Content-Disposition: attachment`, and the record's own access check. Sources: ASP.NET Core file-upload docs, OWASP File Upload cheat sheet, OWASP ASVS 5.0 V5.
+- **DES-10 [review]** (base, P1) A collection that can grow is paged from its endpoint's first release, with a server-capped page size and an opaque cursor or next link left out on the last page. Sources: Google AIP-158, Microsoft Azure REST API guidelines, Zalando #160, OWASP API4:2023.
+- **ERR-10 [review]** (base, P1) Accepting an upload: size caps, an extension allow-list checked against the magic bytes, a generated storage name outside the web root, the user's file name kept as encoded display metadata. Sources: ASP.NET Core file-upload docs, OWASP File Upload cheat sheet, OWASP ASVS 5.0 5.2.1, 5.2.2, 5.3.2.
+- **ERR-11 [review]** (base, P1) Serving an upload to other users: after a malware scan, through the owning record's access check (ERR-7), with the encoded file name in `Content-Disposition`. Sources: ASP.NET Core file-upload docs, OWASP File Upload cheat sheet, OWASP ASVS 5.0 5.4.1-5.4.3.
 
 ## 0.12.1 — 2026-10-17
 

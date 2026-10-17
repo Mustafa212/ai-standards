@@ -60,10 +60,15 @@ start from (Grep, or Glob for file names) and a short bad snippet. Never rendere
 
 ## DES-10
 
-- Search: endpoints that return `List<`, `IEnumerable<`, `list[`, an array or `ToListAsync()` with no page parameters
+- Search, in controllers and route handlers: `ToListAsync\(|\.findMany\(|\.all\(\)|List<|IEnumerable<|list\[` with no page, cursor or limit parameter
 - Break: `[HttpGet] public Task<List<ProjectDto>> GetAll(CancellationToken ct) => db.Projects.Select(p => new ProjectDto(p.Id, p.Name)).ToListAsync(ct);`
 
 ## ERR-10
 
 - Search: `IFormFile|UploadFile|multer|\.FileName\b|\.originalname\b`
 - Break: `var path = Path.Combine("wwwroot/uploads", file.FileName);`
+
+## ERR-11
+
+- Search: `PhysicalFile\(|File\(|res\.(download|sendFile)\(|FileResponse\(`
+- Break: `[HttpGet("files/{id}")] public IActionResult Get(Guid id) => PhysicalFile(store.PathFor(id), "application/pdf");`
