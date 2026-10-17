@@ -12,6 +12,8 @@ The TypeScript rules above apply too.
 - **NG-8 [review]** One concept per file (a component, a directive or a service), named in kebab-case after it. Folders by feature, not by type (no `components/` or `services/`), with specs next to the code.
 - **NG-9 [review]** `class` and `style` bindings instead of `NgClass` and `NgStyle`; lifecycle hooks stay short and call well-named methods.
 - **NG-10 [review]** Long-lived subscriptions end with the component (`takeUntilDestroyed`, the `async` pipe, `toSignal`); one-shot HTTP calls need nothing.
+- **NG-11 [tool]** Never write HTML past Angular's sanitizer: no `innerHTML`, `outerHTML` or `insertAdjacentHTML` through an element, no `document.write`, and no `Renderer2.setProperty` on those properties; bind in the template instead. `DomSanitizer.bypassSecurityTrust*` is allowed only on a value the code built itself (a fixed embed URL plus a validated ID), with a SUP-1 suppression that says why.
+- **NG-12 [review]** Never store access tokens, refresh tokens or personal data in `localStorage` or `sessionStorage`, because one XSS reads all of it. Prefer a backend-for-frontend that keeps tokens on the server and gives the browser an `HttpOnly`, `Secure`, `SameSite` session cookie, with CSRF checked on the server (Angular's `HttpClient` sends only the client half). Keep tokens in memory only where a BFF isn't possible, and check where the auth library stores them.
 
 | Task | Command |
 | --- | --- |

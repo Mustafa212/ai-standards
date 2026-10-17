@@ -13,7 +13,8 @@
     "@angular-eslint/prefer-standalone": "NG-1",
     "@angular-eslint/prefer-on-push-component-change-detection": "NG-1",
     "@angular-eslint/prefer-inject": "NG-2", "@angular-eslint/prefer-signals": "NG-3",
-    "@angular-eslint/template/prefer-control-flow": "NG-4"
+    "@angular-eslint/template/prefer-control-flow": "NG-4",
+    "no-restricted-properties": "NG-11"
   },
   "python": {
     "PLR0913": "RDB-1", "PLR0915": "RDB-1", "C901": "RDB-1", "PLR1702": "RDB-1", "PLR2004": "RDB-4",
@@ -26,7 +27,7 @@
     "S125": "RDB-5", "CS1591": "RDB-8", "IDE0055": "RDB-6", "IDE0161": "CS-2", "IDE0065": "CS-2",
     "IDE0040": "CS-2", "IDE1006": "CS-2", "IDE0007": "CS-3", "IDE0008": "CS-3", "CA1031": "CS-4",
     "CA2200": "CS-4", "CA2016": "CS-5", "CA1852": "CS-6", "CA1822": "CS-6", "CA1507": "CS-7",
-    "S108": "ERR-1", "S2486": "ERR-1", "S2325": "CS-6"
+    "S108": "ERR-1", "S2486": "ERR-1", "S2325": "CS-6", "RS0030": "CS-24"
   },
   "flutter": {
     "public_member_api_docs": "RDB-8", "avoid_positional_boolean_parameters": "RDB-9",

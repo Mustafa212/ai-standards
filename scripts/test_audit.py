@@ -65,6 +65,17 @@ class ParserTest(unittest.TestCase):
         self.assertEqual([(item["rule"], item["file"]) for item in found],
                          [("RDB-1", "src/A.cs"), ("unmapped", "src/B.cs")])
 
+    def test_a_rule_named_in_the_message_wins_over_the_tool_map(self) -> None:
+        # One tool ID (a banned-API list) can serve several rules; each ban message names its own.
+        raw = [
+            {"tool_id": "RS0030", "file": "src/A.cs", "line": 1,
+             "message": "The symbol 'DateTime.UtcNow' is banned in this project: Read the time from an injected "
+                        "TimeProvider (CS-24)."},
+            {"tool_id": "RS0030", "file": "src/A.cs", "line": 2, "message": "The symbol 'X' is banned."},
+        ]
+        found = audit.normalize(raw, Path(tempfile.gettempdir()), {"RS0030": "INNO-2"})
+        self.assertEqual([item["rule"] for item in found], ["CS-24", "INNO-2"])
+
 
 class WorktreeTest(unittest.TestCase):
     def setUp(self) -> None:

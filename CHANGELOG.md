@@ -9,6 +9,47 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.12.0 — 2026-10-17
+
+**BREAKING** (minor bump while 0.x): two new `[tool]` rules can fail existing code. CS-24 bans
+reading the clock directly in .NET production code, and NG-11 bans bypassing Angular's sanitizer.
+Every other change is `[review]`. Each rule comes from published guidance: OWASP (the API Top 10
+and its cheat sheets), Microsoft Learn (ASP.NET Core authorization, EF Core, TimeProvider), RFC
+3339, angular.dev security, Zalando's API guidelines and Martin Fowler's Money pattern.
+
+- **Base, [review]:**
+  - **DES-8 (P1, server stacks only):** a database constraint, not only a check-then-insert;
+  - **DES-9 (P2):** moments in UTC with an offset, calendar dates without a time, and the business
+    date from one time-zone helper;
+  - **ERR-6 (P1):** no binary floating point for money;
+  - **ERR-7, ERR-8, ERR-9 (P1, server stacks only):** object-level authorization, the server
+    re-derives prices and roles, and no internals in error responses.
+- **dotnet:**
+  - **CS-10** now also forbids binding requests to entities (over-posting);
+  - **CS-12** no longer names tests (`Method_Scenario_Expected` contradicted base TST-2, which asks
+    for behavior sentences), and requires a real database instead of an in-memory provider;
+  - **[review]:**
+    - **CS-18 (P1):** a fallback policy, and policies instead of roles on endpoints;
+    - **CS-19 (P1):** decimal precision;
+    - **CS-20 (P1):** a concurrency token and a 409;
+    - **CS-21 (P1):** one `SaveChangesAsync` per use case;
+    - **CS-22 (P2):** a `HasPendingModelChanges` test;
+    - **CS-23 (P1):** read every migration;
+    - **CS-25 (P4):** `is null` patterns;
+  - **CS-24 [tool] (P2):** `DateTime.Now`, `UtcNow` and `Today`, and `DateTimeOffset.Now` and
+    `UtcNow`, are banned through RS0030 for every org. The org's own bans follow them in
+    `BannedSymbols.txt`.
+- **angular:**
+  - **NG-11 [tool] (P1):** `no-restricted-properties` bans `bypassSecurityTrust*`, `innerHTML`,
+    `outerHTML`, `insertAdjacentHTML` and `document.write` (off in spec files, which read the rendered
+    HTML); a vetted bypass takes a SUP-1 suppression;
+  - **NG-12 [review] (P1):** no tokens or personal data in web storage.
+- **Audit:** a tool message that names its rule (`… (CS-24).`) is counted under that rule, because
+  one tool ID such as RS0030 can serve a stack rule and an org rule.
+- **Break shapes** for every new `[review]` rule; violation tests for CS-24 and NG-11.
+- **Checked against the sources:** each new or amended rule was compared with the guide it cites,
+  and the wording was tightened where it overstated or missed a case: 8 rules held as written,
+  21 were reworded, and none was contradicted.
 ## 0.11.1 — 2026-10-17
 
 PATCH: a bug fix in the audit script; no rule text changes and nothing new in a rendered project.

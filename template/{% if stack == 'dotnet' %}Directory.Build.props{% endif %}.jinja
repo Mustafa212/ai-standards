@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <!-- Test projects (the name ends in "Tests"): xUnit, no doc comments (RDB-8 exempts tests), and
-       Method_Scenario_Expected names (CS-12). -->
+       test names as sentences with underscores (TST-2). -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
     <OutputType>Exe</OutputType>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
