@@ -9,7 +9,7 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
-## Unreleased
+## 0.12.0 — 2026-10-17
 
 **BREAKING** (minor bump while 0.x): two new `[tool]` rules can fail existing code. CS-24 bans
 reading the clock directly in .NET production code, and NG-11 bans bypassing Angular's sanitizer.
@@ -18,7 +18,7 @@ and its cheat sheets), Microsoft Learn (ASP.NET Core authorization, EF Core, Tim
 3339, angular.dev security, Zalando's API guidelines and Martin Fowler's Money pattern.
 
 - **Base, [review]:**
-  - **DES-8 (P1):** a database constraint, not only a check-then-insert;
+  - **DES-8 (P1, server stacks only):** a database constraint, not only a check-then-insert;
   - **DES-9 (P2):** moments in UTC with an offset, calendar dates without a time, and the business
     date from one time-zone helper;
   - **ERR-6 (P1):** no binary floating point for money;
@@ -40,12 +40,30 @@ and its cheat sheets), Microsoft Learn (ASP.NET Core authorization, EF Core, Tim
     `UtcNow`, are banned through RS0030 for every org. The org's own bans follow them in
     `BannedSymbols.txt`.
 - **angular:**
-  - **NG-11 [tool] (P1):** `no-restricted-properties` bans `bypassSecurityTrust*`, `innerHTML` and
-    `outerHTML` (off in spec files, which read the rendered HTML);
+  - **NG-11 [tool] (P1):** `no-restricted-properties` bans `bypassSecurityTrust*`, `innerHTML`,
+    `outerHTML`, `insertAdjacentHTML` and `document.write` (off in spec files, which read the rendered
+    HTML); a vetted bypass takes a SUP-1 suppression;
   - **NG-12 [review] (P1):** no tokens or personal data in web storage.
 - **Audit:** a tool message that names its rule (`… (CS-24).`) is counted under that rule, because
   one tool ID such as RS0030 can serve a stack rule and an org rule.
 - **Break shapes** for every new `[review]` rule; violation tests for CS-24 and NG-11.
+- **Checked against the sources:** each new or amended rule was compared with the guide it cites,
+  and the wording was tightened where it overstated or missed a case: 8 rules held as written,
+  21 were reworded, and none was contradicted.
+## 0.11.1 — 2026-10-17
+
+PATCH: a bug fix in the audit script; no rule text changes and nothing new in a rendered project.
+
+- **dotnet audit with the solution in a subfolder** (for example `backend/` next to `frontend/`).
+  The audit's props and targets were written at the repo root, and MSBuild never reads them when
+  the solution's folder has a `Directory.Build.props` of its own. The analyzers didn't run, and the
+  report said `ran` with 0 findings. They now go next to the solution. When that folder has no props
+  of its own, they import the ones above, as MSBuild would. A build that writes no analyzer results
+  is `failed`, never clean. Found on the first real audit of a monorepo (0 findings before the fix,
+  5,730 after). fix-debt's `verify` uses the same runner, so it is fixed too.
+- **New tests:** the overlay next to a solution in a subfolder; the import from above; no SARIF
+  means failed; and one that evaluates the overlay with real MSBuild when dotnet is installed
+  (skipped otherwise).
 
 ## 0.11.0 — 2026-10-16
 
