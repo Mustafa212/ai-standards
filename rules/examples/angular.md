@@ -17,3 +17,8 @@ into AGENTS.md.
 
 - Search: `\.subscribe\(`, then keep the ones in a component with no `takeUntilDestroyed`
 - Break: `this.store.select(selectUser).subscribe(user => (this.user = user));`
+
+## NG-12
+
+- Search: `(localStorage|sessionStorage)\.setItem\(.*(token|jwt|auth|Token|Jwt|Auth)`
+- Break: `localStorage.setItem("access_token", response.accessToken);`

@@ -7,6 +7,17 @@ import prettier from "eslint-config-prettier";
 import jsdoc from "eslint-plugin-jsdoc";
 import tseslint from "typescript-eslint";
 
+// NG-11: these skip the sanitizing that template bindings get
+const sanitize = "Bind in the template so Angular sanitizes the value (NG-11).";
+const bypassingSanitizer = [
+  ...["Html", "Script", "Style", "Url", "ResourceUrl"].map((kind) => ({
+    property: `bypassSecurityTrust${kind}`,
+    message: sanitize,
+  })),
+  { property: "innerHTML", message: sanitize },
+  { property: "outerHTML", message: sanitize },
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -41,6 +52,7 @@ export default tseslint.config(
       "@angular-eslint/prefer-on-push-component-change-detection": "error",
       "@angular-eslint/prefer-inject": "error",
       "@angular-eslint/prefer-signals": "error",
+      "no-restricted-properties": ["error", ...bypassingSanitizer],
       "@angular-eslint/component-selector": [
         "error",
         { type: "element", prefix: "app", style: "kebab-case" },
@@ -64,6 +76,8 @@ export default tseslint.config(
       "@typescript-eslint/no-magic-numbers": "off",
       "jsdoc/require-jsdoc": "off",
       "jsdoc/require-description": "off",
+      // tests read the rendered HTML
+      "no-restricted-properties": "off",
     },
   },
   {

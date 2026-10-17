@@ -44,6 +44,8 @@ rule, say so and why.
 - **DES-5 [review]** Data is immutable by default ({% if stack in ["typescript", "angular"] %}`readonly`, `as const`{% elif stack == "dotnet" %}records, `init`, `readonly`{% elif stack == "flutter" %}`final` fields, `copyWith`{% else %}frozen dataclasses, tuples{% endif %}). Change data by making a new value.
 - **DES-6 [review]** The UI shows state and forwards events; business logic lives below it (view models, services, handlers).
 - **DES-7 [review]** A switch over an enum or union handles every case, with no catch-all default, so a new value fails the build{% if stack in ["typescript", "angular"] %} (TS-2 enforces it){% elif stack == "dotnet" %} (use a switch expression without a `_` arm: a missing case is build error CS8509){% elif stack == "flutter" %} (DART-4 enforces it){% else %} (end a `match` with `assert_never`){% endif %}.
+- **DES-8 [review]** A rule that must hold across concurrent requests (a unique invoice number, one payment per key) is a database constraint such as a unique index, not only a check-then-insert in code: two requests can both pass the check.
+- **DES-9 [review]** A moment is stored and sent in UTC with an explicit offset (RFC 3339, `2026-10-17T09:30:00Z`); a calendar date such as a due date has no time part ({% if stack == "dotnet" %}`DateOnly`{% elif stack in ["typescript", "angular"] %}a `YYYY-MM-DD` string{% elif stack == "flutter" %}year, month and day only{% else %}`datetime.date`{% endif %}). Today's business date comes from one helper that applies the business's time zone.
 
 ## 4. Errors and security
 
@@ -52,6 +54,12 @@ rule, say so and why.
 - **ERR-3 [tool]** No secrets in code or git history (gitleaks runs in pre-commit and CI). Configuration comes from environment variables.
 - **ERR-4 [review]** Never log secrets, tokens or personal data.
 - **ERR-5 [review]** Error messages say what happened and what to do next.
+- **ERR-6 [review]** Never hold money in binary floating point ({% if stack == "dotnet" %}`double`, `float`{% elif stack in ["typescript", "angular"] %}arithmetic on a `number`{% elif stack == "flutter" %}`double`{% else %}`float`{% endif %}): use {% if stack == "dotnet" %}`decimal`{% elif stack == "python" %}`Decimal`{% else %}integer minor units or a decimal type{% endif %}. Floats can't store 0.10 exactly.
+{% if stack in ["typescript", "python", "dotnet"] %}
+- **ERR-7 [review]** Code that reads or writes a record by ID checks that the caller may access that record (owner, tenant or role), not only that someone is signed in. Changing an ID in a URL never opens another customer's data.
+- **ERR-8 [review]** Prices, totals, discounts, balances and roles sent by a client are input, not truth: look them up or recompute them on the server.
+- **ERR-9 [review]** Error responses never carry stack traces, exception messages, SQL or internal type names: return a generic message with a trace ID, and log the details on the server.
+{% endif %}
 
 ## 5. Tests
 

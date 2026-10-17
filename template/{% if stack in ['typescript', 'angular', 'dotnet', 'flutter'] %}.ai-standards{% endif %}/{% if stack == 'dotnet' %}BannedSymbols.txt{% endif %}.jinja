@@ -1,5 +1,11 @@
 {% import "config/settings.jinja" as cfg with context -%}
-# Managed by ai-standards. APIs the org bans (RS0030), one per line: <documentation id>;<message>
+# Managed by ai-standards. Banned APIs (RS0030), one per line: <documentation id>;<message>
+P:System.DateTime.Now;Read the time from an injected TimeProvider (CS-24).
+P:System.DateTime.UtcNow;Read the time from an injected TimeProvider (CS-24).
+P:System.DateTime.Today;Read the time from an injected TimeProvider (CS-24).
+P:System.DateTimeOffset.Now;Read the time from an injected TimeProvider (CS-24).
+P:System.DateTimeOffset.UtcNow;Read the time from an injected TimeProvider (CS-24).
+# The org's bans
 {%- for symbol, message in cfg.banned_cs.items() %}
 {{ symbol }};{{ message }}
 {%- endfor %}

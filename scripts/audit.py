@@ -148,6 +148,11 @@ def parse_dart_machine(text: str) -> list[Finding]:
     return found
 
 
+# A message that names its rule, as a banned-API or restricted-property message does: one tool ID
+# serves several rules there, so the message decides, not the tool map.
+RULE_IN_MESSAGE = re.compile(r"\(([A-Z][A-Z0-9]*-\d+)\)\.?\s*$")
+
+
 def normalize(raw: list[Finding], base: Path, tool_map: dict[str, str]) -> list[Finding]:
     """Project-relative paths, rule IDs, no duplicates (multi-targeting), no generated code."""
     root = base.resolve()
@@ -166,8 +171,11 @@ def normalize(raw: list[Finding], base: Path, tool_map: dict[str, str]) -> list[
         if SKIP.search(relative) or key in seen:
             continue
         seen.add(key)
-        out.append({"rule": tool_map.get(str(item["tool_id"]), "unmapped"), "tool_id": item["tool_id"],
-                    "file": relative, "line": item["line"], "message": str(item["message"]).strip(),
+        message = str(item["message"]).strip()
+        named = RULE_IN_MESSAGE.search(message)
+        rule = named.group(1) if named else tool_map.get(str(item["tool_id"]), "unmapped")
+        out.append({"rule": rule, "tool_id": item["tool_id"],
+                    "file": relative, "line": item["line"], "message": message,
                     "source": "tool"})
     return out
 
