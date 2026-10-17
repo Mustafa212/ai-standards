@@ -26,7 +26,7 @@ Paths:
    | Runner | Command | `--format` |
    |---|---|---|
    | dotnet | `dotnet test <sln> --logger trx --results-directory {dir}` | `trx` |
-   | dotnet on Microsoft.Testing.Platform (`global.json` has `"test": {"runner": "Microsoft.Testing.Platform"}`) | `dotnet test --solution <sln> --report-xunit-trx --results-directory {dir}` (xunit.v3), or `--report-trx` with `Microsoft.Testing.Extensions.TrxReport` | `trx` |
+   | dotnet on Microsoft.Testing.Platform (`global.json` has `"test": {"runner": "Microsoft.Testing.Platform"}`) | `cd <folder with global.json> && dotnet test --solution <sln> --report-xunit-trx --results-directory {dir}` (xunit.v3), or `--report-trx` with `Microsoft.Testing.Extensions.TrxReport`. From any other folder `dotnet test` falls back to VSTest and rejects `--solution` | `trx` |
    | pytest | `<python> -m pytest --junitxml={result}` | `junit` |
    | vitest | `npx vitest run --reporter=default --reporter=junit --outputFile.junit={result}` | `junit` |
    | jest | `npx jest --json --outputFile={result}` | `jest` |
@@ -39,6 +39,8 @@ Paths:
 4. **Ask once** (one message, then wait):
    - the items table (rule, folder, count, priority, kind);
    - the P1 items apart, each with the behavior it changes. The user picks them by number, one by one;
+   - an item whose fix would change a response, a status code or stored data (a P2 such as 422 → 409)
+     goes with the P1 items, whatever its priority: it changes behavior too;
    - the branch (`refactor/standards-debt-<date>`, or the open debt branch and its PR);
    - the test command and how long its last run took;
    - "At the end: push `<branch>` to `<remote>` and open a PR to `<base>` on <host>."
