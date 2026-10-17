@@ -16,6 +16,8 @@ const bypassingSanitizer = [
   })),
   { property: "innerHTML", message: sanitize },
   { property: "outerHTML", message: sanitize },
+  { property: "insertAdjacentHTML", message: sanitize },
+  { object: "document", property: "write", message: sanitize },
 ];
 
 export default tseslint.config(
