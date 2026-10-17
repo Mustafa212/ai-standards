@@ -9,6 +9,21 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.11.1 — 2026-10-17
+
+PATCH: a bug fix in the audit script; no rule text changes and nothing new in a rendered project.
+
+- **dotnet audit with the solution in a subfolder** (for example `backend/` next to `frontend/`).
+  The audit's props and targets were written at the repo root, and MSBuild never reads them when
+  the solution's folder has a `Directory.Build.props` of its own. The analyzers didn't run, and the
+  report said `ran` with 0 findings. They now go next to the solution. When that folder has no props
+  of its own, they import the ones above, as MSBuild would. A build that writes no analyzer results
+  is `failed`, never clean. Found on the first real audit of a monorepo (0 findings before the fix,
+  5,730 after). fix-debt's `verify` uses the same runner, so it is fixed too.
+- **New tests:** the overlay next to a solution in a subfolder; the import from above; no SARIF
+  means failed; and one that evaluates the overlay with real MSBuild when dotnet is installed
+  (skipped otherwise).
+
 ## 0.11.0 — 2026-10-16
 
 MINOR: new plugin behavior; nothing that fails existing code.

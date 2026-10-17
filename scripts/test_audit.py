@@ -215,6 +215,97 @@ class DotnetTest(unittest.TestCase):
             self.assertTrue((worktree / ".ai-standards" / "SonarLint.xml").exists())
             self.assertTrue((worktree / audit.SARIF_DIR).is_dir())  # the compiler writes the SARIF there
 
+    @staticmethod
+    def _small_render(render: Path) -> None:
+        (render / ".ai-standards").mkdir(parents=True)
+        (render / "Directory.Build.props").write_text("<Project />", encoding="utf-8")
+        (render / ".editorconfig").write_text("root = true\n[*.cs]\n", encoding="utf-8")
+        for name in ("SonarLint.xml", "BannedSymbols.txt"):
+            (render / ".ai-standards" / name).write_text("x", encoding="utf-8")
+
+    def _run_dotnet(self, worktree: Path, render: Path, sarif_in: Path | None) -> tuple[str, list, list]:
+        sarif = {"runs": [{"results": [{"ruleId": "CA1031", "locations": [{"physicalLocation": {
+            "artifactLocation": {"uri": "src/A.cs"}, "region": {"startLine": 3}}}]}]}]}
+
+        def fake_run(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
+            if "build" in args and sarif_in is not None:
+                sarif_in.mkdir(parents=True, exist_ok=True)
+                (sarif_in / "A-net10.0.sarif").write_text(json.dumps(sarif), encoding="utf-8")
+            return subprocess.CompletedProcess(args, 0, "10.0.401", "")
+
+        original_which, original_run = audit.shutil.which, audit.run
+        audit.shutil.which = lambda name: "dotnet"
+        audit.run = fake_run
+        try:
+            return audit.run_dotnet(worktree, render, None)
+        finally:
+            audit.shutil.which, audit.run = original_which, original_run
+
+    def test_a_solution_in_a_subfolder_gets_the_overlay_next_to_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
+            self._small_render(render)
+            backend = worktree / "backend"
+            (backend / "src").mkdir(parents=True)
+            (backend / "App.slnx").write_text('<Project Path="src/A/A.csproj" />', encoding="utf-8")
+            # The project's own props stop MSBuild there, so props at the repo root are never read.
+            (backend / "Directory.Build.props").write_text("<Project />", encoding="utf-8")
+            (backend / "src" / "Directory.Build.props").write_text(
+                "<Project><Import Project=\"$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', "
+                "'$(MSBuildThisFileDirectory)../'))\" /></Project>", encoding="utf-8")
+            status, found, notes = self._run_dotnet(worktree, render, backend / audit.SARIF_DIR)
+            self.assertEqual((status, len(found), notes), ("ran (dotnet 10.0.401)", 1, []))
+            self.assertIn("ai-standards audit", (backend / "Directory.Build.props").read_text(encoding="utf-8"))
+            self.assertTrue((backend / "Directory.Build.project.props").exists())
+            self.assertTrue((backend / ".ai-standards" / "SonarLint.xml").exists())
+            self.assertFalse((worktree / "Directory.Build.props").exists())
+
+    def test_without_props_of_its_own_the_solution_folder_imports_the_ones_above(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
+            self._small_render(render)
+            (worktree / "backend").mkdir(parents=True)
+            (worktree / "backend" / "App.sln").write_text("", encoding="utf-8")
+            self._run_dotnet(worktree, render, worktree / "backend" / audit.SARIF_DIR)
+            for name in ("props", "targets"):
+                text = (worktree / "backend" / f"Directory.Build.{name}").read_text(encoding="utf-8")
+                self.assertIn(f"GetPathOfFileAbove('Directory.Build.{name}', '$(MSBuildThisFileDirectory)../')", text)
+
+    @unittest.skipUnless(shutil.which("dotnet"), "dotnet not installed")
+    def test_msbuild_reads_the_overlay_and_the_projects_own_settings(self) -> None:
+        def evaluate(project: Path) -> list[str]:
+            proc = subprocess.run(["dotnet", "msbuild", str(project), "-nologo", "-getProperty:AnalysisLevel",
+                                   "-getProperty:Marker"], capture_output=True, text=True, check=False)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            values = json.loads(proc.stdout)["Properties"]
+            return [values["AnalysisLevel"], values["Marker"]]
+
+        marker = "<Project><PropertyGroup><Marker>{}</Marker></PropertyGroup></Project>"
+        for own_props in (True, False):
+            with tempfile.TemporaryDirectory() as tmp, self.subTest(own_props=own_props):
+                worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
+                self._small_render(render)
+                app = worktree / "backend" / "App"
+                app.mkdir(parents=True)
+                (app / "App.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>'
+                                                "<TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>",
+                                                encoding="utf-8")
+                # Settings either in the solution's folder, or only above it (the repo root).
+                where = worktree / "backend" if own_props else worktree
+                (where / "Directory.Build.props").write_text(marker.format("project"), encoding="utf-8")
+                audit.overlay_dotnet(worktree, render, worktree / "backend")
+                self.assertEqual(evaluate(app / "App.csproj"), ["latest-Recommended", "project"])
+
+    def test_a_build_that_writes_no_analyzer_results_is_failed_not_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
+            self._small_render(render)
+            worktree.mkdir()
+            (worktree / "App.sln").write_text("", encoding="utf-8")
+            status, found, _ = self._run_dotnet(worktree, render, None)
+            self.assertTrue(status.startswith("failed (the build wrote no analyzer results"), status)
+            self.assertEqual(found, [])
+
 
 class NodeAndDartTest(unittest.TestCase):
     def test_lint_packages_come_from_the_standard_package_json(self) -> None:

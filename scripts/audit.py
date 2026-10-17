@@ -200,6 +200,11 @@ AUDIT_PROPS = """<Project>
   <Import Project="$(MSBuildThisFileDirectory)Directory.Build.project.props"
           Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.project.props')" />
   <PropertyGroup>
+    <_AiStandardsPropsAbove>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</_AiStandardsPropsAbove>
+  </PropertyGroup>
+  <Import Project="$(_AiStandardsPropsAbove)"
+          Condition="!Exists('$(MSBuildThisFileDirectory)Directory.Build.project.props') And '$(_AiStandardsPropsAbove)' != ''" />
+  <PropertyGroup>
     <AnalysisLevel>latest-Recommended</AnalysisLevel>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
@@ -218,6 +223,11 @@ AUDIT_TARGETS = """<Project>
   <!-- ai-standards audit: temporary worktree only. -->
   <Import Project="$(MSBuildThisFileDirectory)Directory.Build.project.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.project.targets')" />
+  <PropertyGroup>
+    <_AiStandardsTargetsAbove>$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))</_AiStandardsTargetsAbove>
+  </PropertyGroup>
+  <Import Project="$(_AiStandardsTargetsAbove)"
+          Condition="!Exists('$(MSBuildThisFileDirectory)Directory.Build.project.targets') And '$(_AiStandardsTargetsAbove)' != ''" />
   <PropertyGroup>
     <RunAnalyzers>true</RunAnalyzers>
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
@@ -301,19 +311,22 @@ def standard_ids() -> list[str]:
     return ids + [rule_id[2:] for rule_id in ids if rule_id.startswith("CS")]
 
 
-def overlay_dotnet(worktree: Path, render: Path) -> None:
+def overlay_dotnet(worktree: Path, render: Path, base: Path | None = None) -> None:
+    """The audit's props and targets go in `base`, the solution's folder: MSBuild stops at the nearest
+    Directory.Build.props, so a copy at the repo root is never read when the solution has its own."""
+    base = base or worktree
     for name, renamed in (("Directory.Build.props", "Directory.Build.project.props"),
                           ("Directory.Build.targets", "Directory.Build.project.targets")):
-        if (worktree / name).exists():
-            (worktree / name).rename(worktree / renamed)
-    (worktree / "Directory.Build.props").write_text(
+        if (base / name).exists():
+            (base / name).rename(base / renamed)
+    (base / "Directory.Build.props").write_text(
         AUDIT_PROPS.format(sarif_dir=SARIF_DIR, packages=analyzer_packages(render)), encoding="utf-8")
-    (worktree / "Directory.Build.targets").write_text(
+    (base / "Directory.Build.targets").write_text(
         AUDIT_TARGETS.format(standard_ids=";".join(standard_ids())), encoding="utf-8")
-    (worktree / SARIF_DIR).mkdir(exist_ok=True)  # the compiler won't create the ErrorLog's folder
-    (worktree / ".ai-standards").mkdir(exist_ok=True)
+    (base / SARIF_DIR).mkdir(exist_ok=True)  # the compiler won't create the ErrorLog's folder
+    (base / ".ai-standards").mkdir(exist_ok=True)
     for name in ("SonarLint.xml", "BannedSymbols.txt"):
-        shutil.copy(render / ".ai-standards" / name, worktree / ".ai-standards" / name)
+        shutil.copy(render / ".ai-standards" / name, base / ".ai-standards" / name)
     # A rule silenced by ID beats an option's ":warning" suffix, so the standard's IDE rules are set by
     # ID too. The block goes last in every .editorconfig, nested ones included: later entries win.
     explicit = "\n".join(f"dotnet_diagnostic.{rule_id}.severity = warning"
@@ -336,17 +349,20 @@ def run_dotnet(worktree: Path, render: Path, solution: str | None) -> tuple[str,
     target = worktree / solution if solution else pick_solution(worktree)
     if target is None:
         return "failed (no solution or project found)", [], []
-    overlay_dotnet(worktree, render)
+    base = target.parent
+    overlay_dotnet(worktree, render, base)
     notes = [f"{path.relative_to(worktree).as_posix()} doesn't import the root props: its projects may be missed"
-             for path in worktree.rglob("Directory.Build.props")
-             if path.parent != worktree and not SKIP.search(path.relative_to(worktree).as_posix())
+             for path in base.rglob("Directory.Build.props")
+             if path.parent != base and not SKIP.search(path.relative_to(worktree).as_posix())
              and "GetPathOfFileAbove" not in path.read_text(encoding="utf-8", errors="replace")]
     proc = run([dotnet, "build", str(target), "--nologo",
                 "-p:TreatWarningsAsErrors=false", "-p:CodeAnalysisTreatWarningsAsErrors=false"], worktree)
-    found = [finding for sarif in sorted((worktree / SARIF_DIR).glob("*.sarif"))
-             for finding in parse_sarif(sarif.read_text(encoding="utf-8"))]
+    sarifs = sorted((base / SARIF_DIR).glob("*.sarif"))
+    found = [finding for sarif in sarifs for finding in parse_sarif(sarif.read_text(encoding="utf-8"))]
     version = run([dotnet, "--version"], worktree).stdout.strip()
     status = f"ran (dotnet {version})" if proc.returncode == 0 else f"failed ({first_error(proc)})"
+    if proc.returncode == 0 and not sarifs:  # analyzers that never ran look exactly like clean code
+        status = "failed (the build wrote no analyzer results: the audit's props weren't imported)"
     return status, found, notes
 
 
