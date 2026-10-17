@@ -9,6 +9,25 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.12.1 — 2026-10-17
+
+PATCH: skill text and one priority; no rule text changes and nothing new in a rendered project.
+Lessons from the first real onboard, audit and fix-debt run on an AI-written monorepo.
+
+- **onboard, consistency isn't correctness:** code written mostly by an AI is consistent by habit.
+  A proposed Rule or Exception candidate now names its **Source** (official docs, a large company's
+  published standard, an RFC, OWASP). A consistent pattern the guides contradict is a Wrong
+  pattern, so its places are findings to fix. The table has a Source column.
+- **fix-debt, .NET on Microsoft.Testing.Platform** (`global.json` sets
+  `"test": {"runner": "Microsoft.Testing.Platform"}`, as the template does):
+  `cd <folder with global.json> && dotnet test --solution <sln> --report-xunit-trx --results-directory {dir}`.
+  `--logger trx` is VSTest-only, and from another folder `dotnet test` falls back to VSTest and
+  rejects `--solution`.
+- **fix-debt, behavior is judged per item:** an item whose fix changes a response, a status code
+  or stored data goes with the P1 items, whatever its priority.
+- **ERR-5 is P3:** a message that doesn't say what to do next was P1 only because every ERR rule
+  defaulted to P1.
+
 ## 0.12.0 — 2026-10-17
 
 **BREAKING** (minor bump while 0.x): two new `[tool]` rules can fail existing code. CS-24 bans

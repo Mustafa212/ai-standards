@@ -80,6 +80,12 @@ under 100%, one or two of the places that do it differently. A pattern found onl
 strings or names isn't a rule. Before showing the table, reopen every cited line and remove the rows
 those lines don't back up; tell the user how many you removed.
 
+**Consistency isn't correctness.** Code written mostly by an AI is consistent by habit. A Rule or an
+Exception candidate also names its **Source**: the published guide that backs it (official docs, a
+large company's published standard, an RFC, OWASP). A consistent pattern the guides contradict is a
+Wrong pattern, so its places become findings to fix. One with no source stays a project choice,
+labelled as such. A rule useful beyond this project goes to the public repo or the org (step 6).
+
 Sort every pattern into one class:
 
 | Class | Test | Becomes |
@@ -92,8 +98,8 @@ Sort every pattern into one class:
 Show at most 10 rows per round, highest count first, as one table; offer the next 10 once these are
 decided.
 
-| # | Class | Proposal | Evidence | Count | Enforcement |
-|---|---|---|---|---|---|
+| # | Class | Proposal | Evidence | Count | Source | Enforcement |
+|---|---|---|---|---|---|---|
 
 Then ask for each row's decision with AskUserQuestion, up to 4 rows per call, in the table's order:
 keep, edit or drop for rules and inconsistencies; fix or exception for candidates. Wrong patterns
