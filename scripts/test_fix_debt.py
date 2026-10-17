@@ -125,6 +125,7 @@ def make_repo(root: Path) -> Path:
     (repo / "src" / "calc.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
     git_q("init", "-q", cwd=repo)
     git_q("config", "core.autocrlf", "false", cwd=repo)  # plain git calls then see the committed bytes
+    git_q("config", "gc.auto", "0", cwd=repo)  # no background gc writing objects/pack while tearDown deletes it
     git_q("add", ".", cwd=repo)
     git_q("commit", "-qm", "init", cwd=repo)
     return repo
