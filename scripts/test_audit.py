@@ -73,8 +73,8 @@ class ParserTest(unittest.TestCase):
                         "TimeProvider (CS-24)."},
             {"tool_id": "RS0030", "file": "src/A.cs", "line": 2, "message": "The symbol 'X' is banned."},
         ]
-        found = audit.normalize(raw, Path(tempfile.gettempdir()), {"RS0030": "INNO-2"})
-        self.assertEqual([item["rule"] for item in found], ["CS-24", "INNO-2"])
+        found = audit.normalize(raw, Path(tempfile.gettempdir()), {"RS0030": "ACME-2"})
+        self.assertEqual([item["rule"] for item in found], ["CS-24", "ACME-2"])
 
 
 class WorktreeTest(unittest.TestCase):

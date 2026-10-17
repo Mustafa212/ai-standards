@@ -57,3 +57,18 @@ start from (Grep, or Glob for file names) and a short bad snippet. Never rendere
 
 - Search: `(ex|exception|err)\.(Message|StackTrace|stack)\b` inside a response
 - Break: `return StatusCode(500, ex.Message);`
+
+## DES-10
+
+- Search, in controllers and route handlers: `ToListAsync\(|\.findMany\(|\.all\(\)|List<|IEnumerable<|list\[` with no page, cursor or limit parameter
+- Break: `[HttpGet] public Task<List<ProjectDto>> GetAll(CancellationToken ct) => db.Projects.Select(p => new ProjectDto(p.Id, p.Name)).ToListAsync(ct);`
+
+## ERR-10
+
+- Search: `IFormFile|UploadFile|multer|\.FileName\b|\.originalname\b`
+- Break: `var path = Path.Combine("wwwroot/uploads", file.FileName);`
+
+## ERR-11
+
+- Search: `PhysicalFile\(|File\(|res\.(download|sendFile)\(|FileResponse\(`
+- Break: `[HttpGet("files/{id}")] public IActionResult Get(Guid id) => PhysicalFile(store.PathFor(id), "application/pdf");`
