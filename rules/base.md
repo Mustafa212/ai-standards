@@ -48,6 +48,9 @@ rule, say so and why.
 - **DES-8 [review]** A rule that must hold across concurrent requests (a unique invoice number, one payment per key) is a database constraint such as a unique index, not only a check-then-insert in code: two requests can both pass the check. Map the unique violation to 409 Conflict.
 {% endif %}
 - **DES-9 [review]** A moment that has happened (created, paid, posted) is stored and sent in UTC as RFC 3339 with a `Z` (`2026-10-17T09:30:00Z`). A calendar date such as a due date has no time part ({% if stack == "dotnet" %}`DateOnly`{% elif stack in ["typescript", "angular"] %}a `YYYY-MM-DD` string{% elif stack == "flutter" %}year, month and day only{% else %}`datetime.date`{% endif %}). A future local time (a billing run at 02:00 in the business's zone) is stored as the local time plus an IANA time zone ID, not as a precomputed UTC instant. Today's business date comes from one helper that applies the business's time zone.
+{% if stack in ["typescript", "python", "dotnet"] %}
+- **DES-10 [review]** Every endpoint that returns a collection is paged from its first release, because adding paging later breaks its clients. The server caps the page size, states the default and the maximum in the API docs, and lowers a bigger request to the maximum. A response returns an opaque cursor or next link, left out on the last page. Use cursor (keyset) paging for lists that change while they are read (feeds, sync), and offset paging only for small admin grids that need page numbers.
+{% endif %}
 
 ## 4. Errors and security
 
@@ -61,6 +64,7 @@ rule, say so and why.
 - **ERR-7 [review]** Code that reads or writes records using an ID or filter from the client (a route ID, a `customerId` query, a list or an export) checks that the caller may access those records: the owner or tenant first, then any role that widens access. Being signed in is not enough, and changing an ID in a URL never opens another customer's data.
 - **ERR-8 [review]** Prices, totals, discounts, balances and roles sent by a client are input, not truth: look them up or recompute them on the server.
 - **ERR-9 [review]** Error responses never carry stack traces, SQL, internal type names or the message of an unexpected exception. A 5xx returns a generic message with a trace ID, and the details go to the server log; a 4xx says what the client can fix (ERR-5), in text written for the client, never copied from a framework or database exception.
+- **ERR-10 [review]** An upload endpoint caps the request size and each file's size, allows only listed extensions, and checks that the file's magic bytes match the extension. Files are stored outside the web root under a generated name; the user's file name is display metadata only, encoded when shown. A file is scanned for malware before anyone else can download it, is served with `Content-Disposition: attachment` and its stored content type, and is downloaded through the same access check as the record it belongs to (ERR-7).
 {% endif %}
 
 ## 5. Tests

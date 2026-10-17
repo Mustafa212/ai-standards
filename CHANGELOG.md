@@ -9,6 +9,13 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## Unreleased
+
+MINOR: two new `[review]` rules for API stacks (typescript, python, dotnet); nothing fails existing code.
+
+- **DES-10 [review]** (base) A collection endpoint is paged from its first release, with a server-capped page size and an opaque cursor or next link left out on the last page. Sources: Google AIP-158, Microsoft Azure REST API guidelines, Zalando #160, OWASP API4:2023.
+- **ERR-10 [review]** (base) Uploads: size caps, an extension allow-list checked against the magic bytes, a generated storage name outside the web root, a malware scan before others can download, `Content-Disposition: attachment`, and the record's own access check. Sources: ASP.NET Core file-upload docs, OWASP File Upload cheat sheet, OWASP ASVS 5.0 V5.
+
 ## 0.12.1 — 2026-10-17
 
 PATCH: skill text and one priority; no rule text changes and nothing new in a rendered project.
