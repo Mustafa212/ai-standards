@@ -26,6 +26,7 @@ Paths:
    | Runner | Command | `--format` |
    |---|---|---|
    | dotnet | `dotnet test <sln> --logger trx --results-directory {dir}` | `trx` |
+   | dotnet on Microsoft.Testing.Platform (`global.json` has `"test": {"runner": "Microsoft.Testing.Platform"}`) | `dotnet test --solution <sln> --report-xunit-trx --results-directory {dir}` (xunit.v3), or `--report-trx` with `Microsoft.Testing.Extensions.TrxReport` | `trx` |
    | pytest | `<python> -m pytest --junitxml={result}` | `junit` |
    | vitest | `npx vitest run --reporter=default --reporter=junit --outputFile.junit={result}` | `junit` |
    | jest | `npx jest --json --outputFile={result}` | `jest` |
