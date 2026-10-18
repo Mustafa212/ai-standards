@@ -55,6 +55,19 @@
         "repo: https://github\\.com/(?<depName>[^\\s]+)\\s+rev: (?<currentValue>v?[0-9][^\\s]*)"
       ],
       "datasourceTemplate": "github-tags"
+    },
+    {
+      "customType": "regex",
+      "description": "The gitleaks CLI the template's CI downloads (same tool as the pre-commit hook; both are grouped below)",
+      "managerFilePatterns": [
+        "/^template/\\.github/workflows/ci\\.yml\\.jinja$/"
+      ],
+      "matchStrings": [
+        "GITLEAKS_VERSION: (?<currentValue>[0-9][0-9.]*)"
+      ],
+      "depNameTemplate": "gitleaks/gitleaks",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
     }
   ],
   "packageRules": [
