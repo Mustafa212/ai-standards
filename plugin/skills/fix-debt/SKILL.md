@@ -1,6 +1,6 @@
 ---
 name: fix-debt
-description: Use when the user wants to pay down standards debt in a project registered with or adopted onto ai-standards ("fix the debt", "pay the debt", "clean up the lint baseline", "next items in the report"), on any stack. Proposes a round of items for one approval, fixes them back to back with one commit each, proves every item with a verdict a script computes (test result files, a canary, an analyzer re-run), and opens one pull request for the round.
+description: Use when the user wants to pay down standards debt in a project registered with or adopted onto ai-standards ("fix the debt", "pay the debt", "clean up the lint baseline", "next items in the report"), on any stack. Changes code after one approval: one commit per item and one pull request per round.
 ---
 
 # Pay down standards debt, in rounds with computed proof
@@ -20,7 +20,7 @@ Paths:
 1. **Source:**
    - **Registered, not adopted:** `<out>/findings.json`. If its `sha` isn't `git rev-parse --short HEAD`, run the `ai-standards:audit` skill first.
    - **Adopted** (the project has an "Adoption status" in `AGENTS.md`, typescript or python): `fd baseline <project> --stack <stack> --out <out>/fix-debt/baseline.json`.
-2. **Items:** `fd items <out> --org <org>` (adopted: add `--baseline <out>/fix-debt/baseline.json --stack <stack>`). This writes `<out>/fix-debt/items.json`: up to 10 behavior-preserving items in priority order, plus the P1 items apart.
+2. **Items:** `fd items <out> --org <org> --project <project>` (adopted: add `--baseline <out>/fix-debt/baseline.json --stack <stack>`). This writes `<out>/fix-debt/items.json`: up to 10 behavior-preserving items in priority order, plus the P1 items apart. Within a priority, the folders with the most commits in the last 90 days come first: debt there is copied into every new change.
 3. **The test command,** once per project, saved in `<out>/fix-debt/command.md`. Use `{result}` (the result file) or `{dir}` (its folder, new for each run) where the runner writes:
 
    | Runner | Command | `--format` |
@@ -37,7 +37,7 @@ Paths:
    `fd test` and `fd canary` in the background and wait for it, never starting another `fd` meanwhile.
    `--timeout <seconds>` (default 3600) turns a hung run into a run with no result.
 4. **Ask once** (one message, then wait):
-   - the items table (rule with its short text, folder, count, priority, kind);
+   - the items table (rule with its short text, folder, count, priority, kind, commits in 90 days);
    - the P1 items apart, each with the behavior it changes. The user picks them by number, one by one;
    - an item whose fix would change a response, a status code or stored data (a P2 such as 422 → 409)
      goes with the P1 items, whatever its priority: it changes behavior too;

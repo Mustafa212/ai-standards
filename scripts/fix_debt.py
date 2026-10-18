@@ -46,6 +46,7 @@ from run_results import read as read_result  # noqa: E402
 
 SPLIT_AT = 30
 ITEMS, DONE, SKIPPED = "items.json", "done.json", "skipped.json"
+RECENT_DAYS = 90  # how far back "recently changed" looks when ordering items
 TIMEOUT = 3600.0  # seconds a test run may take; after that it counts as a run with no result
 
 
@@ -61,6 +62,21 @@ def in_item(file: str, item: dict) -> bool:
     if not in_area(file, item["area"]):
         return False
     return not item.get("direct") or item["area"] == "(root)" or "/" not in file[len(item["area"]) + 1:]
+
+
+def recent_commits(project: Path, days: int = RECENT_DAYS) -> list[set[str]]:
+    """The project-relative files each commit of the last `days` days changed."""
+    log = git(project, "log", f"--since={days}.days", "--relative", "--name-only", "--format=%x00")
+    return [set(filter(None, chunk.splitlines())) for chunk in log.split("\x00") if chunk.strip()]
+
+
+def order_by_change(result: dict, commits: list[set[str]]) -> None:
+    """Within a priority, the folders that changed most recently come first: debt there is copied
+    into every new change, so paying it pays off soonest. Then the bigger items."""
+    for key in ("items", "p1"):
+        for item in result[key]:
+            item["recent_commits"] = sum(any(in_item(file, item) for file in files) for files in commits)
+        result[key].sort(key=lambda i: (i["priority"], -i["recent_commits"], -i["count"], i["id"]))
 
 
 def safe_name(item_id: str) -> str:
@@ -176,11 +192,14 @@ def cmd_items(args: argparse.Namespace) -> int:
         tool = read_json(out / "tool-findings.json", {"findings": []})["findings"]
     done = set(read_json(out / "fix-debt" / DONE, []))
     result = build_items(findings, tool, priorities, done, read_json(out / "fix-debt" / SKIPPED, {}))
+    if args.project:
+        order_by_change(result, recent_commits(args.project.resolve()))
     write_json(out / "fix-debt" / ITEMS, result)
+    changed = (lambda i: f"  {i['recent_commits']} commits in {RECENT_DAYS} days") if args.project else (lambda i: "")
     for item in result["items"][: args.max]:
-        print(f"{item['id']}  {item['priority']}  {item['count']}  {item['kind']}")
+        print(f"{item['id']}  {item['priority']}  {item['count']}  {item['kind']}{changed(item)}")
     for item in result["p1"]:
-        print(f"{item['id']}  P1 (changes behavior)  {item['count']}  {item['kind']}")
+        print(f"{item['id']}  P1 (changes behavior)  {item['count']}  {item['kind']}{changed(item)}")
     return 0
 
 
@@ -619,6 +638,7 @@ def main(argv: list[str] | None = None) -> int:
     items.add_argument("--max", type=int, default=10)
     items.add_argument("--baseline", type=Path, help="an adopted project's baseline (fix_debt.py baseline)")
     items.add_argument("--stack", choices=("typescript", "python"))
+    items.add_argument("--project", type=Path, help="order each priority by the folders changed recently")
     start = commands.add_parser("start", help="record an item's start commit and allowed paths")
     start.add_argument("project", type=Path)
     start.add_argument("batch", type=Path)

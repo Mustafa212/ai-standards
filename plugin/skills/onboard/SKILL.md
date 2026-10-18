@@ -1,6 +1,6 @@
 ---
 name: onboard
-description: Use when a project isn't registered with ai-standards yet (new folder or existing code on any stack), when the user asks which org a project belongs to or to register or onboard it, and to refresh or re-analyze a registered project's rules. Asks the org (existing or new), registers the project in the user's private copy of ai-standards, extracts and sorts the project's rules from its code (rules, inconsistencies, wrong patterns, exceptions) for approval, audits the project, and moves a rule shared by two projects up to the org. Nothing in the project changes.
+description: Use when a project isn't registered with ai-standards yet (a new folder or existing code on any stack), when the user asks which org a project belongs to or to register or onboard it, and to refresh or re-analyze a registered project's rules. Nothing in the project changes: rules are saved in the user's private copy of ai-standards, after approval.
 ---
 
 # Onboard a project, and keep its rules current

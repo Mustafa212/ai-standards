@@ -9,6 +9,21 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.15.0 — 2026-10-18
+
+MINOR: fix-debt ordering and shorter skill descriptions; no rule text changes.
+
+- **Debt where the code changes first (fix-debt):** `fix_debt.py items --project <project>` orders
+  each priority by the commits in the last 90 days that touched the item's folder, then by count, and
+  shows that number in the round's table. Debt in a module edited every week is copied into every new
+  change (READ-2), while debt in a folder nobody touches can wait.
+- **Shorter skill descriptions:** the five longest now hold only their triggers, their promises
+  (read-only, nothing in the project changes, writes and commits) and the "use X instead" lines, 39%
+  shorter, since descriptions load into every session. A trigger eval (`claude plugin eval`, one case
+  per skill and two that must trigger none) passed for every skill on sonnet. `init-project` didn't
+  fire on the old wording (0 of 2) and now says to run it before any file is written or any
+  scaffolding command runs (2 of 3).
+
 ## 0.14.0 — 2026-10-18
 
 MINOR: audit, onboard and fix-debt fixes; no rule text changes.
