@@ -9,6 +9,18 @@
 _subdirectory: template
 _min_copier_version: "9.4"
 _answers_file: .copier-answers.yml
+# Copier's own defaults, plus files one choice leaves out. A condition in the file name would push
+# the longest template path past Windows' 260 characters.
+_exclude:
+  - copier.yaml
+  - copier.yml
+  - "~*"
+  - "*.py[co]"
+  - __pycache__
+  - .git
+  - .DS_Store
+  - .svn
+  - "{% if use_cases == 'plain' %}BuildGreetingQuery.cs*{% endif %}"
 # Created once, then owned by the project. Never overwritten by `copier update`.
 _skip_if_exists:
   - README.md
@@ -59,6 +71,16 @@ architecture:
     "Vertical slices: one folder per use case": vertical-slice
   default: simple
   when: "{{ stack == 'dotnet' }}"
+
+use_cases:
+  type: str
+  help: How Application runs a use case (CQRS and a mediator only where they pay; see the init-project skill)
+  choices:
+    "Plain handler classes, no CQRS (CRUD, simple rules, HTTP only)": plain
+    "CQRS handlers, no library (commands and queries, decorators for cross-cutting work)": handlers
+    "CQRS handlers + the Mediator library (MIT; pipeline behaviors, notifications)": mediator
+  default: plain
+  when: "{{ stack == 'dotnet' and architecture == 'clean' }}"
 
 project_name:
   type: str

@@ -1,0 +1,8 @@
+namespace {{ dotnet_name }}.Application.Common.Messaging;
+
+/// <summary>Handles one command: changes state and returns what the caller needs next, such as the new record's ID (CLEAN-14).</summary>
+public interface ICommandHandler<in TCommand, TResult>
+{
+    /// <summary>Carries out <paramref name="command"/>.</summary>
+    public Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken);
+}

@@ -1,0 +1,25 @@
+{% if use_cases == "mediator" %}using Mediator;
+{% endif %}{% if use_cases == "handlers" %}using {{ dotnet_name }}.Application.Common.Messaging;
+{% endif %}using {{ dotnet_name }}.Domain.Greetings;
+
+namespace {{ dotnet_name }}.Application.Features.Greetings.BuildGreeting;
+
+/// <summary>Use case: the greeting shown to the user, "Good morning" before noon and "Hello" after.</summary>
+{% if use_cases == "plain" %}public sealed class BuildGreetingHandler(TimeProvider timeProvider)
+{% else %}public sealed class BuildGreetingHandler(TimeProvider timeProvider) : IQueryHandler<BuildGreetingQuery, string>
+{% endif %}{
+    private const int NoonHour = 12;
+
+{% if use_cases == "plain" %}    /// <summary>Returns the greeting for <paramref name="name"/> at the current local time.</summary>
+    public string Handle(string name)
+    {
+        string salutation = timeProvider.GetLocalNow().Hour < NoonHour ? "Good morning" : "Hello";
+        return $"{salutation}, {PersonName.From(name).Value}!";
+    }
+{% else %}    /// <summary>Returns the greeting for the query's name at the current local time.</summary>
+    public {% if use_cases == "mediator" %}ValueTask<string> Handle{% else %}Task<string> HandleAsync{% endif %}(BuildGreetingQuery query, CancellationToken cancellationToken)
+    {
+        string salutation = timeProvider.GetLocalNow().Hour < NoonHour ? "Good morning" : "Hello";
+        return {% if use_cases == "mediator" %}ValueTask{% else %}Task{% endif %}.FromResult($"{salutation}, {PersonName.From(query.Name).Value}!");
+    }
+{% endif %}}

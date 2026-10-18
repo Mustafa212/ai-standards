@@ -1,0 +1,8 @@
+namespace {{ dotnet_name }}.Application.Common.Messaging;
+
+/// <summary>Handles one query: reads state and never changes it (CLEAN-14). Decorators wrap it for cross-cutting work (CLEAN-9).</summary>
+public interface IQueryHandler<in TQuery, TResult>
+{
+    /// <summary>Answers <paramref name="query"/>.</summary>
+    public Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken);
+}

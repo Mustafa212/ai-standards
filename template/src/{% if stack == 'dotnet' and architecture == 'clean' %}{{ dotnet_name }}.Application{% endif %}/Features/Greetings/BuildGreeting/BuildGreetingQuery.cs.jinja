@@ -1,0 +1,6 @@
+{% if use_cases == "mediator" %}using Mediator;
+
+{% endif %}namespace {{ dotnet_name }}.Application.Features.Greetings.BuildGreeting;
+
+/// <summary>Asks for the greeting shown to <paramref name="Name"/>.</summary>
+public sealed record BuildGreetingQuery(string Name){% if use_cases == "mediator" %} : IQuery<string>{% endif %};

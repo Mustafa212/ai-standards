@@ -1,22 +1,26 @@
-// Managed by ai-standards: this test is how CLEAN-1 is enforced. Propose changes upstream.
+// Managed by ai-standards: this test is how CLEAN-1 and CLEAN-6 are enforced. Propose changes upstream.
 using System.Reflection;
 using NetArchTest.Rules;
 
 namespace {{ dotnet_name }}.ArchitectureTests;
 
-/// <summary>CLEAN-1: dependencies point inward, from Api and Infrastructure to Application to Domain.</summary>
+/// <summary>CLEAN-1: dependencies point inward, from Api and Infrastructure to Application to Domain. CLEAN-6: Application knows no ASP.NET Core.</summary>
 public sealed class DependencyDirectionTests
 {
     private const string Domain = "{{ dotnet_name }}.Domain";
     private const string Application = "{{ dotnet_name }}.Application";
     private const string Infrastructure = "{{ dotnet_name }}.Infrastructure";
     private const string Api = "{{ dotnet_name }}.Api";
+    private const string AspNetCore = "Microsoft.AspNetCore";
 
     [Fact]
     public void Domain_DependsOnNoOtherLayer() => AssertNoDependency(Domain, Application, Infrastructure, Api);
 
     [Fact]
     public void Application_DependsOnlyOnDomain() => AssertNoDependency(Application, Infrastructure, Api);
+
+    [Fact]
+    public void Application_DoesNotDependOnAspNetCore() => AssertNoDependency(Application, AspNetCore);
 
     [Fact]
     public void Infrastructure_DoesNotDependOnTheApi() => AssertNoDependency(Infrastructure, Api);

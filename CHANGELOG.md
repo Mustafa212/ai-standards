@@ -9,6 +9,30 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.17.0 — 2026-10-18
+
+**BREAKING** (minor bump while 0.x): two new `[tool]` architecture tests for Clean Architecture.
+A clean project whose use cases call each other, or whose Application references ASP.NET Core,
+fails them after `copier update`. The other new rules are `[review]`. Research and sources:
+`docs/research/2026-10-18-clean-architecture-and-cqrs.md`.
+
+- **New question `use_cases`** (dotnet `clean`): `plain` (default), `handlers` (CQRS with
+  `ICommandHandler`/`IQueryHandler` and no library) or `mediator` (CQRS with the MIT Mediator
+  library; MediatR 13+ needs a commercial or registered licence). The init-project skill recommends
+  one; onboard records it as `use-cases:` and audit passes it on. Each style renders its own example
+  use case under `Application/Features/Greetings/BuildGreeting/`.
+- **CLEAN-6 [tool]** (architecture) Application never references ASP.NET Core; the caller comes through a port.
+- **CLEAN-7 [review]** (architecture) An entity with business rules changes state only through methods that check its invariants.
+- **CLEAN-8 [review]** (architecture) Children change only through the aggregate root; aggregates refer to each other by ID.
+- **CLEAN-9 [review]** (architecture) Cross-cutting work runs once, in a pipeline behavior, decorator or endpoint filter.
+- **CLEAN-10 [tool]** (architecture) A use case never calls another use case, or sends through the mediator.
+- **CLEAN-11 [review]** (architecture) One data-access approach per project, written in `docs/PROJECT.md`; no repository per table, no generic `IRepository<T>` returning `IQueryable`.
+- **CLEAN-12 [review]** (architecture) Interfaces only at real boundaries.
+- **CLEAN-13 [review]** (architecture) Application is organized by feature, a folder per use case.
+- **CLEAN-14 [review]** (architecture, `handlers` and `mediator` only) A request is a command or a query with one handler; one database.
+- **Fix, VSA-2:** `FeatureIsolationTests` matched features by prefix (`Order` took in `Orders`),
+  which failed a project with such names. It now matches the namespace exactly.
+
 ## 0.16.0 — 2026-10-18
 
 **BREAKING** (adopted typescript, angular and python projects, and any project's audit): two

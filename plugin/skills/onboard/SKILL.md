@@ -46,14 +46,17 @@ Read the `org` choices in `<clone>/orgs/orgs.yml`. Ask with AskUserQuestion: "Wh
 1. Ask whether the project's repo is private. If it's public, stop and say why: its rules would be
    published when it's adopted later.
 2. Ask for the project's rule prefix (suggest the first 4 letters of the slug, in capitals). For a
-   dotnet project, ask its architecture (simple, clean or vertical-slice).
+   dotnet project, ask its architecture (simple, clean or vertical-slice). For clean, read its
+   use-case style from the code and confirm it: `mediator` (a mediator package such as MediatR or
+   Mediator, handlers implementing its interfaces), `handlers` (its own command and query handler
+   interfaces) or `plain`.
 3. Create `orgs/<org>/projects/<slug>.md`. `<slug>` is the repository's name in lowercase
    kebab-case, starting with a letter (`^[a-z][a-z0-9-]*$`, which copier's `project_slug` requires):
 
 ```markdown
 ## Project: <project name>
 
-<!-- prefix: <PREFIX> · repo: <git remote URL> · stack: <stack> · architecture: <dotnet only> · rules analyzed: <today> (<HEAD short sha, or none>) -->
+<!-- prefix: <PREFIX> · repo: <git remote URL> · stack: <stack> · architecture: <dotnet only> · use-cases: <clean only> · rules analyzed: <today> (<HEAD short sha, or none>) -->
 ```
 
 For an empty folder, go to step 7.
