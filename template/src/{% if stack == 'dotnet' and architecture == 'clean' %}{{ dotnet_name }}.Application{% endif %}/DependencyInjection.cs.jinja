@@ -1,12 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
-using {{ dotnet_name }}.Application.Greetings;
-
+{% if use_cases != "mediator" %}using {{ dotnet_name }}.Application.Features.Greetings.BuildGreeting;
+{% endif %}{% if use_cases == "handlers" %}using {{ dotnet_name }}.Application.Messaging;
+{% endif %}
 namespace {{ dotnet_name }}.Application;
 
 /// <summary>Registers the use cases of the Application layer.</summary>
 public static class DependencyInjection
 {
     /// <summary>Adds every use case to <paramref name="services"/>.</summary>
-    public static IServiceCollection AddApplication(this IServiceCollection services) =>
-        services.AddSingleton<BuildGreeting>();
-}
+{% if use_cases == "mediator" %}    public static IServiceCollection AddApplication(this IServiceCollection services) =>
+        services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
+{% elif use_cases == "handlers" %}    public static IServiceCollection AddApplication(this IServiceCollection services) =>
+        services.AddScoped<IQueryHandler<BuildGreetingQuery, string>, BuildGreetingHandler>();
+{% else %}    public static IServiceCollection AddApplication(this IServiceCollection services) =>
+        services.AddScoped<BuildGreetingHandler>();
+{% endif %}}

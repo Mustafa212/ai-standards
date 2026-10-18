@@ -5,7 +5,7 @@
      "rules": ["DES", "API", "CLEAN", "VSA", "TS-3", "TS-4", "PY-3", "CS-9", "CS-10", "CS-11", "CS-24", "NG-5",
                "DART-5", "DART-6", "DART-7", "DART-9"]},
     {"name": "Data and persistence",
-     "rules": ["CS-15", "CS-16", "CS-17", "CS-19", "CS-20", "CS-21", "CS-22", "CS-23"]},
+     "rules": ["CLEAN-11", "CS-15", "CS-16", "CS-17", "CS-19", "CS-20", "CS-21", "CS-22", "CS-23"]},
     {"name": "Errors and security",
      "rules": ["ERR", "CS-4", "CS-8", "CS-18", "NG-10", "NG-11", "NG-12"]},
     {"name": "Readability",

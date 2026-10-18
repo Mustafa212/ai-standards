@@ -9,7 +9,8 @@ readable, typed, tested and secure. Rules are **enforced by tools**, not by memo
               ▼
    stack: typescript │ angular │ python │ dotnet │ flutter   (per technology)
               ▼
-   architecture: simple │ clean │ vertical-slice   (.NET; each has its own rules)
+   architecture: simple │ clean │ vertical-slice   (.NET; each has its own rules;
+                 clean asks: plain │ handlers │ mediator, i.e. whether to use CQRS and a mediator)
               ▼
    org: personal │ example-corp │ …   (per organization: stricter limits, own rules)    ┐ in your
               ▼                                                                         │ private

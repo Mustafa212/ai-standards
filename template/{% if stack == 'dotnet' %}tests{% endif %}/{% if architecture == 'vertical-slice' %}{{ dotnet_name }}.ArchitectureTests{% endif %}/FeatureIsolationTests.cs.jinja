@@ -1,5 +1,6 @@
 // Managed by ai-standards: this test is how VSA-2 is enforced. Propose changes upstream.
 using System.Reflection;
+using System.Text.RegularExpressions;
 using NetArchTest.Rules;
 
 namespace {{ dotnet_name }}.ArchitectureTests;
@@ -19,7 +20,8 @@ public sealed class FeatureIsolationTests
             string[] others = [.. features.Where(other => other != feature)];
             NetArchTest.Rules.TestResult result = Types.InAssembly(_app)
                 .That()
-                .ResideInNamespace(feature)
+                // ResideInNamespace compares prefixes, so Order would take in Orders too.
+                .ResideInNamespaceMatching($"^{Regex.Escape(feature)}(\\.|$)")
                 .ShouldNot()
                 .HaveDependencyOnAny(others)
                 .GetResult();

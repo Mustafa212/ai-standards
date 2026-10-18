@@ -1,10 +1,19 @@
 ## Architecture: Clean Architecture
 
 Projects: `Domain` ← `Application` ← `Infrastructure` and `Api` (each arrow points at what a project
-may depend on).
+may depend on). {% if use_cases == "handlers" %}Use cases are CQRS handlers (`ICommandHandler`, `IQueryHandler` in `Application/Messaging`), with no mediator library.{% elif use_cases == "mediator" %}Use cases are CQRS handlers that the Mediator library (MIT, source-generated) dispatches.{% else %}Use cases are plain handler classes, injected and called directly, with no CQRS.{% endif %}
 
 - **CLEAN-1 [tool]** Dependencies point inward: Domain depends on nothing, Application only on Domain, Infrastructure and Api on Application. The architecture tests fail the check otherwise.
 - **CLEAN-2 [review]** Domain holds entities, value objects and business rules, with no EF Core, HTTP or framework attributes.
 - **CLEAN-3 [review]** Application holds one class per use case, plus the interfaces that Infrastructure implements (repositories, clock, email).
 - **CLEAN-4 [review]** Infrastructure implements those interfaces (EF Core, external services); only the Api's composition root references it.
 - **CLEAN-5 [review]** The Api is thin: it maps HTTP to use cases, and results to responses.
+- **CLEAN-6 [tool]** Application never references ASP.NET Core (`HttpContext`, `IFormFile`, `IActionResult`): the Api turns a request into plain data, and Application reads the caller through a port such as `ICurrentUser`. The architecture tests fail the check otherwise.
+- **CLEAN-7 [review]** An entity with business rules changes state only through methods that check its invariants (private setters); a use case loads it, calls one method and saves. An entity with no rules, such as a lookup or a setting, may stay plain.
+- **CLEAN-8 [review]** An aggregate's child entities change only through its root, and an aggregate refers to another aggregate by its ID, not by a navigation property.
+- **CLEAN-9 [review]** Cross-cutting work (validation, transactions, logging) runs once, in {% if use_cases == "handlers" %}a decorator around the handler interfaces (Scrutor's `Decorate`){% elif use_cases == "mediator" %}a pipeline behavior{% else %}an endpoint filter or middleware{% endif %}, never repeated inside each use case.
+- **CLEAN-10 [tool]** A use case never calls another use case{% if use_cases == "mediator" %} or sends through the mediator (only the Api and background jobs send){% endif %}: shared logic moves into the domain model, a domain service or a query extension. The architecture tests fail the check otherwise.
+- **CLEAN-11 [review]** One way to reach the database per project, written in `docs/PROJECT.md`: Application uses EF Core through a context port (`IAppDbContext`), or through one repository per aggregate. Never a repository per table, or a generic `IRepository<T>` that returns `IQueryable`.
+- **CLEAN-12 [review]** An interface exists only at a real boundary: a port that Infrastructure implements, a second implementation, or a seam a decorator wraps. A class with one implementation and no boundary is injected as itself (no `IInvoiceService` for `InvoiceService`).
+- **CLEAN-13 [review]** Application is organized by feature: `Features/<Feature>/<UseCase>/` holds the use case's {% if use_cases == "plain" %}handler{% else %}request, handler{% endif %}, validator and response, one type per file (CS-13). A type two use cases share lives in `Features/<Feature>/`, one that several features share in a folder named for its job, such as `Paging/` (DES-4, RDB-10). No folders by technical type across features (`Handlers/`, `Validators/`, `Dtos/`).{% if use_cases in ["handlers", "mediator"] %}
+- **CLEAN-14 [review]** A request is a command (`<VerbNoun>Command`, changes state) or a query (`<VerbNoun>Query`, never changes state), with exactly one handler. Commands and queries share one database: a separate read store or event sourcing is a decision for one bounded context, never a project default.{% endif %}

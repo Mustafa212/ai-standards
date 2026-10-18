@@ -101,17 +101,64 @@ EOF
   grep -q 'depends on another feature' <<<"$output"
 }
 
+check_use_case_isolation() { # <dotnet project dir> <root namespace>: a use case that calls another
+  # must fail the architecture tests (CLEAN-10), and one whose name starts with another's must not.
+  local dir="$1" ns="$2" app="$1/src/$2.Application/Features" output
+  mkdir -p "$app/Orders/PlaceOrder" "$app/Greetings/BuildGreetingTwice"
+  cat >"$app/Orders/PlaceOrder/PlaceOrderHandler.cs" <<EOF
+using $ns.Application.Features.Greetings.BuildGreeting;
+
+namespace $ns.Application.Features.Orders.PlaceOrder;
+
+/// <summary>Planted by test-templates.sh: calls another use case.</summary>
+public sealed class PlaceOrderHandler(BuildGreetingHandler greetings)
+{
+    /// <summary>The use case it calls.</summary>
+    public BuildGreetingHandler Greetings => greetings;
+}
+EOF
+  output="$(cd "$dir" && dotnet build --nologo -v q >/dev/null 2>&1 &&
+    dotnet test --no-build --output Detailed 2>&1)"
+  rm -r "${app:?}/Orders"
+  grep -q 'depends on another use case' <<<"$output" || return 1
+  cat >"$app/Greetings/BuildGreetingTwice/BuildGreetingTwiceHandler.cs" <<EOF
+namespace $ns.Application.Features.Greetings.BuildGreetingTwice;
+
+/// <summary>Planted by test-templates.sh: its name starts with another use case's.</summary>
+public sealed class BuildGreetingTwiceHandler(BuildGreetingTwiceRules rules)
+{
+    /// <summary>Its own helper.</summary>
+    public BuildGreetingTwiceRules Rules => rules;
+}
+EOF
+  cat >"$app/Greetings/BuildGreetingTwice/BuildGreetingTwiceRules.cs" <<EOF
+namespace $ns.Application.Features.Greetings.BuildGreetingTwice;
+
+/// <summary>Planted by test-templates.sh: a helper of the same use case.</summary>
+public sealed record BuildGreetingTwiceRules(string Separator);
+EOF
+  output="$(cd "$dir" && dotnet build --nologo -v q >/dev/null 2>&1 &&
+    dotnet test --no-build --output Detailed 2>&1)"
+  rm -r "${app:?}/Greetings/BuildGreetingTwice"
+  ! grep -q 'depends on another use case' <<<"$output"
+}
+
 for stack in $stacks; do
   # .NET is generated once per architecture; the other stacks have none ("-").
+  # Clean Architecture is generated once per use-case style (architecture:use_cases).
   architectures="-"
-  [[ "$stack" == dotnet ]] && architectures="simple clean vertical-slice"
-  for architecture in $architectures; do
+  [[ "$stack" == dotnet ]] && architectures="simple clean:plain clean:handlers clean:mediator vertical-slice"
+  for variant in $architectures; do
+  architecture="${variant%%:*}"
+  use_cases=""
+  [[ "$variant" == *:* ]] && use_cases="${variant#*:}"
   for org in $orgs; do
     name="$stack-$org"
     arch_args=()
     if [[ "$architecture" != - ]]; then
-      name="$stack-$architecture-$org"
+      name="$stack-$architecture${use_cases:+-$use_cases}-$org"
       arch_args=(--data "architecture=$architecture")
+      [[ -n "$use_cases" ]] && arch_args+=(--data "use_cases=$use_cases")
     fi
     dir="$work/$name"
     log "$name: generate"
@@ -156,6 +203,13 @@ for stack in $stacks; do
       if [[ "$architecture" == vertical-slice ]]; then
         check_feature_isolation "$dir" "$(basename "$first_project" .csproj)" ||
           fail "$name: VSA-2 not enforced (a cross-feature reference passed the architecture tests)"
+      fi
+      if [[ "$architecture" == clean ]]; then
+        if [[ "$use_cases" == plain ]] && grep -q '^- \*\*CLEAN-14 ' "$dir/AGENTS.md"; then
+          fail "$name: the CQRS rule CLEAN-14 is rendered for plain use cases"
+        fi
+        check_use_case_isolation "$dir" "$(basename "$first_project" .csproj | sed 's/\.[^.]*$//')" ||
+          fail "$name: CLEAN-10 not enforced (a call between use cases passed, or a similar name failed)"
       fi
     else
       if command -v uv >/dev/null 2>&1; then

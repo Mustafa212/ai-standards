@@ -1,4 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
+{%- if use_cases == "mediator" %}
+  <PropertyGroup>
+    <!-- TST-1 counts this project's own assemblies: the Mediator package ships symbols, so coverlet would count it too. -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --coverlet-include "[{{ dotnet_name }}.*]*"</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+{%- endif %}
   <ItemGroup>
     <ProjectReference Include="../../src/{{ dotnet_name }}.Application/{{ dotnet_name }}.Application.csproj" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.13" />

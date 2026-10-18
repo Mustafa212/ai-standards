@@ -24,6 +24,18 @@ Ask in one go (use AskUserQuestion when available), skipping anything the user a
 - **architecture** (dotnet only): `simple` (one Web API project), `clean` (Domain, Application,
   Infrastructure, Api) or `vertical-slice` (one folder per use case). Recommend `simple` for small
   services; each architecture adds its own rules to `AGENTS.md`.
+- **use_cases** (dotnet `clean` only): whether to use CQRS and a mediator. Recommend one from what
+  the user says the project does, and say why in a line:
+  - `plain` (default): handler classes the endpoints call directly. CRUD, simple rules, HTTP the
+    only way in. Fowler: "for most systems CQRS adds risky complexity".
+  - `handlers`: commands and queries behind `ICommandHandler`/`IQueryHandler`, no library. When
+    validation or transactions must also wrap background jobs or message consumers (decorators,
+    Scrutor's `Decorate`), or the team wants plain Go-to-Definition and no licence to track.
+  - `mediator`: handlers plus the Mediator library (MIT, source-generated). When many pipeline
+    behaviors or in-process notifications with several handlers are needed. MediatR 13+ is
+    RPL-1.5 or commercial (a key even on its free Community tier), so the template doesn't use it.
+  None of them adds a separate read store or event sourcing: that is a later decision for one
+  bounded context, never a project default (Fowler; Azure Architecture Center, CQRS pattern).
 - **project_name**: human-readable name.
 - **description**: one line (optional).
 - **ai_tools**: any of `claude`, `cursor`, `copilot` (AGENTS.md is always generated).
@@ -42,11 +54,13 @@ New project (current directory empty, or a new subdirectory the user named):
 uvx copier copy --trust \
   --data org=<org> --data stack=<stack> \
   --data project_name="<name>" --data description="<description>" \
+  --data architecture=<architecture> --data use_cases=<use_cases> \
   --data 'ai_tools=["claude"]' \
   --data standards_source="<source>" \
   "<source>" <target-dir>
 ```
 
+Pass `architecture` and `use_cases` only where they apply (dotnet, and `clean` for `use_cases`).
 Use the remote source (not a local clone path) so `copier update` and the monthly update workflow
 can reach it later.
 

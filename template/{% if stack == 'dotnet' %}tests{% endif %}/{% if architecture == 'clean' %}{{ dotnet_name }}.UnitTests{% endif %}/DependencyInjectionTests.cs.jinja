@@ -1,19 +1,36 @@
-using Microsoft.Extensions.DependencyInjection;
+{% if use_cases == "mediator" %}using Mediator;
+{% endif %}using Microsoft.Extensions.DependencyInjection;
 using {{ dotnet_name }}.Application;
-using {{ dotnet_name }}.Application.Greetings;
-
+using {{ dotnet_name }}.Application.Features.Greetings.BuildGreeting;
+{% if use_cases == "handlers" %}using {{ dotnet_name }}.Application.Messaging;
+{% endif %}
 namespace {{ dotnet_name }}.UnitTests;
 
 public sealed class DependencyInjectionTests
 {
-    [Fact]
+{% if use_cases == "mediator" %}    [Fact]
+    public async Task AddApplication_WithAClock_SendsAQueryToItsHandler()
+    {
+        await using ServiceProvider provider = new ServiceCollection()
+            .AddSingleton(TimeProvider.System)
+            .AddApplication()
+            .BuildServiceProvider(validateScopes: true);
+        using IServiceScope scope = provider.CreateScope();
+
+        ISender sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        string greeting = await sender.Send(new BuildGreetingQuery("Mostafa"), TestContext.Current.CancellationToken);
+
+        Assert.EndsWith("Mostafa!", greeting, StringComparison.Ordinal);
+    }
+{% else %}    [Fact]
     public void AddApplication_WithAClock_ResolvesEveryUseCase()
     {
         using ServiceProvider provider = new ServiceCollection()
             .AddSingleton(TimeProvider.System)
             .AddApplication()
-            .BuildServiceProvider();
+            .BuildServiceProvider(validateScopes: true);
+        using IServiceScope scope = provider.CreateScope();
 
-        Assert.NotNull(provider.GetService<BuildGreeting>());
+        Assert.NotNull(scope.ServiceProvider.GetService<{% if use_cases == "handlers" %}IQueryHandler<BuildGreetingQuery, string>{% else %}BuildGreetingHandler{% endif %}>());
     }
-}
+{% endif %}}

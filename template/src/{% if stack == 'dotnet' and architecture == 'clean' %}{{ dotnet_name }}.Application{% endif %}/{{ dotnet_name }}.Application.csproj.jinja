@@ -2,5 +2,12 @@
   <ItemGroup>
     <ProjectReference Include="../{{ dotnet_name }}.Domain/{{ dotnet_name }}.Domain.csproj" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
+{%- if use_cases == "mediator" %}
+    <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
+    <PackageReference Include="Mediator.SourceGenerator" Version="3.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+{%- endif %}
   </ItemGroup>
 </Project>

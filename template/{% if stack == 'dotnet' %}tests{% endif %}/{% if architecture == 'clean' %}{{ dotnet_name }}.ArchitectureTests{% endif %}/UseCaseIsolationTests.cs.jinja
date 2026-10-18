@@ -1,0 +1,59 @@
+// Managed by ai-standards: this test is how CLEAN-10 is enforced. Propose changes upstream.
+using System.Reflection;
+using System.Text.RegularExpressions;
+using NetArchTest.Rules;
+
+namespace {{ dotnet_name }}.ArchitectureTests;
+
+/// <summary>CLEAN-10: a use case (Application/Features/&lt;Feature&gt;/&lt;UseCase&gt;/) never calls another use case{% if use_cases == "mediator" %} or the mediator{% endif %}.</summary>
+public sealed class UseCaseIsolationTests
+{
+    private const string FeaturesNamespace = "{{ dotnet_name }}.Application.Features";
+    private static readonly Assembly _application = Assembly.Load("{{ dotnet_name }}.Application");
+
+    [Fact]
+    public void EachUseCase_DependsOnNoOtherUseCase()
+    {
+        string[] useCases = UseCases();
+        foreach (string useCase in useCases)
+        {
+            string[] others = [.. useCases.Where(other => other != useCase)];
+            AssertNoDependency(useCase, others, "depends on another use case");
+        }
+    }
+{% if use_cases == "mediator" %}
+    [Fact]
+    public void UseCases_NeverSendThroughTheMediator() =>
+        AssertNoDependency(FeaturesNamespace, ["Mediator.ISender", "Mediator.IMediator"], "sends through the mediator");
+{% endif %}
+    private static void AssertNoDependency(string namespaceName, string[] forbidden, string problem)
+    {
+        if (forbidden.Length == 0)
+        {
+            return;
+        }
+
+        NetArchTest.Rules.TestResult result = Types.InAssembly(_application)
+            .That()
+            // ResideInNamespace compares prefixes, so BuildGreeting would take in BuildGreetingTwice too.
+            .ResideInNamespaceMatching($"^{Regex.Escape(namespaceName)}(\\.|$)")
+            .ShouldNot()
+            .HaveDependencyOnAny(forbidden)
+            .GetResult();
+        string offenders = string.Join(", ", result.FailingTypeNames ?? []);
+        Assert.True(result.IsSuccessful, $"{namespaceName} {problem}: {offenders}");
+    }
+
+    /// <summary>The namespaces two levels below Features: one per use case.</summary>
+    private static string[] UseCases()
+    {
+        int useCaseDepth = FeaturesNamespace.Split('.').Length + 2;
+        return [.. _application.GetTypes()
+            .Select(type => type.Namespace)
+            .OfType<string>()
+            .Where(name => name.StartsWith(FeaturesNamespace + ".", StringComparison.Ordinal))
+            .Where(name => name.Split('.').Length >= useCaseDepth)
+            .Select(name => string.Join('.', name.Split('.').Take(useCaseDepth)))
+            .Distinct(StringComparer.Ordinal)];
+    }
+}

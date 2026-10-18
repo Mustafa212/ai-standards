@@ -23,7 +23,8 @@ copy predates 0.9.0: offer `git -C <clone> pull upstream main --tags` (ask first
 Compare `git remote get-url origin` with the `repo:` value in each `<clone>/orgs/*/projects/*.md`
 header, ignoring a `user@` part and a trailing `.git`. The match gives `<org>` (the folder),
 `<slug>` (the file name), `<project name>` (its `## Project:` heading), the stack, and for dotnet the
-architecture (`architecture:`, else `simple`). No match: say the project isn't registered, offer
+architecture (`architecture:`, else `simple`) and, for clean, the use-case style (`use-cases:`, else
+`plain`). No match: say the project isn't registered, offer
 `/ai-standards:onboard`, and stop. With uncommitted changes, say the audit covers the last commit
 (`git rev-parse --short HEAD`) and go on.
 
@@ -35,7 +36,7 @@ uvx copier copy --trust --defaults --quiet --vcs-ref HEAD \
   --data 'ai_tools=["claude"]' "<clone>" <tmp>/rendered
 ```
 
-For dotnet add `--data architecture=<architecture>`. `--vcs-ref HEAD` includes rules kept in this
+For dotnet add `--data architecture=<architecture>`, and for clean `--data use_cases=<style>`. `--vcs-ref HEAD` includes rules kept in this
 session that aren't committed yet. `<tmp>/rendered/AGENTS.md` now holds every rule in effect for this
 project.
 
