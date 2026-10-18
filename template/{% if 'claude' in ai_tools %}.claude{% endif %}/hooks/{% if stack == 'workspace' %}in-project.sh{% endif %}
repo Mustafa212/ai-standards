@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2154  # $file and $rel come from read-hook-file.sh
+# Managed by ai-standards.
+# Workspace root: runs a project folder's own Claude hook when the edited file is in that folder,
+# from inside the folder, as if Claude had been started there. Edits elsewhere are left alone.
+# Usage: in-project.sh <folder> <command...>
+set -uo pipefail
+
+folder="$1"
+shift
+# shellcheck source=/dev/null  # sets $file and $rel
+. "$(dirname "${BASH_SOURCE[0]}")/read-hook-file.sh"
+[[ "$rel" == "$folder"/* ]] || exit 0
+
+# A hook that can't start doesn't block the edit: fail closed instead.
+if ! command -v "$1" >/dev/null 2>&1; then
+  echo "ai-standards: $1 is not installed, so this edit in $folder/ cannot be checked." >&2
+  exit 2
+fi
+
+# The folder's hook reads only the file path; give it the absolute one, so a path relative to the
+# repo root still resolves from inside the folder.
+command -v cygpath >/dev/null 2>&1 && file="$(cygpath -m "$file")"
+file="${file//\/\\}" # JSON escapes: a backslash is \
+file="${file//\"/\\\"}" #               a quote is \"
+export CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}/$folder"
+cd "$CLAUDE_PROJECT_DIR" || exit 2
+"$@" <<<"{\"tool_input\":{\"file_path\":\"$file\"}}"

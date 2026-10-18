@@ -50,7 +50,8 @@ def format_file(project: Path, file: str, *, tracked: bool) -> None:
     """Format a new file, or a tracked one only if it was already formatted at HEAD."""
     if tracked:
         # Only format files that were already formatted, so the formatter never rewrites old code.
-        head = run(["git", "show", f"HEAD:{file}"], project)
+        head = run(["git", "show", f"HEAD:{% if in_workspace %}./{% endif %}{file}"], project)
+        {#- In a workspace folder, ./ makes the path relative to the folder instead of the repo root. #}
         if head.returncode != 0:
             return
         check = run(ruff("format", "--check", "--stdin-filename", file, "-"), project, head.stdout)

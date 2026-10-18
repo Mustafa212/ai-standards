@@ -90,6 +90,12 @@ audits the project. Nothing in the project changes. Say no for good and it creat
 | dotnet | yes | yes | later |
 | flutter | yes | yes | later |
 
+**Several projects in one repository** (e.g. `backend/` and `frontend/`): pre-commit, GitHub
+Actions and Claude Code read their config only at the repository root. Each folder is rendered
+with `in_workspace=true`, and the root with `stack: workspace`, which holds the one pre-commit
+config, CI workflow (a job per folder) and Claude settings, and runs each folder's own checks and
+hooks from inside that folder. `/ai-standards:init-project` sets this up.
+
 **Rules and audit** change nothing in the project. The rules stay in your private copy.
 `/ai-standards:audit` runs the stack's analyzers in a temporary worktree, AI agents check the
 `[review]` rules, and the report goes to `~/.claude/ai-standards/reports/<org>/<project>/`.

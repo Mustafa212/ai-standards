@@ -61,7 +61,8 @@ function changedLines() {
 function format(prettier, tracked) {
   if (tracked) {
     // Only format files that were already formatted, so the formatter never rewrites old code.
-    const head = run("git", ["show", `HEAD:${file}`]);
+    const head = run("git", ["show", `HEAD:{% if in_workspace %}./{% endif %}${file}`]);
+    {#- In a workspace folder, ./ makes the path relative to the folder instead of the repo root. #}
     const check =
       head.status === 0 &&
       run(process.execPath, [prettier, "--check", "--stdin-filepath", file], head.stdout);

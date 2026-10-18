@@ -1,4 +1,19 @@
-{% include "rules/base.md" %}
+{% if stack == "workspace" -%}
+## Projects in this repository
+
+This repository is a workspace: each folder below is a project with its own `AGENTS.md`. Before
+changing a file, read the `AGENTS.md` of the folder that holds it and follow those rules; one
+folder's rules never apply to another. Run a project's checks from its folder.
+
+| Folder | Stack | Rules |
+| --- | --- | --- |
+{%- for folder, project_stack in workspace_projects.items() %}
+| `{{ folder }}/` | {{ project_stack }} | [{{ folder }}/AGENTS.md]({{ folder }}/AGENTS.md) |
+{%- endfor %}
+
+The files at the root (CI, pre-commit, Claude Code settings, this file) serve every folder and are
+managed by ai-standards.
+{%- else %}{% include "rules/base.md" %}
 
 {% if stack == "angular" %}{% include "rules/stacks/typescript.md" %}
 
@@ -9,4 +24,4 @@
 {% include ["orgs/" ~ org ~ "/rules.md"] ignore missing %}
 
 {#- Project rules live in a private copy of ai-standards (orgs/<org>/projects/<slug>.md). #}
-{% include ["orgs/" ~ org ~ "/projects/" ~ project_slug ~ ".md"] ignore missing %}
+{% include ["orgs/" ~ org ~ "/projects/" ~ project_slug ~ ".md"] ignore missing %}{% endif %}

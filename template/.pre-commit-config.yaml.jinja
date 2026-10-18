@@ -25,47 +25,76 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-{% if stack in ["typescript", "angular"] %}
+{#- Each stack's own hooks. In a workspace root, a folder's hooks run from inside that folder on its
+    files only (their names without the folder), so its tools find their configs and dependencies. #}
+{%- macro run(command, folder) %}{% if folder %}bash -c 'cd {{ folder }} && exec {{ command }} "${@#{{ folder }}/}"' --{% else %}{{ command }}{% endif %}{% endmacro %}
+{%- macro local_hooks(project_stack, folder="") %}
+{%- set label = folder ~ "/ " if folder else "" %}
+{%- set only = "^" ~ (folder | regex_escape) ~ "/" if folder else "" %}
+{%- if project_stack in ["typescript", "angular"] %}
   - repo: local
     hooks:
       - id: prettier
-        name: prettier
-        entry: npx --no-install prettier --write --ignore-unknown
+        name: {{ label }}prettier
+        entry: {{ run("npx --no-install prettier --write --ignore-unknown", folder) }}
         language: system
         types: [text]
+{%- if folder %}
+        files: {{ only }}
+{%- endif %}
       - id: eslint
-        name: eslint
-        entry: npx --no-install eslint --fix --max-warnings=0
+        name: {{ label }}eslint
+        entry: {{ run("npx --no-install eslint --fix --max-warnings=0", folder) }}
         language: system
-        files: \.(ts|tsx|js|mjs|cjs{% if stack == "angular" %}|html{% endif %})$
-{%- elif stack == "flutter" %}
+        files: {{ only ~ ".*" if folder }}\.(ts|tsx|js|mjs|cjs{% if project_stack == "angular" %}|html{% endif %})$
+{%- elif project_stack == "flutter" %}
   - repo: local
     hooks:
       - id: dart-format
-        name: dart format
-        entry: dart format --output=none --set-exit-if-changed
+        name: {{ label }}dart format
+        entry: {{ run("dart format --output=none --set-exit-if-changed", folder) }}
         language: system
         types: [dart]
-{%- elif stack == "dotnet" %}
+{%- if folder %}
+        files: {{ only }}
+{%- endif %}
+{%- elif project_stack == "dotnet" %}
   - repo: local
     hooks:
       - id: dotnet-format
-        name: dotnet format (whitespace)
-        entry: dotnet format whitespace --verify-no-changes --include
+        name: {{ label }}dotnet format (whitespace)
+        entry: {{ run("dotnet format whitespace --verify-no-changes --include", folder) }}
         language: system
         types_or: [c#]
+{%- if folder %}
+        files: {{ only }}
+{%- endif %}
 {%- else %}
   # The project's own ruff (from its lock file), so pre-commit, the edit hook and CI agree on rules.
   - repo: local
     hooks:
       - id: ruff
-        name: ruff
-        entry: uv run --quiet ruff check --fix
+        name: {{ label }}ruff
+        entry: {{ run("uv run --quiet ruff check --fix", folder) }}
         language: system
         types_or: [python, pyi]
+{%- if folder %}
+        files: {{ only }}
+{%- endif %}
       - id: ruff-format
-        name: ruff format
-        entry: uv run --quiet ruff format
+        name: {{ label }}ruff format
+        entry: {{ run("uv run --quiet ruff format", folder) }}
         language: system
         types_or: [python, pyi]
+{%- if folder %}
+        files: {{ only }}
+{%- endif %}
+{%- endif %}
+{%- endmacro %}
+{%- if stack == "workspace" %}
+{%- for folder, project_stack in workspace_projects.items() %}
+{{ local_hooks(project_stack, folder) }}
+{%- endfor %}
+{%- else %}
+{{ local_hooks(stack) }}
 {%- endif %}

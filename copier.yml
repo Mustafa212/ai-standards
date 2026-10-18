@@ -21,6 +21,13 @@ _exclude:
   - .DS_Store
   - .svn
   - "{% if use_cases == 'plain' %}BuildGreetingQuery.cs*{% endif %}"
+  # A project in a workspace: the repo root's render holds its pre-commit, CI and Claude settings,
+  # since pre-commit, GitHub Actions and Claude Code only read them at the root.
+  - "{% if in_workspace %}/.pre-commit-config.yaml{% endif %}"
+  - "{% if in_workspace %}/.github{% endif %}"
+  - "{% if in_workspace %}/.claude/settings.json{% endif %}"
+  # A workspace root has no code of its own; its README is the repo owner's to write.
+  - "{% if stack == 'workspace' %}/README.md{% endif %}"
 # Created once, then owned by the project. Never overwritten by `copier update`.
 _skip_if_exists:
   - README.md
@@ -47,9 +54,15 @@ _message_after_copy: |
   Project "{{ project_name }}" scaffolded with ai-standards (org: {{ org }}, stack: {{ stack }}).
 
   Next:
-    1. git init && pre-commit install --install-hooks -t pre-commit -t commit-msg
+  {%- if stack == "workspace" %}
+    1. git init && pre-commit install --install-hooks -t pre-commit -t commit-msg   (once, at the repo root)
+    2. Scaffold each folder ({{ workspace_projects.keys() | join(", ") }}) with its stack and --data in_workspace=true,
+       then install and check it from its folder.
+  {%- else %}
+    1. {% if in_workspace %}pre-commit runs from the repo root (the workspace render): install it there{% else %}git init && pre-commit install --install-hooks -t pre-commit -t commit-msg{% endif %}
     2. {% if stack in ["typescript", "angular"] %}npm install{% elif stack == "dotnet" %}dotnet restore{% elif stack == "flutter" %}flutter pub get{% else %}uv sync{% endif %}
     3. {% if stack in ["typescript", "angular"] %}npm run check{% elif stack in ["dotnet", "flutter"] %}bash .ai-standards/check.sh{% else %}make check{% endif %}
+  {%- endif %}
 
 stack:
   type: str
@@ -60,7 +73,16 @@ stack:
     Python: python
     .NET (C#): dotnet
     Flutter: flutter
+    "Workspace: the root of a repo whose folders are projects": workspace
   default: typescript
+
+workspace_projects:
+  type: yaml
+  help: "Each project folder and its stack, e.g. {backend: dotnet, frontend: angular}"
+  default: {}
+  validator: >-
+    {% if workspace_projects is not mapping or not workspace_projects %}List each project folder and its stack{% else %}{% for folder, folder_stack in workspace_projects.items() %}{% if not (folder | string | regex_search('^[A-Za-z0-9_][A-Za-z0-9._-]*(/[A-Za-z0-9_][A-Za-z0-9._-]*)*$')) %}"{{ folder }}" is not a relative folder path. {% endif %}{% if folder_stack not in ["typescript", "angular", "python", "dotnet", "flutter"] %}"{{ folder }}": no stack "{{ folder_stack }}". {% endif %}{% endfor %}{% endif %}
+  when: "{{ stack == 'workspace' }}"
 
 architecture:
   type: str
@@ -122,10 +144,19 @@ ai_tools:
     GitHub Copilot: copilot
   default: [claude]
 
+in_workspace:
+  type: bool
+  help: >-
+    Is this project one folder of a repo whose root is a workspace (stack workspace)? The root then
+    holds its pre-commit, CI and Claude settings.
+  default: false
+  when: "{{ stack != 'workspace' }}"
+
 adopted:
   type: bool
   help: Is this an EXISTING project being brought onto ai-standards? (new project = no)
   default: false
+  when: "{{ stack != 'workspace' }}"
 
 deferred_checks:
   type: str

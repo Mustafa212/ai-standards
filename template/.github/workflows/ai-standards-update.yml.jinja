@@ -1,5 +1,5 @@
 # Managed by ai-standards.
-# Once a month, pull the latest standards into this project and open a PR.
+# Once a month, pull the latest standards into this {{ "repo (its root and every project folder)" if stack == "workspace" else "project" }} and open a PR.
 #
 # Add a secret AI_STANDARDS_TOKEN (fine-grained token or GitHub App token) with Contents, Pull
 # requests and Workflows read/write on THIS repo, plus read access to the standards repo if it is
@@ -39,7 +39,15 @@ jobs:
         run: |
           git config user.name "ai-standards-bot"
           git config user.email "ai-standards-bot@users.noreply.github.com"
+{%- if stack == "workspace" %}
+          # The root first: copier refuses to update a repo with changes in it, and checks only the
+          # project's own folder, so each folder after the root still starts clean.
+          for project in . {{ workspace_projects.keys() | join(" ") }}; do
+            copier update --defaults --trust --conflict inline "$project"
+          done
+{%- else %}
           copier update --defaults --trust --conflict inline
+{%- endif %}
       - name: Look for conflict markers
         id: conflicts
         run: |
