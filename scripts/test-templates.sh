@@ -98,7 +98,22 @@ EOF
   output="$(cd "$dir" && dotnet build --nologo -v q >/dev/null 2>&1 &&
     dotnet test --no-build --output Detailed 2>&1)"
   rm -r "${dir:?}/src/${ns:?}/Features/Orders"
-  grep -q 'depends on another feature' <<<"$output"
+  grep -q 'depends on another feature' <<<"$output" || return 1
+  # VSA-7: Domain/ that reaches into a feature must fail too.
+  planted="$dir/src/$ns/Domain/Greetings/Greeting.cs"
+  mkdir -p "$(dirname "$planted")"
+  cat >"$planted" <<EOF
+using $ns.Features.Greetings.BuildGreeting;
+
+namespace $ns.Domain.Greetings;
+
+/// <summary>Planted by test-templates.sh: the domain reaches into a feature.</summary>
+public sealed record Greeting(BuildGreetingHandler Handler);
+EOF
+  output="$(cd "$dir" && dotnet build --nologo -v q >/dev/null 2>&1 &&
+    dotnet test --no-build --output Detailed 2>&1)"
+  rm -r "${dir:?}/src/${ns:?}/Domain"
+  grep -q 'depends on a feature' <<<"$output"
 }
 
 check_use_case_isolation() { # <dotnet project dir> <root namespace>: a use case that calls another
@@ -202,7 +217,7 @@ for stack in $stacks; do
       bash "$work/src/scripts/test-hooks.sh" "$dir" "$stack" || fail "$name: hooks"
       if [[ "$architecture" == vertical-slice ]]; then
         check_feature_isolation "$dir" "$(basename "$first_project" .csproj)" ||
-          fail "$name: VSA-2 not enforced (a cross-feature reference passed the architecture tests)"
+          fail "$name: VSA-2 or VSA-7 not enforced (a reference into a feature passed the architecture tests)"
       fi
       if [[ "$architecture" == clean ]]; then
         if [[ "$use_cases" == plain ]] && grep -q '^- \*\*CLEAN-14 ' "$dir/AGENTS.md"; then

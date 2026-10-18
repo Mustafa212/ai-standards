@@ -9,6 +9,21 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.18.0 — 2026-10-18
+
+**BREAKING** (minor bump while 0.x): one new `[tool]` architecture test for vertical slices. A
+project whose `Domain/` references `Features/` fails it after `copier update`. The other rules are
+`[review]`. Research and sources: `docs/research/2026-10-18-vertical-slices-and-other-architectures.md`.
+
+- **VSA-3 [review]** (architecture, amended) Two slices of one feature share through `Features/<Feature>/Shared/`; code leaves the feature only when technical or at the third feature, into a folder named for its job (RDB-10, which the old wording's `Common/` broke); requests and responses are never shared.
+- **VSA-4 [review]** (architecture) A slice starts as procedural code; a repeated rule moves onto the entity, a domain service only across aggregates.
+- **VSA-5 [review]** (architecture) Each slice maps its endpoint onto its feature's route group, defined once. The template now maps `BuildGreeting` onto a `/greetings` group.
+- **VSA-6 [review]** (architecture) Read another feature's data with your own query; react through events; never call its handler.
+- **VSA-7 [tool]** (architecture) `Domain/` never depends on `Features/`, enforced by `FeatureIsolationTests`.
+- **VSA-8 [review]** (architecture) Each slice is tested through its endpoint, against a real database.
+- **RDB-12 [review]** (base) Use cases and endpoints are named for the business intent, not the data change.
+- Clean Architecture's rules now say that Hexagonal and Onion are the same style.
+
 ## 0.17.0 — 2026-10-18
 
 **BREAKING** (minor bump while 0.x): two new `[tool]` architecture tests for Clean Architecture.

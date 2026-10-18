@@ -28,6 +28,7 @@ rule, say so and why.
 - **RDB-9 [review]** Names a reader understands: single letters only for short loop counters. No boolean flag arguments (`send(user, true)`): use an options object or two functions.
 - **RDB-10 [review]** A file is named after what it holds. No dumping-ground names such as `utils`, `helpers` or `common`: name it for its job (`date-format`, `tax`).
 - **RDB-11 [review]** Folders group code by feature, not by kind: everything one feature needs (its UI, logic, data access, types and the tests the stack keeps beside the code) lives in a folder named for that feature, and code that features share lives in a folder named for its job (RDB-10). A folder past about 15 files or 4 levels of nesting is split by sub-feature. Where the stack's architecture rules set layers{% if stack == "flutter" %} (DART-5){% elif stack == "dotnet" %} (clean architecture, vertical slices){% endif %}, the feature folders sit inside them.
+- **RDB-12 [review]** A use case, command, endpoint or the folder that holds it is named for the business intent (`BookRoom`, `PayInvoice`), not the data change behind it (`UpdateReservationStatus`, `SetIsPaid`).
 
 ## 2. Before writing code
 

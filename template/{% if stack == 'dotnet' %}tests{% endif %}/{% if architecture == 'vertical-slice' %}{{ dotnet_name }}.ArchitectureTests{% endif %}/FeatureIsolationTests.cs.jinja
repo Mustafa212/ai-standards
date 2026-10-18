@@ -1,14 +1,15 @@
-// Managed by ai-standards: this test is how VSA-2 is enforced. Propose changes upstream.
+// Managed by ai-standards: this test is how VSA-2 and VSA-7 are enforced. Propose changes upstream.
 using System.Reflection;
 using System.Text.RegularExpressions;
 using NetArchTest.Rules;
 
 namespace {{ dotnet_name }}.ArchitectureTests;
 
-/// <summary>VSA-2: a feature (Features/&lt;Feature&gt;/) never depends on another feature.</summary>
+/// <summary>VSA-2: a feature (Features/&lt;Feature&gt;/) never depends on another feature. VSA-7: Domain/ never depends on Features/.</summary>
 public sealed class FeatureIsolationTests
 {
     private const string FeaturesNamespace = "{{ dotnet_name }}.Features";
+    private const string DomainNamespace = "{{ dotnet_name }}.Domain";
     private static readonly Assembly _app = typeof(Program).Assembly;
 
     [Fact]
@@ -18,16 +19,30 @@ public sealed class FeatureIsolationTests
         foreach (string feature in features)
         {
             string[] others = [.. features.Where(other => other != feature)];
-            NetArchTest.Rules.TestResult result = Types.InAssembly(_app)
-                .That()
-                // ResideInNamespace compares prefixes, so Order would take in Orders too.
-                .ResideInNamespaceMatching($"^{Regex.Escape(feature)}(\\.|$)")
-                .ShouldNot()
-                .HaveDependencyOnAny(others)
-                .GetResult();
-            string offenders = string.Join(", ", result.FailingTypeNames ?? []);
-            Assert.True(result.IsSuccessful, $"{feature} depends on another feature: {offenders}");
+            AssertNoDependency(feature, others, "depends on another feature");
         }
+    }
+
+    [Fact]
+    public void Domain_DependsOnNoFeature() =>
+        AssertNoDependency(DomainNamespace, [FeaturesNamespace], "depends on a feature");
+
+    private static void AssertNoDependency(string namespaceName, string[] forbidden, string problem)
+    {
+        if (forbidden.Length == 0)
+        {
+            return;
+        }
+
+        NetArchTest.Rules.TestResult result = Types.InAssembly(_app)
+            .That()
+            // ResideInNamespace compares prefixes, so Order would take in Orders too.
+            .ResideInNamespaceMatching($"^{Regex.Escape(namespaceName)}(\\.|$)")
+            .ShouldNot()
+            .HaveDependencyOnAny(forbidden)
+            .GetResult();
+        string offenders = string.Join(", ", result.FailingTypeNames ?? []);
+        Assert.True(result.IsSuccessful, $"{namespaceName} {problem}: {offenders}");
     }
 
     /// <summary>The namespaces one level below Features: one per feature.</summary>

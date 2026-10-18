@@ -5,6 +5,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddBuildGreeting();
 
 WebApplication app = builder.Build();
-app.MapBuildGreeting();
+// One route group per feature (VSA-5): its prefix, authorization and tags live here once.
+app.MapGroup("/greetings").MapBuildGreeting();
 
 await app.RunAsync();
