@@ -9,7 +9,7 @@ Debt work is its own change, never mixed into a feature (ADOPT-2). **A script de
 item is done** (`fix_debt.py verdict`); your account of it is never evidence.
 
 Paths:
-- `<clone>`: the private copy, from `~/.claude/ai-standards/config.md`.
+- `<clone>`: the private copy in `~/.claude/ai-standards/config.md` that registers this project (with several `Clone:` lines, the one whose `orgs/*/projects/*.md` has its repo).
 - `<out>`: `~/.claude/ai-standards/reports/<org>/<slug>/`, found as in the audit skill's step 1.
 - `fd`: `python3 <clone>/scripts/fix_debt.py` (another Python: `${CLAUDE_PLUGIN_ROOT}/references/runners.md`). A private copy without `scripts/fix_debt.py` predates 0.11.0: offer `git -C <clone> pull upstream main --tags` (ask first).
 - Evidence: `<out>/fix-debt/<batch>/<item>/`, where `<batch>` is `<date>-<n>`. It never goes in the project.

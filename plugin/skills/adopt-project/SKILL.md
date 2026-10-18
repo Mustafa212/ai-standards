@@ -9,8 +9,9 @@ Goal: from day one, every **new or changed** line meets the standards, while the
 keeps working and its debt is paid down deliberately, item by item. Nothing the user wrote is
 overwritten or deleted, and nothing is committed without their OK.
 
-Template source (`<source>` below): the `Source:` line of `~/.claude/ai-standards/config.md`
-(the user's private copy, set up by the `onboard` skill) if that file exists, else
+Template source (`<source>` below): the `Source:` of the private copy in
+`~/.claude/ai-standards/config.md` that holds the project's org (set up by the `onboard` skill) if
+that file exists, else
 `${user_config.standards_source}`. Default org: `${user_config.default_org}`.
 Usually the `onboard` skill runs this one, after it has asked the org and registered the project.
 

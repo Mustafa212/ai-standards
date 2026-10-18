@@ -12,34 +12,37 @@ Two promises hold on every step:
 - **Org and project rules are private.** They live only in the user's private copy of ai-standards,
   never in the public repo. General rules go to the public repo as a PR (step 6).
 
-The private copy is recorded in `~/.claude/ai-standards/config.md`:
+The private copies are recorded in `~/.claude/ai-standards/config.md`, one pair each. Most users
+have one; keep a copy per client whose rules the others mustn't see.
 
 ```
 Source: gh:<owner>/<repo>
 Clone: <absolute path of the local clone>
 ```
 
-Below, `<clone>` and `<source>` mean those two values. Commands use `python3` and `uvx copier`; when
+Below, `<clone>` and `<source>` mean the pair of this project's copy: the one that registers it, else
+the one that holds its org (step 2). Commands use `python3` and `uvx copier`; when
 one isn't available, see `${CLAUDE_PLUGIN_ROOT}/references/runners.md`.
 
-**Mode.** If the project is registered (its remote matches a `repo:` in
-`<clone>/orgs/*/projects/*.md`), go to "Refresh mode". Otherwise run steps 1–7.
+**Mode.** If the project is registered (its remote matches a `repo:` in any copy's
+`orgs/*/projects/*.md`), go to "Refresh mode". Otherwise run steps 1–7.
 
 ## 1. The private copy
 
-If `config.md` exists, `<clone>` exists, and `git -C <clone> remote get-url upstream` works (a
-private copy keeps the public repo as `upstream`): run `git -C <clone> pull`, then go to step 2.
-Otherwise set one up with "Private copy" in `references/setup.md`; the public repo is
-`${user_config.standards_source}`.
+If `config.md` exists and each `Clone:` exists with a working `git -C <clone> remote get-url
+upstream` (a private copy keeps the public repo as `upstream`): run `git -C <clone> pull` in each,
+then go to step 2. Otherwise, or when the user wants a new copy for a client, set one up with
+"Private copy" in `references/setup.md`; the public repo is `${user_config.standards_source}`.
 
 New public releases reach the private copy with `git -C <clone> pull upstream main --tags`. Offer
 that when the public repo has a newer tag than the private copy, and always ask first.
 
 ## 2. Which org?
 
-Read the `org` choices in `<clone>/orgs/orgs.yml`. Ask with AskUserQuestion: "Which org does
-<project> belong to?", listing every org plus "New org". For a new org, follow "New org" in
-`references/setup.md`.
+Read the `org` choices in each copy's `orgs/orgs.yml`. Ask with AskUserQuestion: "Which org does
+<project> belong to?", listing every org (with its copy's repo when there are several copies) plus
+"New org". The org picks `<clone>`. For a new org, ask which copy it goes in when there are several,
+then follow "New org" in `references/setup.md`.
 
 ## 3. Register the project
 

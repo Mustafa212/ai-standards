@@ -71,12 +71,13 @@ dir="$work/empty"
 mkdir -p "$dir"
 grep -q 'ai-standards:onboard' <<<"$(hook_output "$dir")" || fail "empty folder: onboard not required"
 
-# A project registered in the private copy but not adopted: summary of its latest report, and the
-# refresh offer once it's due.
+# A project registered in the second of two private copies but not adopted: summary of its latest
+# report, and the refresh offer once it's due.
 home="$work/ai-home"
 clone="$home/clone"
-mkdir -p "$clone/orgs/personal/projects" "$home/reports/personal/fixture-app"
-printf 'Source: gh:x/y\nClone: %s\n' "$clone" >"$home/config.md"
+mkdir -p "$home/other/orgs/acme/projects" "$clone/orgs/personal/projects" "$home/reports/personal/fixture-app"
+printf '## Project: other\n\n<!-- repo: https://example.com/acme/other -->\n' >"$home/other/orgs/acme/projects/other.md"
+printf 'Source: gh:x/other\nClone: %s\nSource: gh:x/y\nClone: %s\n' "$home/other" "$clone" >"$home/config.md"
 dir="$work/registered"
 make_commits "$dir" 1
 git -C "$dir" remote add origin "https://someone@example.com/acme/fixture-app.git"

@@ -9,6 +9,14 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.22.0 — 2026-10-18
+
+- **Several private copies.** `~/.claude/ai-standards/config.md` can list one `Source:` and `Clone:`
+  pair per copy, so a client's org and project rules can live in a repo only that client's people
+  see. The SessionStart hook finds a registered project in any copy; the skills use the copy that
+  registers the project, else the one that holds its org, and onboard asks which copy a new org
+  goes in. One pair works as before.
+
 ## 0.21.0 — 2026-10-18
 
 MINOR: a fourth .NET architecture, `modular-monolith`; nothing changes for existing projects.
