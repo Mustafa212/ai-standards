@@ -1,9 +1,9 @@
 {% if use_cases == "mediator" %}using Mediator;
 {% endif %}using Microsoft.Extensions.DependencyInjection;
 using {{ dotnet_name }}.Application;
-{% if use_cases == "handlers" %}using {{ dotnet_name }}.Application.Common.Messaging;
-{% endif %}using {{ dotnet_name }}.Application.Features.Greetings.BuildGreeting;
-
+using {{ dotnet_name }}.Application.Features.Greetings.BuildGreeting;
+{% if use_cases == "handlers" %}using {{ dotnet_name }}.Application.Messaging;
+{% endif %}
 namespace {{ dotnet_name }}.UnitTests;
 
 public sealed class DependencyInjectionTests

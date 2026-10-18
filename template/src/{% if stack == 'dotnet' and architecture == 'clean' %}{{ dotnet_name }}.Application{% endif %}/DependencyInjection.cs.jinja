@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-{% if use_cases == "handlers" %}using {{ dotnet_name }}.Application.Common.Messaging;
-{% endif %}{% if use_cases != "mediator" %}using {{ dotnet_name }}.Application.Features.Greetings.BuildGreeting;
+{% if use_cases != "mediator" %}using {{ dotnet_name }}.Application.Features.Greetings.BuildGreeting;
+{% endif %}{% if use_cases == "handlers" %}using {{ dotnet_name }}.Application.Messaging;
 {% endif %}
 namespace {{ dotnet_name }}.Application;
 
