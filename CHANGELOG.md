@@ -32,6 +32,11 @@ MINOR: several projects in one repository. Nothing changes for a single project.
   folder, runs each folder's check, runs pre-commit at the root (all files, then a staged change in
   each folder) and the Claude hooks through the root's settings. `test-hooks.sh` also checks that an
   edited tracked file is formatted.
+- **Fix: a fresh scaffold's first commit passes pre-commit.** The ESLint hook got the files ESLint
+  ignores (`.claude/hooks/*.mjs`, `.ai-standards/run.mjs`), and their "File ignored" warning failed
+  `--max-warnings=0`: the hook now runs with `--no-warn-ignored`. The Cursor and Copilot instruction
+  files (and `AGENTS.md` without Claude) ended with blank lines that `end-of-file-fixer` rewrote.
+  Found by the workspace test, the first one to run pre-commit on a scaffold.
 
 ## 0.22.1 — 2026-10-18
 

@@ -1,4 +1,4 @@
-<!-- Managed by ai-standards. Do not edit: changes are overwritten on update. Propose rule changes upstream. -->
+{% filter trim %}<!-- Managed by ai-standards. Do not edit: changes are overwritten on update. Propose rule changes upstream. -->
 
 # {{ project_name }}: Engineering Standards
 
@@ -33,4 +33,4 @@ The plan for the old debt is in `docs/STANDARDS-DEBT.md`.
 {%- endif %}
 - Hooks block edits to files managed by ai-standards (lint configs, CI, this file). Do not work around this, and never change those files through shell commands either; tell the user and suggest `/ai-standards:propose-rule`.
 - `CLAUDE.md` and `docs/PROJECT.md` belong to the project. Edit them when the user asks.
-{%- endif %}
+{%- endif %}{% endfilter %}

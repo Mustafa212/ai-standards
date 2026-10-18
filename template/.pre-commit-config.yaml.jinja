@@ -44,7 +44,7 @@ repos:
 {%- endif %}
       - id: eslint
         name: {{ label }}eslint
-        entry: {{ run("npx --no-install eslint --fix --max-warnings=0", folder) }}
+        entry: {{ run("npx --no-install eslint --fix --max-warnings=0 --no-warn-ignored", folder) }}
         language: system
         files: {{ only ~ ".*" if folder }}\.(ts|tsx|js|mjs|cjs{% if project_stack == "angular" %}|html{% endif %})$
 {%- elif project_stack == "flutter" %}
