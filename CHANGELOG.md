@@ -9,6 +9,44 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.16.0 — 2026-10-18
+
+**BREAKING** (adopted typescript, angular and python projects, and any project's audit): two
+[tool] checks get stricter, so `copier update` can bring new lint findings. Fix them, or baseline
+them as with any new rule (ADOPT-2). Agents had been dumping files into one folder, skipping
+comments and writing clever code; the rules covered part of it, and published guidance covers the
+rest.
+
+- **RDB-11 [review]** (base, new) Folders by feature, not by kind: what a feature needs lives in its
+  folder, shared code in a folder named for its job (RDB-10), and a folder past about 15 files or 4
+  levels deep is split; feature folders sit inside the stack's architecture layers. Sources:
+  angular.dev style guide ("Avoid putting so many files into one directory…"), Microsoft's "Feature
+  Slices for ASP.NET Core MVC" ("perhaps five to 15 items"), NestJS feature modules, bulletproof-react,
+  the React FAQ on nesting. NG-8 now points to it for its folder half.
+- **DART-5 [review]** (flutter, amended) The folder layout of Flutter's architecture case study:
+  `lib/ui/<feature>/`, `lib/ui/core/`, `lib/data/repositories/` and `services/`,
+  `lib/domain/models/`, and `test/` mirroring `lib/`.
+- **RDB-5 [review]** (base, amended) Says when a comment is required, not only what it may not do:
+  a workaround with its issue link, a business rule, a deliberate limit or trade-off, an order or
+  value that looks wrong but isn't. Sources: Google Python style guide 3.8.5 ("If you're going to have
+  to explain it at the next code review, you should comment it now"), Google C++ and Go guides.
+- **RDB-8 [tool]** (base, amended, **BREAKING**) Public methods of exported classes need a doc comment
+  too. TypeScript and Angular: `jsdoc/require-jsdoc` gets a `MethodDefinition` context (private,
+  protected and `#private` members, constructors and Angular's `ngOnInit`-style hooks are exempt;
+  classes that aren't exported stay exempt through `publicOnly`). Python: Ruff `D102`. .NET (CS1591)
+  and Flutter (`public_member_api_docs`) already covered every public member. Sources: PEP 257,
+  Google Java style 7.3, Microsoft's C# documentation conventions.
+- **RDB-1 [tool]** (typescript, angular, dotnet, amended, **BREAKING**) Cognitive complexity ≤ 15
+  (`max_cognitive`, an org setting), which also counts nesting and broken flow, as cyclomatic
+  complexity doesn't. TypeScript and Angular: `sonarjs/cognitive-complexity` from the new dev
+  dependency `eslint-plugin-sonarjs` (^4.2.1); .NET: `S3776` with its threshold in SonarLint.xml.
+  Python and Flutter have no free rule for it and keep cyclomatic complexity only. Source: Sonar's
+  Cognitive Complexity paper.
+- **RDB-7** (dotnet): nested conditional operators fail the build (`S3358`), as `no-nested-ternary`
+  already does in TypeScript.
+- Violation tests prove each new check fires: `documentation.ts` (typescript, angular),
+  `documentation.py`, `complexity.cs`.
+
 ## 0.15.0 — 2026-10-18
 
 MINOR: fix-debt ordering and shorter skill descriptions; no rule text changes.

@@ -5,6 +5,7 @@ import js from "@eslint/js";
 import comments from "@eslint-community/eslint-plugin-eslint-comments/configs";
 import prettier from "eslint-config-prettier";
 import jsdoc from "eslint-plugin-jsdoc";
+import sonarjs from "eslint-plugin-sonarjs";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -16,7 +17,7 @@ export default tseslint.config(
   tseslint.configs.stylisticTypeChecked,
   comments.recommended,
   {
-    plugins: { jsdoc },
+    plugins: { jsdoc, sonarjs },
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },

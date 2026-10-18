@@ -18,15 +18,16 @@ rule, say so and why.
 ## 1. Readability first
 
 - **RDB-7 [review]** Write code a new teammate understands on first read: plain steps over clever one-liners, one idea per line. If code needs a comment to say what it does, simplify the code first.
-- **RDB-1 {% if stack == "flutter" %}[review]{% else %}[tool]{% endif %}** {% if stack == "python" %}Functions ≤ {{ cfg.max_statements }} statements{% else %}Functions ≤ {{ cfg.max_function_lines }} lines{% endif %}, cyclomatic complexity ≤ {{ cfg.max_complexity }}, ≤ {{ cfg.max_params }} parameters (use an options object beyond that), nesting depth ≤ {{ cfg.max_depth }}. Use early returns and guard clauses.
+- **RDB-1 {% if stack == "flutter" %}[review]{% else %}[tool]{% endif %}** {% if stack == "python" %}Functions ≤ {{ cfg.max_statements }} statements{% else %}Functions ≤ {{ cfg.max_function_lines }} lines{% endif %}, cyclomatic complexity ≤ {{ cfg.max_complexity }}, ≤ {{ cfg.max_params }} parameters (use an options object beyond that), nesting depth ≤ {{ cfg.max_depth }}{% if stack in ["typescript", "angular", "dotnet"] %}, cognitive complexity ≤ {{ cfg.max_cognitive }} (it also counts nesting and broken flow){% endif %}. Use early returns and guard clauses.
 - **RDB-2 [tool]** Files ≤ {{ cfg.max_file_lines }} lines. A file past that has more than one responsibility.
 - **RDB-3 [review]** Names say what, not how: `unpaidInvoices` not `list2`, `isExpired` for booleans, verbs for functions. No abbreviations except universal ones (id, url, http).
 - **RDB-4 {% if stack == "flutter" %}[review]{% else %}[tool]{% endif %}** No magic numbers. Name them as constants.
-- **RDB-5 [review]** Comments explain *why*, not *what*. Delete commented-out code; git remembers.
+- **RDB-5 [review]** Comments explain *why*, not *what*. Wherever a reader would otherwise ask why, a comment next to the code says it: a workaround (with its issue link), a business rule, a deliberate limit or trade-off, an order or value that looks wrong but isn't. Delete commented-out code; git remembers.
 - **RDB-6 [tool]** Formatting is automatic. Never hand-format.
-- **RDB-8 [tool]** Every exported function and class starts with a doc comment ({% if stack in ["typescript", "angular"] %}JSDoc `/** … */`{% elif stack == "dotnet" %}an XML doc comment, `/// <summary>`{% elif stack == "flutter" %}a dartdoc comment, `///`{% else %}a docstring{% endif %}) saying what it is for and anything a caller must know. One sentence is enough; tests are exempt.
+- **RDB-8 [tool]** Every exported function and class, and every public method of an exported class, starts with a doc comment ({% if stack in ["typescript", "angular"] %}JSDoc `/** … */`{% elif stack == "dotnet" %}an XML doc comment, `/// <summary>`{% elif stack == "flutter" %}a dartdoc comment, `///`{% else %}a docstring{% endif %}) saying what it is for and anything a caller must know. One sentence is enough; tests are exempt.
 - **RDB-9 [review]** Names a reader understands: single letters only for short loop counters. No boolean flag arguments (`send(user, true)`): use an options object or two functions.
 - **RDB-10 [review]** A file is named after what it holds. No dumping-ground names such as `utils`, `helpers` or `common`: name it for its job (`date-format`, `tax`).
+- **RDB-11 [review]** Folders group code by feature, not by kind: everything one feature needs (its UI, logic, data access, types and the tests the stack keeps beside the code) lives in a folder named for that feature, and code that features share lives in a folder named for its job (RDB-10). A folder past about 15 files or 4 levels of nesting is split by sub-feature. Where the stack's architecture rules set layers{% if stack == "flutter" %} (DART-5){% elif stack == "dotnet" %} (clean architecture, vertical slices){% endif %}, the feature folders sit inside them.
 
 ## 2. Before writing code
 

@@ -9,7 +9,7 @@ The TypeScript rules above apply too.
 - **NG-5 [review]** Components only present. Validation, transformation and data access live in services or plain functions, and complex template logic becomes a `computed`.
 - **NG-6 [review]** Members used only by the template are `protected`; inputs, outputs, models and queries are `readonly`.
 - **NG-7 [review]** Event handlers are named for what they do (`saveDraft()`), not for the event (`onClick()`).
-- **NG-8 [review]** One concept per file (a component, a directive or a service), named in kebab-case after it. Folders by feature, not by type (no `components/` or `services/`), with specs next to the code.
+- **NG-8 [review]** One concept per file (a component, a directive or a service), named in kebab-case after it, with its spec next to it. Folders follow RDB-11: no `components/` or `services/` folders.
 - **NG-9 [review]** `class` and `style` bindings instead of `NgClass` and `NgStyle`; lifecycle hooks stay short and call well-named methods.
 - **NG-10 [review]** Long-lived subscriptions end with the component (`takeUntilDestroyed`, the `async` pipe, `toSignal`); one-shot HTTP calls need nothing.
 - **NG-11 [tool]** Never write HTML past Angular's sanitizer: no `innerHTML`, `outerHTML` or `insertAdjacentHTML` through an element, no `document.write`, and no `Renderer2.setProperty` on those properties; bind in the template instead. `DomSanitizer.bypassSecurityTrust*` is allowed only on a value the code built itself (a fixed embed URL plus a validated ID), with a SUP-1 suppression that says why.

@@ -2,13 +2,16 @@
 {# The import outputs nothing, so the first rule keeps its indentation. -#}
 {% import "config/settings.jinja" as cfg with context %}      // RDB-1 / RDB-2: size and complexity limits
       complexity: ["error", {{ cfg.max_complexity }}],
+      "sonarjs/cognitive-complexity": ["error", {{ cfg.max_cognitive }}],
       "max-depth": ["error", {{ cfg.max_depth }}],
       "max-params": ["error", {{ cfg.max_params }}],
       "max-lines-per-function": ["error", { max: {{ cfg.max_function_lines }}, skipBlankLines: true, skipComments: true }],
       "max-lines": ["error", { max: {{ cfg.max_file_lines }}, skipBlankLines: true, skipComments: true }],
       "no-nested-ternary": "error",
       "no-else-return": ["error", { allowElseIf: false }],
-      // RDB-8: exported functions and classes say what they are for
+      // RDB-8: exported functions and classes, and the public methods of exported classes, say what
+      // they are for (private, protected and #private members and constructors are exempt{% if stack == "angular" %}, and so are
+      // Angular's ngOnInit-style lifecycle hooks{% endif %})
       "jsdoc/require-jsdoc": [
         "error",
         {
@@ -19,6 +22,9 @@
             ArrowFunctionExpression: true,
             FunctionExpression: true,
           },
+          contexts: [
+            'MethodDefinition:not([accessibility="private"]):not([accessibility="protected"]):not([kind="constructor"]):not([key.type="PrivateIdentifier"]){% if stack == "angular" %}:not([key.name=/^ng[A-Z]/]){% endif %} > FunctionExpression',
+          ],
         },
       ],
       "jsdoc/require-description": "error",
