@@ -9,6 +9,17 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.23.1 — 2026-10-18
+
+PATCH: two CI jobs failed on every pull request of an organization-owned repository.
+
+- **CI `secrets`** runs the gitleaks CLI (MIT, the same tool and version as the pre-commit hook,
+  downloaded with its checksum checked) instead of `gitleaks/gitleaks-action`, which stops with
+  "missing gitleaks license" on any repository an organization owns. Renovate bumps its version
+  with the pre-commit hook's. ERR-3 (base, [tool]) is unchanged.
+- **CI `commits`** gets `pull-requests: read`: on a private repository the PR-title check failed
+  with "Resource not accessible by integration" under the workflow's `contents: read`.
+
 ## 0.23.0 — 2026-10-18
 
 MINOR: several projects in one repository. Nothing changes for a single project.
