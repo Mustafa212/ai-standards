@@ -9,6 +9,14 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.19.0 — 2026-10-18
+
+MINOR: one new `[review]` rule for dotnet; nothing fails existing code, and an audit after updating
+reports a thrown expected failure as a finding. Research and sources:
+`docs/research/2026-10-18-result-pattern.md`.
+
+- **CS-26 [review]** (stack, P2) An expected failure is returned as `ErrorOr<T>` with a typed `Error` and a stable code, never thrown; exceptions are for the unexpected only; results are read through `Match`, `Switch` or `IsError`; one place maps errors to 400, 404, 409 and 422 problem details. Sources: Microsoft's best practices for exceptions, Scott Wlaschin; against it, Microsoft's Framework Design Guidelines (written for framework libraries).
+
 ## 0.18.0 — 2026-10-18
 
 **BREAKING** (minor bump while 0.x): one new `[tool]` architecture test for vertical slices. A

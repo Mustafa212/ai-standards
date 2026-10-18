@@ -57,3 +57,8 @@ into AGENTS.md.
 
 - Search: `[!=]=\s*null\b` outside lambdas passed to `Where`, `Any`, `Select` or `OrderBy`
 - Break: `if (customer == null) throw new NotFoundException(…);`
+
+## CS-26
+
+- Search: `throw new \w*(NotFound|Validation|BusinessRule|Domain|Conflict)\w*Exception\(`, and `\.Value\b` on an `ErrorOr` result with no `IsError` check before it
+- Break: `if (invoice.IsPaid) throw new BusinessRuleException("Invoice is already paid.");` in a handler, caught and mapped to 409 by an exception handler
