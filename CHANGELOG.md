@@ -9,6 +9,20 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.20.0 — 2026-10-18
+
+MINOR: the .NET architecture tests (CLEAN-1, CLEAN-6, CLEAN-10, VSA-2, VSA-7) run on ArchUnitNET instead of
+NetArchTest, which hasn't released since 1.3.2 (May 2021). Same rules and failure messages. ArchUnitNET
+reads dependencies in more places than NetArchTest did, so an update can report one it missed.
+
+- **ArchUnitNET 0.13.4** (`TngTech.ArchUnitNET`) comes from the managed `Directory.Build.props` for every
+  `*ArchitectureTests` project, so `copier update` brings the package with the tests that use it. Project
+  files are the project's own: a `NetArchTest.Rules` reference left in one is unused and can be removed.
+- **Empty selections pass**, as before: ArchUnitNET fails a rule that selects nothing by default, and a
+  project with no `Domain/` yet, or one use case, is fine (`WithoutRequiringPositiveResults`).
+- **Namespaces match exactly** (`ResideInNamespaceMatching` with `^name(\.|$)`), so `Order` never takes in
+  `Orders`; CLEAN-6 sees ASP.NET Core through `Types(true)`, which includes referenced types.
+
 ## 0.19.0 — 2026-10-18
 
 MINOR: one new `[review]` rule for dotnet; nothing fails existing code, and an audit after updating

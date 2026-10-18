@@ -59,4 +59,4 @@ names them as the same style as Clean).
 - NetArchTest's `ResideInNamespace` compares prefixes (`Order` takes in `Orders`). Both the new test
   and VSA-2's `FeatureIsolationTests` now match the namespace exactly.
 - NetArchTest hasn't released since 1.3.2 (May 2021); [ArchUnitNET](https://www.nuget.org/packages/TngTech.ArchUnitNET)
-  is active. Moving the architecture tests to it is a separate change.
+  is active. The architecture tests moved to it in 0.20.0.

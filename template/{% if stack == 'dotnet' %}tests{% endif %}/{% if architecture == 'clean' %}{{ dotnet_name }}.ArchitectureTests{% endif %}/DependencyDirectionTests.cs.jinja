@@ -1,6 +1,10 @@
 // Managed by ai-standards: this test is how CLEAN-1 and CLEAN-6 are enforced. Propose changes upstream.
-using System.Reflection;
-using NetArchTest.Rules;
+using Assembly = System.Reflection.Assembly;
+using System.Text.RegularExpressions;
+using ArchUnitNET.Domain;
+using ArchUnitNET.Fluent;
+using ArchUnitNET.Loader;
+using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 namespace {{ dotnet_name }}.ArchitectureTests;
 
@@ -12,6 +16,9 @@ public sealed class DependencyDirectionTests
     private const string Infrastructure = "{{ dotnet_name }}.Infrastructure";
     private const string Api = "{{ dotnet_name }}.Api";
     private const string AspNetCore = "Microsoft.AspNetCore";
+    private static readonly Architecture _architecture = new ArchLoader()
+        .LoadAssemblies([.. new[] { Domain, Application, Infrastructure, Api }.Select(Assembly.Load)])
+        .Build();
 
     [Fact]
     public void Domain_DependsOnNoOtherLayer() => AssertNoDependency(Domain, Application, Infrastructure, Api);
@@ -27,11 +34,17 @@ public sealed class DependencyDirectionTests
 
     private static void AssertNoDependency(string layer, params string[] forbidden)
     {
-        NetArchTest.Rules.TestResult result = Types.InAssembly(Assembly.Load(layer))
-            .ShouldNot()
-            .HaveDependencyOnAny(forbidden)
-            .GetResult();
-        string offenders = string.Join(", ", result.FailingTypeNames ?? []);
-        Assert.True(result.IsSuccessful, $"{layer} must not depend on {string.Join(", ", forbidden)}: {offenders}");
+        // Types(true) takes in referenced types too, so a dependency on ASP.NET Core is seen.
+        ArchRule<IType> rule = Types().That().ResideInAssembly(Assembly.Load(layer))
+            .Should().NotDependOnAny(Types(true).That().ResideInNamespaceMatching(Within(forbidden)))
+            .WithoutRequiringPositiveResults();
+        Assert.True(rule.HasNoViolations(_architecture), $"{layer} must not depend on {string.Join(", ", forbidden)}: {Offenders(rule)}");
     }
+
+    /// <summary>These namespaces and the ones below them, as one pattern.</summary>
+    private static string Within(string[] namespaces) =>
+        $"^({string.Join('|', namespaces.Select(Regex.Escape))})(\\.|$)";
+
+    private static string Offenders(ArchRule<IType> rule) =>
+        string.Join(", ", rule.Evaluate(_architecture).Where(result => !result.Passed).Select(result => result.Description));
 }

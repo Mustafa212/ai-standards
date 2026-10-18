@@ -35,4 +35,4 @@ contested; CLEAN-10's idea (handlers never call each other) is already VSA-2 and
 
 NetArchTest.Rules hasn't released since 1.3.2 (May 2021);
 [ArchUnitNET](https://www.nuget.org/packages/TngTech.ArchUnitNET) is active. The architecture tests
-move to it in a separate change, before the modular monolith template, which needs module rules.
+moved to it in 0.20.0, before the modular monolith template, which needs module rules.

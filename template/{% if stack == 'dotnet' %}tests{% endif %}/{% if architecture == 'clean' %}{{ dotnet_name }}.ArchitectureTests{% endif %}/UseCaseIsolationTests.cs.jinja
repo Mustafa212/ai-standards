@@ -1,7 +1,10 @@
 // Managed by ai-standards: this test is how CLEAN-10 is enforced. Propose changes upstream.
-using System.Reflection;
+using Assembly = System.Reflection.Assembly;
 using System.Text.RegularExpressions;
-using NetArchTest.Rules;
+using ArchUnitNET.Domain;
+using ArchUnitNET.Fluent;
+using ArchUnitNET.Loader;
+using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 namespace {{ dotnet_name }}.ArchitectureTests;
 
@@ -10,6 +13,7 @@ public sealed class UseCaseIsolationTests
 {
     private const string FeaturesNamespace = "{{ dotnet_name }}.Application.Features";
     private static readonly Assembly _application = Assembly.Load("{{ dotnet_name }}.Application");
+    private static readonly Architecture _architecture = new ArchLoader().LoadAssemblies(_application).Build();
 
     [Fact]
     public void EachUseCase_DependsOnNoOtherUseCase()
@@ -18,31 +22,28 @@ public sealed class UseCaseIsolationTests
         foreach (string useCase in useCases)
         {
             string[] others = [.. useCases.Where(other => other != useCase)];
-            AssertNoDependency(useCase, others, "depends on another use case");
+            if (others.Length > 0)
+            {
+                AssertNoDependency(useCase, Types().That().ResideInNamespaceMatching(Within(others)), "depends on another use case");
+            }
         }
     }
 {% if use_cases == "mediator" %}
     [Fact]
     public void UseCases_NeverSendThroughTheMediator() =>
-        AssertNoDependency(FeaturesNamespace, ["Mediator.ISender", "Mediator.IMediator"], "sends through the mediator");
+        AssertNoDependency(FeaturesNamespace, Types(true).That().HaveFullNameMatching(@"^Mediator\.(ISender|IMediator)$"), "sends through the mediator");
 {% endif %}
-    private static void AssertNoDependency(string namespaceName, string[] forbidden, string problem)
+    private static void AssertNoDependency(string namespaceName, IObjectProvider<IType> forbidden, string problem)
     {
-        if (forbidden.Length == 0)
-        {
-            return;
-        }
-
-        NetArchTest.Rules.TestResult result = Types.InAssembly(_application)
-            .That()
-            // ResideInNamespace compares prefixes, so BuildGreeting would take in BuildGreetingTwice too.
-            .ResideInNamespaceMatching($"^{Regex.Escape(namespaceName)}(\\.|$)")
-            .ShouldNot()
-            .HaveDependencyOnAny(forbidden)
-            .GetResult();
-        string offenders = string.Join(", ", result.FailingTypeNames ?? []);
-        Assert.True(result.IsSuccessful, $"{namespaceName} {problem}: {offenders}");
+        ArchRule<IType> rule = Types().That().ResideInNamespaceMatching(Within([namespaceName])).Should().NotDependOnAny(forbidden)
+            .WithoutRequiringPositiveResults();
+        string offenders = string.Join(", ", rule.Evaluate(_architecture).Where(result => !result.Passed).Select(result => result.Description));
+        Assert.True(rule.HasNoViolations(_architecture), $"{namespaceName} {problem}: {offenders}");
     }
+
+    /// <summary>These namespaces and the ones below them, as one pattern: BuildGreeting doesn't take in BuildGreetingTwice.</summary>
+    private static string Within(string[] namespaces) =>
+        $"^({string.Join('|', namespaces.Select(Regex.Escape))})(\\.|$)";
 
     /// <summary>The namespaces two levels below Features: one per use case.</summary>
     private static string[] UseCases()
