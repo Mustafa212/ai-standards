@@ -5,6 +5,7 @@ import comments from "@eslint-community/eslint-plugin-eslint-comments/configs";
 import angular from "angular-eslint";
 import prettier from "eslint-config-prettier";
 import jsdoc from "eslint-plugin-jsdoc";
+import sonarjs from "eslint-plugin-sonarjs";
 import tseslint from "typescript-eslint";
 
 // NG-11: these skip the sanitizing that template bindings get
@@ -42,7 +43,7 @@ export default tseslint.config(
       angular.configs.tsRecommended,
     ],
     processor: angular.processInlineTemplates,
-    plugins: { jsdoc },
+    plugins: { jsdoc, sonarjs },
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },

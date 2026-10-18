@@ -4,7 +4,7 @@
 - **DART-2 [tool]** Futures are awaited or wrapped in `unawaited()`, and nothing uses `print` (use a logger).
 - **DART-3 [tool]** `const` constructors wherever possible, and `context.mounted` is checked after an `await`.
 - **DART-4 [tool]** Enum switches are exhaustive, with no `default`.
-- **DART-5 [review]** MVVM layers, as in the Flutter architecture guide: views (widgets) hold no logic, view models hold UI state, repositories (abstract classes) own data, and services wrap platforms and APIs. Data flows one way.
+- **DART-5 [review]** MVVM layers, as in the Flutter architecture guide: views (widgets) hold no logic, view models hold UI state, repositories (abstract classes) own data, and services wrap platforms and APIs. Data flows one way. Folders follow the guide's layout: `lib/ui/<feature>/` holds that feature's view model and widgets, `lib/ui/core/` the widgets and themes views share, `lib/data/repositories/` and `lib/data/services/` the data layer, `lib/domain/models/` the app's data types, and `test/` mirrors `lib/`.
 - **DART-6 [review]** Data models are immutable (`freezed` or a hand-written `copyWith`).
 - **DART-7 [review]** Dependencies are injected (constructor parameters, with provider, Riverpod or get_it at the edge); no global singletons.
 - **DART-8 [review]** A big `build` method is split into small widget classes, not helper methods.

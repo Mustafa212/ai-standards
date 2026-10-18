@@ -13,6 +13,11 @@ start from (Grep, or Glob for file names) and a short bad snippet. Never rendere
 - Search: `\w\(([^()]*,\s*)?(true|false|True|False)\s*\)` (a boolean flag argument)
 - Break: `send(user, true)`
 
+## RDB-11
+
+- Search: Glob for folders named by kind (`**/{components,services,models,controllers,screens,widgets}/`) at the source root, and for folders holding more than 15 files
+- Break: `src/components/` with 40 files for six features; `lib/widgets/` beside `lib/screens/`
+
 ## RDB-10
 
 - Search: Glob `**/*{util,Util,helper,Helper,common,Common}*`
