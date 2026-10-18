@@ -2,8 +2,9 @@
 
 Also rejects an ID that a `<!-- removed: ID ... -->` or `<!-- moved to org: ID → ... -->` marker
 retired (IDs are never reused), a break shape (rules/examples/*.md, orgs/<org>/examples.md) for a
-rule that doesn't exist, and a base, stack or architecture rule that isn't in exactly one of the
-audit's auditor groups (config/rule-groups.json).
+rule that doesn't exist, a base, stack or architecture rule that isn't in exactly one of the
+audit's auditor groups (config/rule-groups.json), and a project registration whose repo URL carries
+a user or token (everyone who can read the private copy would see it).
 
 A project sees base + stack + architecture + its org + its own project rules, so within that scope every rule ID
 and every rule text must appear once. A rule that two projects share belongs in the org file: the
@@ -31,6 +32,10 @@ RETIRED = re.compile(r"<!-- (?:removed|moved to org): ([A-Z][A-Z0-9]*-(?:EX-)?\d
 AI_RULE = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-\d+) \[ai\]\*\*")
 # A break shape for the auditors: a "## <ID>" heading in an examples file.
 EXAMPLE = re.compile(r"^## ([A-Z][A-Z0-9]*-\d+)\s*$", re.MULTILINE)
+# A registration's repo URL, and an http(s) one with something before @ (`user:token@`, or a token
+# alone, as Azure DevOps remotes often carry). SSH's `git@host:` is a fixed name, not a secret.
+REPO_URL = re.compile(r"repo: (\S+)")
+CREDENTIALS = re.compile(r"^https?://[^/@\s]+@", re.IGNORECASE)
 
 
 def rules_in(path: Path) -> list[tuple[str, str]]:
@@ -113,6 +118,16 @@ def ungrouped(root: Path) -> set[str]:
     return problems
 
 
+def url_credentials(root: Path, org_dir: Path) -> set[str]:
+    """Name each registration whose repo URL carries credentials, without printing the URL."""
+    return {
+        f"repo URL with a user or token (remove the part before @): {file.relative_to(root).as_posix()}"
+        for file in sorted((org_dir / "projects").glob("*.md"))
+        for url in REPO_URL.findall(file.read_text(encoding="utf-8"))
+        if CREDENTIALS.match(url)
+    }
+
+
 def normalized(text: str) -> str:
     """Rule text without case, punctuation or markdown, so a trivial rewording still matches."""
     return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
@@ -162,7 +177,7 @@ def main() -> int:
     for org_dir in sorted(path for path in (root / "orgs").iterdir() if path.is_dir()):
         scope = org_scope(root, org_dir)
         problems |= duplicates(root, scope) | unknown_targets(root, scope) | reused_ids(root, scope)
-        problems |= unknown_examples(root, org_dir, scope)
+        problems |= unknown_examples(root, org_dir, scope) | url_credentials(root, org_dir)
     for problem in sorted(problems):
         print(problem)
     return 1 if problems else 0

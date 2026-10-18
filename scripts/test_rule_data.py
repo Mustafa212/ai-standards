@@ -139,6 +139,21 @@ class ExceptionRuleTest(unittest.TestCase):
         self.assertIn("reused id X-3", out)
 
 
+class RepoUrlTest(unittest.TestCase):
+    check = ExceptionRuleTest.check
+
+    def test_a_url_with_a_token_fails_without_printing_it(self) -> None:
+        for url in ("https://user:s3cret@example.com/acme/x.git", "https://s3cret@dev.azure.com/acme/x/_git/x"):
+            code, out = self.check(f"<!-- prefix: X · repo: {url} · stack: dotnet -->\n")
+            self.assertEqual(code, 1, url)
+            self.assertIn("repo URL with a user or token", out)
+            self.assertNotIn("s3cret", out)
+
+    def test_a_url_without_credentials_passes(self) -> None:
+        for url in ("https://example.com/acme/x.git", "git@github.com:acme/x.git"):
+            self.assertEqual(self.check(f"<!-- prefix: X · repo: {url} · stack: dotnet -->\n"), (0, ""), url)
+
+
 class BreakShapeTest(unittest.TestCase):
     """rules/examples/ holds break shapes for the auditors; AGENTS.md must never include them."""
 
