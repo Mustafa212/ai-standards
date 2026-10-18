@@ -9,6 +9,26 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.21.0 — 2026-10-18
+
+MINOR: a fourth .NET architecture, `modular-monolith`; nothing changes for existing projects.
+Research and sources: `docs/research/2026-10-18-vertical-slices-and-other-architectures.md`.
+
+- **New architecture `modular-monolith`** (copier `architecture`, init-project, onboard): `<App>.Host`
+  composes modules; each module is `<App>.Modules.<Module>` (its implementation, `internal` but for its
+  `<Module>Module` class) and `<App>.Modules.<Module>.Contracts` (its facade, DTOs and integration
+  events). The template ships one module, Greetings, with its use case under
+  `Features/Greetings/BuildGreeting/`, endpoint and facade tests, and `ModuleBoundaryTests`.
+- **MOD-1 [tool]** (architecture) A module uses another only through its `Contracts`, and no `Contracts` uses an implementation.
+- **MOD-2 [tool]** (architecture) A module's types are `internal`, except its `<Module>Module` class.
+- **MOD-3 [review]** (architecture, "Data and persistence" group) Each module owns its data: its own `DbContext`, schema and migrations history.
+- **MOD-4 [review]** (architecture) No transaction spans two modules; reactions are integration events through an outbox.
+- **MOD-5 [review]** (architecture) Another module's data comes through its facade or a local read model, never a join.
+- **MOD-6 [review]** (architecture) Inside a module, a folder per use case, and features don't depend on each other.
+- **MOD-7 [review]** (architecture) A module becomes a service only for a measured need.
+- `test-templates.sh` generates the architecture and plants a public type in a module and a second module
+  that uses the first one's implementation; each must fail the architecture tests.
+
 ## 0.20.0 — 2026-10-18
 
 MINOR: the .NET architecture tests (CLEAN-1, CLEAN-6, CLEAN-10, VSA-2, VSA-7) run on ArchUnitNET instead of

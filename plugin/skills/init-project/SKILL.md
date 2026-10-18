@@ -22,8 +22,10 @@ Ask in one go (use AskUserQuestion when available), skipping anything the user a
 - **org**: which org's rules apply. Default `${user_config.default_org}`.
 - **stack**: `typescript`, `angular`, `python`, `dotnet` or `flutter`.
 - **architecture** (dotnet only): `simple` (one Web API project), `clean` (Domain, Application,
-  Infrastructure, Api) or `vertical-slice` (one folder per use case). Recommend `simple` for small
-  services; each architecture adds its own rules to `AGENTS.md`.
+  Infrastructure, Api), `vertical-slice` (one folder per use case) or `modular-monolith` (a host
+  and modules that own their data and talk through `Contracts` projects). Recommend `simple` for
+  small services, and `modular-monolith` only for several bounded contexts or teams in one
+  deployable; each architecture adds its own rules to `AGENTS.md`.
 - **use_cases** (dotnet `clean` only): whether to use CQRS and a mediator. Recommend one from what
   the user says the project does, and say why in a line:
   - `plain` (default): handler classes the endpoints call directly. CRUD, simple rules, HTTP the

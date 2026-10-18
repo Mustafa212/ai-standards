@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <!-- The module maps its own endpoints (MOD-2), so it needs ASP.NET Core, not the host. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../{{ dotnet_name }}.Modules.Greetings.Contracts/{{ dotnet_name }}.Modules.Greetings.Contracts.csproj" />
+  </ItemGroup>
+</Project>

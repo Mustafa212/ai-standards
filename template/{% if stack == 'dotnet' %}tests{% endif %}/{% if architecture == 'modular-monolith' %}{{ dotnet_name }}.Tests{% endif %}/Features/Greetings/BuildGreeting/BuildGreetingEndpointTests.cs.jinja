@@ -1,0 +1,25 @@
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace {{ dotnet_name }}.Tests.Features.Greetings.BuildGreeting;
+
+public sealed class BuildGreetingEndpointTests
+{
+    private static readonly DateTimeOffset _afternoon = new(2026, 1, 1, 15, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task GetGreeting_InTheAfternoon_ReturnsHello()
+    {
+        await using WebApplicationFactory<Program> app = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(host => host.ConfigureServices(services =>
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(_afternoon))));
+        using HttpClient client = app.CreateClient();
+
+        string greeting = await client.GetStringAsync(
+            new Uri("/greetings/Mostafa", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("Hello, Mostafa!", greeting);
+    }
+}

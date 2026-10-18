@@ -116,6 +116,49 @@ EOF
   grep -q 'depends on a feature' <<<"$output"
 }
 
+check_module_boundaries() { # <dotnet project dir> <root namespace>: a public type inside a module
+  # (MOD-2) and a module that uses another module's implementation (MOD-1) must each fail the
+  # architecture tests; the project is clean again afterwards.
+  local dir="$1" ns="$2" leak orders output
+  leak="$dir/src/$ns.Modules.Greetings/Leak.cs"
+  printf 'namespace %s.Modules.Greetings;\n\n/// <summary>Planted by test-templates.sh: public inside a module.</summary>\npublic sealed record Leak(string Value);\n' "$ns" >"$leak"
+  output="$(cd "$dir" && dotnet build --nologo -v q >/dev/null 2>&1 &&
+    dotnet test --no-build --output Detailed 2>&1)"
+  rm "$leak"
+  grep -q 'makes types public' <<<"$output" || return 1
+  orders="$dir/src/$ns.Modules.Orders"
+  mkdir -p "$orders"
+  cat >"$orders/$ns.Modules.Orders.csproj" <<EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../$ns.Modules.Greetings/$ns.Modules.Greetings.csproj" />
+  </ItemGroup>
+</Project>
+EOF
+  cat >"$orders/OrdersModule.cs" <<EOF
+using Microsoft.Extensions.DependencyInjection;
+using $ns.Modules.Greetings;
+
+namespace $ns.Modules.Orders;
+
+/// <summary>Planted by test-templates.sh: uses the Greetings module's implementation.</summary>
+public static class OrdersModule
+{
+    /// <summary>Adds the Greetings module itself instead of asking for its Contracts.</summary>
+    public static IServiceCollection AddOrdersModule(this IServiceCollection services) => services.AddGreetingsModule();
+}
+EOF
+  cp "$dir/src/$ns.Host/$ns.Host.csproj" "$dir/host.csproj.bak"
+  cp "$dir/$ns.slnx" "$dir/slnx.bak"
+  output="$(cd "$dir" && dotnet sln add "src/$ns.Modules.Orders/$ns.Modules.Orders.csproj" >/dev/null &&
+    dotnet add "src/$ns.Host/$ns.Host.csproj" reference "src/$ns.Modules.Orders/$ns.Modules.Orders.csproj" >/dev/null &&
+    dotnet build --nologo -v q >/dev/null 2>&1 && dotnet test --no-build --output Detailed 2>&1)"
+  mv "$dir/host.csproj.bak" "$dir/src/$ns.Host/$ns.Host.csproj"
+  mv "$dir/slnx.bak" "$dir/$ns.slnx"
+  rm -r "${orders:?}"
+  grep -q "uses another module's implementation" <<<"$output"
+}
+
 check_use_case_isolation() { # <dotnet project dir> <root namespace>: a use case that calls another
   # must fail the architecture tests (CLEAN-10), and one whose name starts with another's must not.
   local dir="$1" ns="$2" app="$1/src/$2.Application/Features" output
@@ -162,7 +205,7 @@ for stack in $stacks; do
   # .NET is generated once per architecture; the other stacks have none ("-").
   # Clean Architecture is generated once per use-case style (architecture:use_cases).
   architectures="-"
-  [[ "$stack" == dotnet ]] && architectures="simple clean:plain clean:handlers clean:mediator vertical-slice"
+  [[ "$stack" == dotnet ]] && architectures="simple clean:plain clean:handlers clean:mediator vertical-slice modular-monolith"
   for variant in $architectures; do
   architecture="${variant%%:*}"
   use_cases=""
@@ -218,6 +261,10 @@ for stack in $stacks; do
       if [[ "$architecture" == vertical-slice ]]; then
         check_feature_isolation "$dir" "$(basename "$first_project" .csproj)" ||
           fail "$name: VSA-2 or VSA-7 not enforced (a reference into a feature passed the architecture tests)"
+      fi
+      if [[ "$architecture" == modular-monolith ]]; then
+        check_module_boundaries "$dir" "$(basename "$first_project" .csproj | sed 's/\.Host$//')" ||
+          fail "$name: MOD-1 or MOD-2 not enforced (a public module type or a cross-module reference passed)"
       fi
       if [[ "$architecture" == clean ]]; then
         if [[ "$use_cases" == plain ]] && grep -q '^- \*\*CLEAN-14 ' "$dir/AGENTS.md"; then

@@ -1,0 +1,14 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+
+namespace {{ dotnet_name }}.Modules.Greetings.Features.Greetings.BuildGreeting;
+
+/// <summary>Maps this use case onto the module's route group (MOD-6).</summary>
+internal static class BuildGreetingEndpoint
+{
+    public static RouteGroupBuilder MapBuildGreeting(this RouteGroupBuilder greetings)
+    {
+        greetings.MapGet("/{name}", (string name, BuildGreetingHandler handler) => handler.Handle(name));
+        return greetings;
+    }
+}
