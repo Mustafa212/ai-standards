@@ -9,7 +9,7 @@ readable, typed, tested and secure. Rules are **enforced by tools**, not by memo
               ▼
    stack: typescript │ angular │ python │ dotnet │ flutter   (per technology)
               ▼
-   architecture: simple │ clean │ vertical-slice   (.NET; each has its own rules;
+   architecture: simple │ clean │ vertical-slice │ modular-monolith   (.NET; each has its own rules;
                  clean asks: plain │ handlers │ mediator, i.e. whether to use CQRS and a mediator)
               ▼
    org: personal │ example-corp │ …   (per organization: stricter limits, own rules)    ┐ in your
@@ -28,7 +28,7 @@ clear names, and a doc comment on every exported function and class (enforced by
 | Readability limits (function size, complexity, params, nesting, file size, magic numbers, naming) | ESLint (+ angular-eslint) / Ruff / Roslyn analyzers + SonarAnalyzer / `very_good_analysis`, thresholds from base or org |
 | Types | TypeScript `strict` + type-checked lint (+ Angular `strictTemplates`) / mypy `--strict` / C# nullable, warnings as errors / Dart strict analyzer |
 | Tests | Vitest / pytest / xUnit / `flutter test` with a coverage threshold |
-| Architecture (.NET) | Architecture tests (ArchUnitNET): Clean Architecture's dependency direction, no ASP.NET Core in Application, no use case calling another; no slice reaching into another feature, no Domain reaching into a feature |
+| Architecture (.NET) | Architecture tests (ArchUnitNET): Clean Architecture's dependency direction, no ASP.NET Core in Application, no use case calling another; no slice reaching into another feature, no Domain reaching into a feature; no module using another module's implementation, nothing public in a module but its `<Module>Module` class |
 | Secrets, commit format | pre-commit (gitleaks, Conventional Commits) |
 | The gate | GitHub Actions CI running the same `check` command |
 | AI while it writes | Claude Code hooks: lint every edited file and send errors back; block edits to managed files |

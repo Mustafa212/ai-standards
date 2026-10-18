@@ -1,0 +1,31 @@
+using Microsoft.Extensions.DependencyInjection;
+using {{ dotnet_name }}.Modules.Greetings;
+using {{ dotnet_name }}.Modules.Greetings.Contracts;
+
+namespace {{ dotnet_name }}.Tests;
+
+/// <summary>The module as other modules see it: through its Contracts facade (MOD-1).</summary>
+public sealed class GreetingsModuleTests
+{
+    private static readonly DateTimeOffset _morning = new(2026, 1, 1, 9, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset _afternoon = new(2026, 1, 1, 15, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void BuildGreeting_InTheMorning_SaysGoodMorning() =>
+        Assert.Equal("Good morning, Mostafa!", Greetings(_morning).BuildGreeting("Mostafa"));
+
+    [Fact]
+    public void BuildGreeting_InTheAfternoon_SaysHello() =>
+        Assert.Equal("Hello, Mostafa!", Greetings(_afternoon).BuildGreeting("Mostafa"));
+
+    [Fact]
+    public void BuildGreeting_BlankName_GreetsTheWorld() =>
+        Assert.Equal("Hello, world!", Greetings(_afternoon).BuildGreeting("   "));
+
+    private static IGreetingsModule Greetings(DateTimeOffset now) =>
+        new ServiceCollection()
+            .AddSingleton<TimeProvider>(new FixedTimeProvider(now))
+            .AddGreetingsModule()
+            .BuildServiceProvider()
+            .GetRequiredService<IGreetingsModule>();
+}

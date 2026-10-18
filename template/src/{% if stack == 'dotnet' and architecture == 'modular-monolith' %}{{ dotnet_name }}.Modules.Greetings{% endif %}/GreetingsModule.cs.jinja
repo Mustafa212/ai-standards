@@ -1,0 +1,22 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using {{ dotnet_name }}.Modules.Greetings.Contracts;
+using {{ dotnet_name }}.Modules.Greetings.Features.Greetings.BuildGreeting;
+
+namespace {{ dotnet_name }}.Modules.Greetings;
+
+/// <summary>The Greetings module's only public type (MOD-2): the host adds and maps the module through it.</summary>
+public static class GreetingsModule
+{
+    /// <summary>Registers the module's handlers and the facade other modules use (MOD-1).</summary>
+    public static IServiceCollection AddGreetingsModule(this IServiceCollection services) =>
+        services.AddSingleton<BuildGreetingHandler>().AddSingleton<IGreetingsModule, GreetingsFacade>();
+
+    /// <summary>Maps the module's endpoints under <c>/greetings</c>.</summary>
+    public static IEndpointRouteBuilder MapGreetingsModule(this IEndpointRouteBuilder app)
+    {
+        app.MapGroup("/greetings").MapBuildGreeting();
+        return app;
+    }
+}

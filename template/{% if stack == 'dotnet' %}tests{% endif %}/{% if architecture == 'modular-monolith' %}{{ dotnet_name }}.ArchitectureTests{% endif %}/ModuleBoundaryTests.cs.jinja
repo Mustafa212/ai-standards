@@ -1,0 +1,64 @@
+// Managed by ai-standards: this test is how MOD-1 and MOD-2 are enforced. Propose changes upstream.
+using Assembly = System.Reflection.Assembly;
+using ArchUnitNET.Domain;
+using ArchUnitNET.Fluent;
+using ArchUnitNET.Loader;
+using static ArchUnitNET.Fluent.ArchRuleDefinition;
+
+namespace {{ dotnet_name }}.ArchitectureTests;
+
+/// <summary>MOD-1: a module uses another only through its Contracts, and no Contracts uses a module's implementation. MOD-2: a module's only public type is its &lt;Module&gt;Module class.</summary>
+public sealed class ModuleBoundaryTests
+{
+    private const string ModulesPrefix = "{{ dotnet_name }}.Modules.";
+    private const string ContractsSuffix = ".Contracts";
+    private static readonly Assembly[] _modules = ModuleAssemblies();
+    private static readonly Architecture _architecture = new ArchLoader().LoadAssemblies(_modules).Build();
+
+    [Fact]
+    public void EachModule_UsesOtherModulesOnlyThroughTheirContracts()
+    {
+        Assembly[] implementations = [.. _modules.Where(IsImplementation)];
+        foreach (Assembly module in _modules)
+        {
+            // A module uses its own code freely; a Contracts project may use no implementation at all.
+            Assembly[] forbidden = [.. implementations.Where(other => other != module)];
+            if (forbidden.Length > 0)
+            {
+                ArchRule<IType> rule = Types().That().ResideInAssembly(module)
+                    .Should().NotDependOnAny(Types().That().ResideInAssembly(forbidden[0], forbidden[1..]))
+                    .WithoutRequiringPositiveResults();
+                AssertHolds(rule, $"{Name(module)} uses another module's implementation");
+            }
+        }
+    }
+
+    [Fact]
+    public void EachModule_MakesOnlyItsModuleClassPublic()
+    {
+        foreach (Assembly module in _modules.Where(IsImplementation))
+        {
+            string moduleClass = Name(module).Split('.')[^1] + "Module";
+            ArchRule<IType> rule = Types().That().ResideInAssembly(module).And().DoNotHaveName(moduleClass)
+                .Should().NotBePublic()
+                .WithoutRequiringPositiveResults();
+            AssertHolds(rule, $"{Name(module)} makes types public besides {moduleClass}");
+        }
+    }
+
+    private static void AssertHolds(ArchRule<IType> rule, string problem)
+    {
+        string offenders = string.Join(", ", rule.Evaluate(_architecture).Where(result => !result.Passed).Select(result => result.Description));
+        Assert.True(rule.HasNoViolations(_architecture), $"{problem}: {offenders}");
+    }
+
+    private static bool IsImplementation(Assembly module) => !Name(module).EndsWith(ContractsSuffix, StringComparison.Ordinal);
+
+    private static string Name(Assembly module) => module.GetName().Name ?? "";
+
+    /// <summary>Every module project the host references: their assemblies are copied next to these tests.</summary>
+    private static Assembly[] ModuleAssemblies() =>
+        [.. Directory.GetFiles(AppContext.BaseDirectory, ModulesPrefix + "*.dll")
+            .Order(StringComparer.Ordinal)
+            .Select(path => Assembly.Load(Path.GetFileNameWithoutExtension(path)))];
+}

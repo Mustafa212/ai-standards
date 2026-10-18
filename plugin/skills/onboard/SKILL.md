@@ -46,7 +46,7 @@ Read the `org` choices in `<clone>/orgs/orgs.yml`. Ask with AskUserQuestion: "Wh
 1. Ask whether the project's repo is private. If it's public, stop and say why: its rules would be
    published when it's adopted later.
 2. Ask for the project's rule prefix (suggest the first 4 letters of the slug, in capitals). For a
-   dotnet project, ask its architecture (simple, clean or vertical-slice). For clean, read its
+   dotnet project, ask its architecture (simple, clean, vertical-slice or modular-monolith). For clean, read its
    use-case style from the code and confirm it: `mediator` (a mediator package such as MediatR or
    Mediator, handlers implementing its interfaces), `handlers` (its own command and query handler
    interfaces) or `plain`.

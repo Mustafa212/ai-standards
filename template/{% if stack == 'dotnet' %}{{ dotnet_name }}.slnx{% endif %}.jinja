@@ -2,6 +2,9 @@
 {%- if architecture == "clean" -%}
 {%- set src = [n ~ ".Domain", n ~ ".Application", n ~ ".Infrastructure", n ~ ".Api"] -%}
 {%- set tests = [n ~ ".UnitTests", n ~ ".ArchitectureTests"] -%}
+{%- elif architecture == "modular-monolith" -%}
+{%- set src = [n ~ ".Host", n ~ ".Modules.Greetings", n ~ ".Modules.Greetings.Contracts"] -%}
+{%- set tests = [n ~ ".Tests", n ~ ".ArchitectureTests"] -%}
 {%- elif architecture == "vertical-slice" -%}
 {%- set src = [n] -%}
 {%- set tests = [n ~ ".Tests", n ~ ".ArchitectureTests"] -%}

@@ -2,10 +2,10 @@
   "_doc": "The audit's rule-auditor groups. An entry is a rule ID (CS-8) or a prefix (ERR); an ID wins over its prefix. Every base, stack and architecture rule except [ai] ones is in exactly one group (scripts/check_rules.py fails otherwise). Org and project rules go to the last group.",
   "groups": [
     {"name": "Design and architecture",
-     "rules": ["DES", "API", "CLEAN", "VSA", "TS-3", "TS-4", "PY-3", "CS-9", "CS-10", "CS-11", "CS-24", "NG-5",
+     "rules": ["DES", "API", "CLEAN", "VSA", "MOD", "TS-3", "TS-4", "PY-3", "CS-9", "CS-10", "CS-11", "CS-24", "NG-5",
                "DART-5", "DART-6", "DART-7", "DART-9"]},
     {"name": "Data and persistence",
-     "rules": ["CLEAN-11", "CS-15", "CS-16", "CS-17", "CS-19", "CS-20", "CS-21", "CS-22", "CS-23"]},
+     "rules": ["CLEAN-11", "MOD-3", "CS-15", "CS-16", "CS-17", "CS-19", "CS-20", "CS-21", "CS-22", "CS-23"]},
     {"name": "Errors and security",
      "rules": ["ERR", "CS-4", "CS-8", "CS-26", "CS-18", "NG-10", "NG-11", "NG-12"]},
     {"name": "Readability",

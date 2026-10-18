@@ -1,0 +1,8 @@
+namespace {{ dotnet_name }}.Modules.Greetings.Contracts;
+
+/// <summary>What other modules may ask the Greetings module (MOD-1). Its integration events go in this project too.</summary>
+public interface IGreetingsModule
+{
+    /// <summary>The greeting for <paramref name="name"/> at the current local time.</summary>
+    public string BuildGreeting(string name);
+}

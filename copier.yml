@@ -69,6 +69,7 @@ architecture:
     "Simple: one Web API project + tests": simple
     "Clean Architecture: Domain, Application, Infrastructure, Api": clean
     "Vertical slices: one folder per use case": vertical-slice
+    "Modular monolith: modules with their own data, talking through Contracts": modular-monolith
   default: simple
   when: "{{ stack == 'dotnet' }}"
 

@@ -1,0 +1,10 @@
+using {{ dotnet_name }}.Modules.Greetings.Contracts;
+using {{ dotnet_name }}.Modules.Greetings.Features.Greetings.BuildGreeting;
+
+namespace {{ dotnet_name }}.Modules.Greetings;
+
+/// <summary>What other modules get when they ask for <see cref="IGreetingsModule"/>.</summary>
+internal sealed class GreetingsFacade(BuildGreetingHandler buildGreeting) : IGreetingsModule
+{
+    public string BuildGreeting(string name) => buildGreeting.Handle(name);
+}

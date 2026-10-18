@@ -1,0 +1,11 @@
+using {{ dotnet_name }}.Modules.Greetings;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(TimeProvider.System);
+// One line per module: each registers its own services and maps its own endpoints (MOD-2).
+builder.Services.AddGreetingsModule();
+
+WebApplication app = builder.Build();
+app.MapGreetingsModule();
+
+await app.RunAsync();
