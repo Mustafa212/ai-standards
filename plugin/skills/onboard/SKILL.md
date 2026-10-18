@@ -54,7 +54,9 @@ then follow "New org" in `references/setup.md`.
    Mediator, handlers implementing its interfaces), `handlers` (its own command and query handler
    interfaces) or `plain`.
 3. Create `orgs/<org>/projects/<slug>.md`. `<slug>` is the repository's name in lowercase
-   kebab-case, starting with a letter (`^[a-z][a-z0-9-]*$`, which copier's `project_slug` requires):
+   kebab-case, starting with a letter (`^[a-z][a-z0-9-]*$`, which copier's `project_slug` requires).
+   `repo:` is the git remote URL without anything before `@` in an https URL (a user, or a token such
+   as an Azure DevOps PAT): everyone who can read the private copy reads it.
 
 ```markdown
 ## Project: <project name>

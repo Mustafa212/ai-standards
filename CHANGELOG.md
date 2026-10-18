@@ -9,6 +9,13 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.22.1 — 2026-10-18
+
+- **No credentials in a registration.** onboard saves a project's `repo:` URL without a user or
+  token before `@` (an https remote with an embedded PAT would have been copied into the private
+  copy as-is), and `check_rules.py` fails on any registration that still has one, naming the file
+  but not the URL.
+
 ## 0.22.0 — 2026-10-18
 
 - **Several private copies.** `~/.claude/ai-standards/config.md` can list one `Source:` and `Clone:`
