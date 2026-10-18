@@ -105,8 +105,10 @@ Then ask for each row's decision with AskUserQuestion, up to 4 rows per call, in
 keep, edit or drop for rules and inconsistencies; fix or exception for candidates. Wrong patterns
 need none. When the user types an answer instead, it replaces the choice and is saved in their own
 words, with their reason when they give one (an exception always needs one). A yes to the whole
-table isn't a decision for each row. Without AskUserQuestion (a headless run), save nothing and
-list the rows as still open.
+table isn't a decision for each row. A row dropped for a reason that will still hold leaves
+`<!-- declined: <proposal> <today>: <reason> -->` in the project file, so no later round or refresh
+proposes it again. Without AskUserQuestion (a headless run), save nothing and list the rows as still
+open.
 
 - **Enforcement:** `[tool]` only when an existing lint rule can check it (name the rule; it's
   configured in the org's `settings.jinja`, for example banned imports), otherwise `[review]`.
@@ -136,8 +138,8 @@ For every kept rule, in order:
 
 1. **Already covered** by base, stack, architecture or the org (same meaning)? Drop it, and say
    which rule covers it.
-2. **Same meaning as a rule in another project of this org?** Offer to move it up: "BILL-4 and
-   PORT-3 say the same thing. Move it to the org as ACME-n and remove it from both projects?" On yes,
+2. **Same meaning as a rule in another project of this org?** Offer to move it up, each ID with its text: "BILL-4 (…) and
+   PORT-3 (…) say the same thing. Move it to the org as ACME-n and remove it from both projects?" On yes,
    add `- **ACME-n [level]** <text>` to `orgs/<org>/rules.md`, and in each project file replace the
    rule with `<!-- moved to org: PORT-3 → ACME-n -->`.
 3. **Useful beyond this org** (any project on this stack, or every project)? Say so, and offer it as
@@ -172,7 +174,8 @@ SessionStart offers this after 7 days and at least 5 commits since the registrat
 1. Read the date and sha from the marker. Look at `git log --stat <sha>..HEAD`, or at all commits
    when the sha is `none` or no longer in history.
 2. Look only at what changed:
-   - New consistent patterns become proposals (step 4's evidence, table and questions).
+   - New consistent patterns become proposals (step 4's evidence, table and questions), except
+     those a `declined:` marker names.
    - Project rules the new code keeps breaking are shown with the evidence: keep, edit or delete? A
      rule the team stopped following may be out of date. A deleted rule leaves
      `<!-- removed: <ID> <today>: <reason> -->` where it was, so its ID is never given again.

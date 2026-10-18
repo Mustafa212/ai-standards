@@ -3,6 +3,7 @@
 Run: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
+import json
 import re
 import sys
 import unittest
@@ -99,6 +100,7 @@ class ExceptionRuleTest(unittest.TestCase):
             root = Path(tmp)
             shutil.copytree(ROOT / "rules", root / "rules")
             shutil.copytree(ROOT / "orgs", root / "orgs")
+            shutil.copytree(ROOT / "config", root / "config")
             projects = root / "orgs" / "personal" / "projects"
             projects.mkdir(exist_ok=True)
             (projects / "x.md").write_text(project_text, encoding="utf-8")
@@ -157,11 +159,49 @@ class BreakShapeTest(unittest.TestCase):
             root = Path(tmp)
             shutil.copytree(ROOT / "rules", root / "rules")
             shutil.copytree(ROOT / "orgs", root / "orgs")
+            shutil.copytree(ROOT / "config", root / "config")
             (root / "orgs" / "personal" / "examples.md").write_text("## NOPE-1\n\n- Search: `x`\n", encoding="utf-8")
             done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_rules.py"), str(root)],
                                   capture_output=True, text=True, check=False)
         self.assertEqual(done.returncode, 1)
         self.assertIn("example for unknown rule NOPE-1", done.stdout)
+
+
+class AuditorGroupTest(unittest.TestCase):
+    def check(self, stack_line: str = "", groups_edit=None) -> tuple[int, str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for folder in ("rules", "orgs", "config"):
+                shutil.copytree(ROOT / folder, root / folder)
+            if stack_line:
+                with (root / "rules" / "stacks" / "dotnet.md").open("a", encoding="utf-8") as file:
+                    file.write("\n" + stack_line + "\n")
+            if groups_edit:
+                path = root / "config" / "rule-groups.json"
+                data = json.loads(path.read_text(encoding="utf-8"))
+                groups_edit(data["groups"])
+                path.write_text(json.dumps(data), encoding="utf-8")
+            done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_rules.py"), str(root)],
+                                  capture_output=True, text=True, check=False)
+            return done.returncode, done.stdout
+
+    def test_a_new_rule_with_no_group_fails(self) -> None:
+        code, out = self.check("- **CS-99 [review]** Something new.")
+        self.assertEqual(code, 1)
+        self.assertIn("rule CS-99 is in no group", out)
+
+    def test_an_ai_rule_needs_no_group(self) -> None:
+        self.assertEqual(self.check("- **CS-99 [ai]** Some guidance."), (0, ""))
+
+    def test_a_rule_in_two_groups_fails(self) -> None:
+        code, out = self.check(groups_edit=lambda groups: groups[0]["rules"].append("CS-8"))
+        self.assertEqual(code, 1)
+        self.assertIn("rule CS-8 is in Design and architecture, Errors and security", out)
+
+    def test_a_group_entry_for_an_unknown_rule_fails(self) -> None:
+        code, out = self.check(groups_edit=lambda groups: groups[0]["rules"].append("NOPE-1"))
+        self.assertEqual(code, 1)
+        self.assertIn("names unknown rule NOPE-1", out)
 
 
 if __name__ == "__main__":

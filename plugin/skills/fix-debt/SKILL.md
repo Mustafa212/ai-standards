@@ -37,7 +37,7 @@ Paths:
    `fd test` and `fd canary` in the background and wait for it, never starting another `fd` meanwhile.
    `--timeout <seconds>` (default 3600) turns a hung run into a run with no result.
 4. **Ask once** (one message, then wait):
-   - the items table (rule, folder, count, priority, kind);
+   - the items table (rule with its short text, folder, count, priority, kind);
    - the P1 items apart, each with the behavior it changes. The user picks them by number, one by one;
    - an item whose fix would change a response, a status code or stored data (a P2 such as 422 → 409)
      goes with the P1 items, whatever its priority: it changes behavior too;
@@ -70,7 +70,8 @@ On the batch branch, with a clean working tree:
 6. **Fix:**
    - No suppressions, `noqa`, `eslint-disable`, `@ts-ignore`, `// ignore:`, baseline entries or severity changes (ADOPT-3).
    - No changes to analyzer or lint settings (ruff or mypy config, `pyproject.toml`, `.editorconfig`, eslint config, `tsconfig`, `*.csproj`, `Directory.Build.*`, `analysis_options.yaml`) unless the user approved them with `--allow`.
-   - A genuine false positive is skipped with a written reason, never suppressed.
+   - A genuine false positive is skipped with a written reason, never suppressed:
+     `fd skip <out> --item <id> --reason "<why>"` keeps it out of later rounds until its count grows.
    - Commit `refactor: pay <rule> debt in <area>` (`fix:` for a P1).
    - Adopted projects: shrink the baseline in the same commit (typescript `npx eslint . --prune-suppressions`, python `uv run ruff check . --fix`).
 7. `fd test … --out <dir>/after.json`

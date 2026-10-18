@@ -112,6 +112,25 @@ class ItemsTest(unittest.TestCase):
             done = json.loads((out / "fix-debt" / "done.json").read_text(encoding="utf-8"))
             self.assertEqual(done, ["A@src", "B@src", "C@lib"])
 
+    def test_a_skipped_false_positive_stays_out_until_its_count_grows(self) -> None:
+        findings = {"rules": [{"rule": "DES-1", "priority": "P3", "kind": "violation", "count": 2,
+                               "sources": ["review"], "areas": {"src": 2}}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            (out / "findings.json").write_text(json.dumps(findings), encoding="utf-8")
+            items = ["items", str(out), "--org", "personal"]
+            self.assertEqual(fix_debt.main(items), 0)
+            self.assertEqual(fix_debt.main(["skip", str(out), "--item", "NOPE@src", "--reason", "x"]), 2)
+            self.assertEqual(fix_debt.main(["skip", str(out), "--item", "DES-1@src", "--reason", "a DTO, not an entity"]), 0)
+            self.assertEqual(fix_debt.main(items), 0)
+            listed = json.loads((out / "fix-debt" / "items.json").read_text(encoding="utf-8"))
+            self.assertEqual(listed["items"] + listed["p1"], [])
+            findings["rules"][0]["areas"]["src"] = 3  # a new finding in the same place
+            (out / "findings.json").write_text(json.dumps(findings), encoding="utf-8")
+            self.assertEqual(fix_debt.main(items), 0)
+            listed = json.loads((out / "fix-debt" / "items.json").read_text(encoding="utf-8"))
+            self.assertEqual([item["id"] for item in listed["items"]], ["DES-1@src"])
+
 
 def git_q(*args: str, cwd: Path) -> str:
     return subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false",

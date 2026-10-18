@@ -9,6 +9,27 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.14.0 — 2026-10-18
+
+MINOR: audit, onboard and fix-debt fixes; no rule text changes.
+
+- **Auditor groups are data (audit):** `config/rule-groups.json` names each base, stack and
+  architecture rule's auditor group, and `scripts/check_rules.py` fails on a rule (other than `[ai]`)
+  in no group or in two, and on a group entry for a rule that doesn't exist. The list written into
+  the audit skill had fallen behind: CS-18 (authorization fallback) and NG-12 (tokens in browser
+  storage) went to the catch-all group instead of the security auditor. A new group, "Data and
+  persistence", takes the EF Core rules (CS-15 to CS-17, CS-19 to CS-23).
+- **Declined proposals stay declined (onboard):** a row dropped for a lasting reason leaves
+  `<!-- declined: <proposal> <date>: <reason> -->` in the project file, and later rounds and refresh
+  mode don't propose it again.
+- **Skipped false positives stay skipped (fix-debt):** `fix_debt.py skip <out> --item <id> --reason`
+  records one in `skipped.json`; `items` leaves it out until its count grows past the count it was
+  skipped at.
+- **Rule text beside IDs:** the fix-debt items table, the onboard move-up question and the audit's
+  top 3 give each rule's short text, so an approval isn't made from bare IDs.
+- **propose-rule:** a new rule also goes into `config/rule-groups.json` (and, when the prefix
+  default doesn't fit, `config/rule-priority.json`).
+
 ## 0.13.0 — 2026-10-17
 
 MINOR: three new `[review]` rules for API stacks (typescript, python, dotnet); nothing fails existing code.
