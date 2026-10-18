@@ -28,7 +28,7 @@ clear names, and a doc comment on every exported function and class (enforced by
 | Readability limits (function size, complexity, params, nesting, file size, magic numbers, naming) | ESLint (+ angular-eslint) / Ruff / Roslyn analyzers + SonarAnalyzer / `very_good_analysis`, thresholds from base or org |
 | Types | TypeScript `strict` + type-checked lint (+ Angular `strictTemplates`) / mypy `--strict` / C# nullable, warnings as errors / Dart strict analyzer |
 | Tests | Vitest / pytest / xUnit / `flutter test` with a coverage threshold |
-| Architecture (.NET) | Architecture tests (NetArchTest): Clean Architecture's dependency direction, no slice reaching into another feature |
+| Architecture (.NET) | Architecture tests (ArchUnitNET): Clean Architecture's dependency direction, no ASP.NET Core in Application, no use case calling another; no slice reaching into another feature, no Domain reaching into a feature |
 | Secrets, commit format | pre-commit (gitleaks, Conventional Commits) |
 | The gate | GitHub Actions CI running the same `check` command |
 | AI while it writes | Claude Code hooks: lint every edited file and send errors back; block edits to managed files |

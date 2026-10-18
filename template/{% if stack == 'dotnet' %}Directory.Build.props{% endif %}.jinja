@@ -42,6 +42,12 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Architecture tests (CLEAN-*, VSA-*): ArchUnitNET, here rather than in the project file, so
+       `copier update` brings it along with the managed tests that use it. -->
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('ArchitectureTests'))">
+    <PackageReference Include="TngTech.ArchUnitNET" Version="0.13.4" />
+  </ItemGroup>
+
   <!-- TST-1: coverage of the production code these tests exercise. Architecture tests run no
        production code, so they don't count. -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests')) And !$(MSBuildProjectName.EndsWith('ArchitectureTests'))">

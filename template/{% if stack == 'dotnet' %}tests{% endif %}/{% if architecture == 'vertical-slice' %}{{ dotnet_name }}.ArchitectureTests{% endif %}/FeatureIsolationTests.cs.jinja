@@ -1,7 +1,10 @@
 // Managed by ai-standards: this test is how VSA-2 and VSA-7 are enforced. Propose changes upstream.
-using System.Reflection;
+using Assembly = System.Reflection.Assembly;
 using System.Text.RegularExpressions;
-using NetArchTest.Rules;
+using ArchUnitNET.Domain;
+using ArchUnitNET.Fluent;
+using ArchUnitNET.Loader;
+using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 namespace {{ dotnet_name }}.ArchitectureTests;
 
@@ -11,6 +14,7 @@ public sealed class FeatureIsolationTests
     private const string FeaturesNamespace = "{{ dotnet_name }}.Features";
     private const string DomainNamespace = "{{ dotnet_name }}.Domain";
     private static readonly Assembly _app = typeof(Program).Assembly;
+    private static readonly Architecture _architecture = new ArchLoader().LoadAssemblies(_app).Build();
 
     [Fact]
     public void EachFeature_DependsOnNoOtherFeature()
@@ -19,7 +23,10 @@ public sealed class FeatureIsolationTests
         foreach (string feature in features)
         {
             string[] others = [.. features.Where(other => other != feature)];
-            AssertNoDependency(feature, others, "depends on another feature");
+            if (others.Length > 0)
+            {
+                AssertNoDependency(feature, others, "depends on another feature");
+            }
         }
     }
 
@@ -29,21 +36,17 @@ public sealed class FeatureIsolationTests
 
     private static void AssertNoDependency(string namespaceName, string[] forbidden, string problem)
     {
-        if (forbidden.Length == 0)
-        {
-            return;
-        }
-
-        NetArchTest.Rules.TestResult result = Types.InAssembly(_app)
-            .That()
-            // ResideInNamespace compares prefixes, so Order would take in Orders too.
-            .ResideInNamespaceMatching($"^{Regex.Escape(namespaceName)}(\\.|$)")
-            .ShouldNot()
-            .HaveDependencyOnAny(forbidden)
-            .GetResult();
-        string offenders = string.Join(", ", result.FailingTypeNames ?? []);
-        Assert.True(result.IsSuccessful, $"{namespaceName} {problem}: {offenders}");
+        ArchRule<IType> rule = Types().That().ResideInNamespaceMatching(Within([namespaceName]))
+            .Should().NotDependOnAny(Types().That().ResideInNamespaceMatching(Within(forbidden)))
+            // A project with no Domain/ yet passes: the rule is about what exists.
+            .WithoutRequiringPositiveResults();
+        string offenders = string.Join(", ", rule.Evaluate(_architecture).Where(result => !result.Passed).Select(result => result.Description));
+        Assert.True(rule.HasNoViolations(_architecture), $"{namespaceName} {problem}: {offenders}");
     }
+
+    /// <summary>These namespaces and the ones below them, as one pattern: Order doesn't take in Orders.</summary>
+    private static string Within(string[] namespaces) =>
+        $"^({string.Join('|', namespaces.Select(Regex.Escape))})(\\.|$)";
 
     /// <summary>The namespaces one level below Features: one per feature.</summary>
     private static string[] Features()
