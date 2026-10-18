@@ -7,7 +7,7 @@
     {"name": "Data and persistence",
      "rules": ["CLEAN-11", "CS-15", "CS-16", "CS-17", "CS-19", "CS-20", "CS-21", "CS-22", "CS-23"]},
     {"name": "Errors and security",
-     "rules": ["ERR", "CS-4", "CS-8", "CS-18", "NG-10", "NG-11", "NG-12"]},
+     "rules": ["ERR", "CS-4", "CS-8", "CS-26", "CS-18", "NG-10", "NG-11", "NG-12"]},
     {"name": "Readability",
      "rules": ["RDB", "READ-4", "CS-2", "CS-3", "CS-7", "CS-13", "CS-14", "CS-25", "NG-6", "NG-7", "NG-8", "NG-9",
                "DART-8", "TS-6"]},

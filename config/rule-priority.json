@@ -7,7 +7,7 @@
     "CS-11": "P1", "CS-14": "P4", "DART-1": "P2", "DART-2": "P1", "DART-3": "P1", "DART-4": "P1",
     "NG-10": "P1", "RDB-6": "P4", "RDB-8": "P4", "TST-1": "P2",
     "DES-8": "P1", "DES-9": "P2", "DES-10": "P1", "CS-18": "P1", "CS-19": "P1", "CS-20": "P1", "CS-21": "P1", "CS-22": "P2",
-    "CS-23": "P1", "CS-24": "P2", "CS-25": "P4", "NG-11": "P1", "NG-12": "P1"
+    "CS-23": "P1", "CS-24": "P2", "CS-25": "P4", "CS-26": "P2", "NG-11": "P1", "NG-12": "P1"
   },
   "tool_ids": {
     "prefer_const_constructors": "P4", "@typescript-eslint/consistent-type-imports": "P4",

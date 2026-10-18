@@ -25,6 +25,7 @@
 - **CS-23 [review]** Read every generated migration before merging: a rename must not come out as drop-and-add (use `RenameColumn`), and a column that becomes required gets a deliberate default or a data step. Never accept a scaffolded `0` or empty-string backfill on a money or reference column.
 - **CS-24 [tool]** Read the current time only from an injected `TimeProvider`. `DateTime.Now`, `UtcNow` and `Today`, and `DateTimeOffset.Now` and `UtcNow`, are banned outside tests (RS0030), so tests control the clock.
 - **CS-25 [review]** Check for null with `is null`, `is not null` or `is { } x`, which never call a user-overloaded `==`. Inside expression trees (EF Core and other `IQueryable` queries), where patterns are compile error CS8122, `== null` is correct.
+- **CS-26 [review]** An expected failure (input that breaks a rule, a record that isn't there, a state that forbids the action) is returned as an `ErrorOr<T>` (the ErrorOr package, MIT), never thrown: an `Error` of the matching type (`Validation`, `NotFound`, `Conflict` when the record's state forbids it, `Failure` when the request breaks a rule) with a stable code (`Invoice.AlreadyPaid`) and a message that says what to do next (ERR-5). Exceptions are for the unexpected only. Read a result with `Match`, `Switch` or `IsError`, never `.Value` unchecked, and turn errors into HTTP in one place: 400, 404, 409 and 422, through `TypedResults.ValidationProblem` and `TypedResults.Problem` with the code in a `code` extension.
 
 | Task | Command |
 | --- | --- |
