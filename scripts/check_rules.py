@@ -1,8 +1,9 @@
 """Reject rules written twice within one org: the same ID, or the same text in two places.
 
 Also rejects an ID that a `<!-- removed: ID ... -->` or `<!-- moved to org: ID → ... -->` marker
-retired (IDs are never reused), and a break shape (rules/examples/*.md, orgs/<org>/examples.md) for a
-rule that doesn't exist.
+retired (IDs are never reused), a break shape (rules/examples/*.md, orgs/<org>/examples.md) for a
+rule that doesn't exist, and a base, stack or architecture rule that isn't in exactly one of the
+audit's auditor groups (config/rule-groups.json).
 
 A project sees base + stack + architecture + its org + its own project rules, so within that scope every rule ID
 and every rule text must appear once. A rule that two projects share belongs in the org file: the
@@ -12,6 +13,7 @@ Usage: python3 scripts/check_rules.py [repo root]   (prints each problem; exit 1
 Standard library only.
 """
 
+import json
 import re
 import sys
 from collections import defaultdict
@@ -25,6 +27,8 @@ EXCEPTION = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-EX-\d+) \[exception\] → ([A-Z]
 ANY_ID = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-\d+) ")
 # A deleted rule or exception, or one moved up to the org, leaves a marker; its ID stays taken.
 RETIRED = re.compile(r"<!-- (?:removed|moved to org): ([A-Z][A-Z0-9]*-(?:EX-)?\d+)")
+# An [ai] rule is guidance: the audit doesn't check it, so it needs no auditor group.
+AI_RULE = re.compile(r"^- \*\*([A-Z][A-Z0-9]*-\d+) \[ai\]\*\*")
 # A break shape for the auditors: a "## <ID>" heading in an examples file.
 EXAMPLE = re.compile(r"^## ([A-Z][A-Z0-9]*-\d+)\s*$", re.MULTILINE)
 
@@ -84,6 +88,31 @@ def unknown_examples(root: Path, org_dir: Path, files: list[Path]) -> set[str]:
     }
 
 
+def ungrouped(root: Path) -> set[str]:
+    """Describe each audited base, stack or architecture rule in no auditor group, or in two."""
+    path = root / "config" / "rule-groups.json"
+    if not path.is_file():
+        return {"missing config/rule-groups.json"}
+    groups = json.loads(path.read_text(encoding="utf-8"))["groups"]
+    files = [root / "rules" / "base.md", *sorted((root / "rules" / "stacks").glob("*.md")),
+             *sorted((root / "rules" / "architectures").glob("*.md"))]
+    lines = [line for file in files if file.exists() for line in file.read_text(encoding="utf-8").splitlines()]
+    audited = {m.group(1) for line in lines if (m := ANY_ID.match(line)) and not AI_RULE.match(line)}
+    problems = set()
+    for rule_id in sorted(audited):
+        by_id = [g["name"] for g in groups if rule_id in g["rules"]]
+        names = by_id or [g["name"] for g in groups if rule_id.split("-")[0] in g["rules"]]
+        if len(names) != 1:
+            where = ", ".join(names) if names else "no group"
+            problems.add(f"rule {rule_id} is in {where}: config/rule-groups.json")
+    prefixes = {rule_id.split("-")[0] for rule_id in audited}
+    for group in groups:
+        for entry in group["rules"]:
+            if entry not in audited and entry not in prefixes:
+                problems.add(f"auditor group {group['name']} names unknown rule {entry}: config/rule-groups.json")
+    return problems
+
+
 def normalized(text: str) -> str:
     """Rule text without case, punctuation or markdown, so a trivial rewording still matches."""
     return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
@@ -129,7 +158,7 @@ def main() -> int:
     """Check every org's scope and report the problems once each."""
     root = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     # A set, because a duplicate in base or stack rules shows up in every org's scope.
-    problems: set[str] = set()
+    problems: set[str] = ungrouped(root)
     for org_dir in sorted(path for path in (root / "orgs").iterdir() if path.is_dir()):
         scope = org_scope(root, org_dir)
         problems |= duplicates(root, scope) | unknown_targets(root, scope) | reused_ids(root, scope)

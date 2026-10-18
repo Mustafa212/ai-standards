@@ -206,7 +206,7 @@ log "check_rules.py: no rule written twice inside one org"
 python3 "$work/src/scripts/check_rules.py" "$root" >/dev/null || fail "check_rules: the repo itself has duplicates"
 # Planted duplicates: the same text (modulo case and punctuation) and the same ID inside one org.
 dup="$work/dup-rules"
-mkdir -p "$dup" && tar -C "$root" -cf - rules orgs | tar -C "$dup" -xf -
+mkdir -p "$dup" && tar -C "$root" -cf - rules orgs config | tar -C "$dup" -xf -
 printf '
 - **ME-1 [review]** Same text.
 ' >>"$dup/orgs/personal/rules.md"
@@ -223,7 +223,7 @@ grep -q 'duplicate text' <<<"$dup_report" || fail "check_rules: duplicate text n
 grep -q 'duplicate id ME-1' <<<"$dup_report" || fail "check_rules: duplicate id not reported"
 # The same ID in two different orgs is fine: no project ever sees both.
 cross="$work/cross-org-rules"
-mkdir -p "$cross" && tar -C "$root" -cf - rules orgs | tar -C "$cross" -xf -
+mkdir -p "$cross" && tar -C "$root" -cf - rules orgs config | tar -C "$cross" -xf -
 printf '
 - **ME-1 [review]** Personal rule.
 ' >>"$cross/orgs/personal/rules.md"

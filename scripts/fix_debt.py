@@ -45,7 +45,7 @@ from run_results import Unreadable, merge  # noqa: E402
 from run_results import read as read_result  # noqa: E402
 
 SPLIT_AT = 30
-ITEMS, DONE = "items.json", "done.json"
+ITEMS, DONE, SKIPPED = "items.json", "done.json", "skipped.json"
 TIMEOUT = 3600.0  # seconds a test run may take; after that it counts as a run with no result
 
 
@@ -106,8 +106,11 @@ def _sub_area(file: str, top: str) -> str:
     return "/".join(parts[:2]) if top != "(root)" and len(parts) > 2 else top
 
 
-def build_items(findings: dict, tool_findings: list[dict], priorities: dict, done: set[str]) -> dict:
-    """Debt items, one per rule, priority and folder (split by the next folder past SPLIT_AT)."""
+def build_items(findings: dict, tool_findings: list[dict], priorities: dict, done: set[str],
+                skipped: dict | None = None) -> dict:
+    """Debt items, one per rule, priority and folder (split by the next folder past SPLIT_AT).
+    A skipped false positive stays out until its count grows past the count it was skipped at."""
+    skipped = skipped or {}
     repeated = {rule["rule"] for rule in findings["rules"]
                 if sum(r["rule"] == rule["rule"] for r in findings["rules"]) > 1}
     items: list[dict] = []
@@ -127,11 +130,12 @@ def build_items(findings: dict, tool_findings: list[dict], priorities: dict, don
                     groups.setdefault(_sub_area(finding["file"], top), []).append(finding)
             for where, group in groups.items():
                 item_id = f"{rule['rule']}@{where}{suffix}"
-                if item_id in done:
+                count_now = len(group) if group else int(count)
+                if item_id in done or count_now <= skipped.get(item_id, {}).get("count", -1):
                     continue
                 items.append({
                     "id": item_id, "rule": rule["rule"], "area": where, "priority": rule["priority"],
-                    "count": len(group) if group else int(count),
+                    "count": count_now,
                     "kind": "tool" if group else "review",
                     "tool_ids": sorted({str(f["tool_id"]) for f in group}),
                     "files": sorted({str(f["file"]) for f in group}),
@@ -171,7 +175,7 @@ def cmd_items(args: argparse.Namespace) -> int:
             return 2
         tool = read_json(out / "tool-findings.json", {"findings": []})["findings"]
     done = set(read_json(out / "fix-debt" / DONE, []))
-    result = build_items(findings, tool, priorities, done)
+    result = build_items(findings, tool, priorities, done, read_json(out / "fix-debt" / SKIPPED, {}))
     write_json(out / "fix-debt" / ITEMS, result)
     for item in result["items"][: args.max]:
         print(f"{item['id']}  {item['priority']}  {item['count']}  {item['kind']}")
@@ -591,6 +595,20 @@ def cmd_done(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_skip(args: argparse.Namespace) -> int:
+    """Record a false positive with its reason, so later rounds leave it out until it grows."""
+    folder = args.out.resolve() / "fix-debt"
+    listed = read_json(folder / ITEMS, {"items": [], "p1": []})
+    item = next((i for i in listed["items"] + listed["p1"] if i["id"] == args.item), None)
+    if item is None:
+        sys.stderr.write(f"{args.item} isn't in {folder / ITEMS}: run fix_debt.py items first\n")
+        return 2
+    skipped = read_json(folder / SKIPPED, {})
+    skipped[args.item] = {"reason": args.reason, "count": item["count"]}
+    write_json(folder / SKIPPED, skipped)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     # "action", not "command": the test and canary commands have a --command option of their own.
@@ -652,10 +670,15 @@ def main(argv: list[str] | None = None) -> int:
     done = commands.add_parser("done", help="record the round's DONE items")
     done.add_argument("out", type=Path)
     done.add_argument("--item", required=True, action="append")
+    skip = commands.add_parser("skip", help="record a false positive, with its reason")
+    skip.add_argument("out", type=Path)
+    skip.add_argument("--item", required=True)
+    skip.add_argument("--reason", required=True)
     args = parser.parse_args(argv)
     handlers = {"items": cmd_items, "start": cmd_start, "test": cmd_test, "canary": cmd_canary,
                 "verify": cmd_verify, "verify-review": cmd_verify_review, "baseline": cmd_baseline,
-                "verify-adopted": cmd_verify_adopted, "verdict": cmd_verdict, "done": cmd_done}
+                "verify-adopted": cmd_verify_adopted, "verdict": cmd_verdict, "done": cmd_done,
+                "skip": cmd_skip}
     try:
         return handlers[args.action](args)
     except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError) as error:

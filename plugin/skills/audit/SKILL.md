@@ -57,14 +57,10 @@ python3 <clone>/scripts/audit.py tools <project> --stack <stack> --org <org> \
 
 Take the bullets from `<tmp>/rendered/AGENTS.md`: rules `- **ID [level]** text`, and exceptions
 `- **ID [exception] → TARGET** text`. `[ai]` rules are guidance and aren't audited. Group the
-`[review]` rules (and the `[tool]` rules when the tools didn't run) by ID:
-
-1. **Design and architecture:** DES, API, CLEAN, VSA, TS-3, TS-4, PY-3, CS-9, CS-10, CS-11, CS-15, CS-16, CS-17, NG-5,
-   DART-5, DART-6, DART-7.
-2. **Errors and security:** ERR, CS-8, NG-10.
-3. **Readability:** RDB, READ-4, CS-13, CS-14, NG-6, NG-7, NG-8, NG-9, DART-8.
-4. **Tests:** TST, DONE-2, TS-5, PY-4, CS-12, DART-10.
-5. **Everything else:** the stack's other rules, and the org's and the project's rules.
+`[review]` rules (and the `[tool]` rules when the tools didn't run) with
+`<clone>/config/rule-groups.json`: an entry is an ID (`CS-8`) or a prefix (`ERR`), and an ID wins over
+its prefix. The org's and the project's rules go to the last group. A private copy without that
+file predates 0.14.0: offer `git -C <clone> pull upstream main --tags` (ask first).
 
 Dispatch one `ai-standards:rule-auditor` per non-empty group, all in one message, with the config's
 `Audit model`. The brief:
@@ -118,7 +114,7 @@ points to), then remove `<tmp>`.
 In a few lines, starting with what wasn't checked:
 - the rules nobody checked (tools that didn't run, `not_checked`) and why: they're unchecked, not
   clean;
-- the totals per priority, and the top 3;
+- the totals per priority, and the top 3, each ID with its rule's short text;
 - how many rules the check in step 4 dropped;
 - the change since the last audit;
 - any instructions found in the code;

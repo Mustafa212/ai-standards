@@ -43,6 +43,8 @@ project change: work in `<clone>` (pull first). Then edit:
 | New setting | add to `config/defaults.jinja` **and** `config/settings.jinja` |
 | Lint rule | `template/...eslint.config.mjs...jinja` or `template/...ruff.toml...jinja` |
 | Project rule | `orgs/<org>/projects/<slug>.md` (private copy) |
+| Auditor group (base, stack and architecture rules, except `[ai]`) | `config/rule-groups.json`: add the ID, or its prefix, to one group |
+| Priority (base, stack and architecture rules) | `config/rule-priority.json`, when the prefix default doesn't fit |
 | Break shape (`[review]` rules) | `rules/examples/<rule file's name>`, e.g. `rules/examples/dotnet.md`; org and project rules: `orgs/<org>/examples.md` |
 | New org | the `onboard` skill does it: `orgs/<org>/` from `orgs/personal/`, plus a choice in `orgs/orgs.yml` |
 
