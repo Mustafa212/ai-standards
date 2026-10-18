@@ -7,10 +7,10 @@ public static class BuildGreetingEndpoint
     public static IServiceCollection AddBuildGreeting(this IServiceCollection services) =>
         services.AddSingleton<BuildGreetingHandler>();
 
-    /// <summary>Maps <c>GET /greetings/{name}</c>.</summary>
-    public static IEndpointRouteBuilder MapBuildGreeting(this IEndpointRouteBuilder app)
+    /// <summary>Maps <c>GET {name}</c> onto the Greetings feature's route group.</summary>
+    public static RouteGroupBuilder MapBuildGreeting(this RouteGroupBuilder greetings)
     {
-        app.MapGet("/greetings/{name}", (string name, BuildGreetingHandler handler) => handler.Handle(name));
-        return app;
+        greetings.MapGet("/{name}", (string name, BuildGreetingHandler handler) => handler.Handle(name));
+        return greetings;
     }
 }

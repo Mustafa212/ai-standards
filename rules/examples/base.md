@@ -77,3 +77,8 @@ start from (Grep, or Glob for file names) and a short bad snippet. Never rendere
 
 - Search: `PhysicalFile\(|File\(|res\.(download|sendFile)\(|FileResponse\(`
 - Break: `[HttpGet("files/{id}")] public IActionResult Get(Guid id) => PhysicalFile(store.PathFor(id), "application/pdf");`
+
+## RDB-12
+
+- Search: `(Update|Set|Change)\w*(Status|State|Flag|Is[A-Z]\w*)(Command|Handler|Endpoint)?\b` in use-case, command and endpoint names
+- Break: `Features/Reservations/UpdateReservationStatus/` for what the business calls booking a room

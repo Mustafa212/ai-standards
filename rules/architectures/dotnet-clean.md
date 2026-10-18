@@ -1,7 +1,7 @@
 ## Architecture: Clean Architecture
 
 Projects: `Domain` ← `Application` ← `Infrastructure` and `Api` (each arrow points at what a project
-may depend on). {% if use_cases == "handlers" %}Use cases are CQRS handlers (`ICommandHandler`, `IQueryHandler` in `Application/Messaging`), with no mediator library.{% elif use_cases == "mediator" %}Use cases are CQRS handlers that the Mediator library (MIT, source-generated) dispatches.{% else %}Use cases are plain handler classes, injected and called directly, with no CQRS.{% endif %}
+may depend on). Hexagonal (ports and adapters) and Onion are the same style under other names. {% if use_cases == "handlers" %}Use cases are CQRS handlers (`ICommandHandler`, `IQueryHandler` in `Application/Messaging`), with no mediator library.{% elif use_cases == "mediator" %}Use cases are CQRS handlers that the Mediator library (MIT, source-generated) dispatches.{% else %}Use cases are plain handler classes, injected and called directly, with no CQRS.{% endif %}
 
 - **CLEAN-1 [tool]** Dependencies point inward: Domain depends on nothing, Application only on Domain, Infrastructure and Api on Application. The architecture tests fail the check otherwise.
 - **CLEAN-2 [review]** Domain holds entities, value objects and business rules, with no EF Core, HTTP or framework attributes.

@@ -12,7 +12,7 @@
      "rules": ["RDB", "READ-4", "CS-2", "CS-3", "CS-7", "CS-13", "CS-14", "CS-25", "NG-6", "NG-7", "NG-8", "NG-9",
                "DART-8", "TS-6"]},
     {"name": "Tests",
-     "rules": ["TST", "DONE", "TS-5", "PY-4", "CS-12", "DART-10"]},
+     "rules": ["TST", "DONE", "VSA-8", "TS-5", "PY-4", "CS-12", "DART-10"]},
     {"name": "Everything else",
      "rules": ["GIT", "SUP", "CS-1", "CS-5", "CS-6", "NG-1", "NG-2", "NG-3", "NG-4", "DART-1", "DART-2", "DART-3",
                "DART-4", "PY-1", "PY-2", "PY-5", "PY-6", "TS-1", "TS-2"]}
