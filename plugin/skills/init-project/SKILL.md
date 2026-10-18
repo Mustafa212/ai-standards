@@ -1,6 +1,6 @@
 ---
 name: init-project
-description: Use whenever the user wants to create, start, init, bootstrap or scaffold a NEW project or repo. Scaffolds from the ai-standards template so lint, formatting, types, tests, CI and AI rules are identical across projects. Use this instead of hand-writing configs. For an existing project, use adopt-project instead.
+description: Use first, before writing any file or running a scaffolding command (npm init, uv init, dotnet new, flutter create, ng new), whenever the user wants to create, start, init, bootstrap or scaffold a NEW project or repo. For an existing project, use adopt-project instead.
 ---
 
 # Scaffold a project from ai-standards

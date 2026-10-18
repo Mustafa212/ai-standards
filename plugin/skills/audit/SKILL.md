@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Use when the user asks whether a project follows its rules or standards, wants a standards report or audit, asks what to fix first, or right after onboarding. Works for any registered project on any stack (typescript, python, angular, dotnet, flutter), adopted or not. Read-only on the project: the real analyzers run in a temporary worktree, AI agents check the [review] rules, and a prioritized report is written on this machine only.
+description: Use when the user asks whether a project follows its rules or standards, wants a standards report or audit, asks what to fix first, or right after onboarding; any registered project on any stack, adopted or not. Read-only on the project: the report stays on this machine.
 ---
 
 # Audit a project against its rules

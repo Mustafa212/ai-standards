@@ -150,6 +150,26 @@ def make_repo(root: Path) -> Path:
     return repo
 
 
+class OrderByChangeTest(unittest.TestCase):
+    def test_within_a_priority_the_folder_changed_recently_comes_first(self) -> None:
+        findings = {"rules": [{"rule": "RDB-1", "priority": "P3", "kind": "violation", "count": 6,
+                               "sources": ["review"], "areas": {"src": 5, "lib": 1}}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_repo(Path(tmp))
+            (repo / "lib").mkdir()
+            for n in range(3):  # lib changes three times, src only at init
+                (repo / "lib" / "a.py").write_text(f"x = {n}\n", encoding="utf-8")
+                git_q("add", ".", cwd=repo)
+                git_q("commit", "-qm", f"lib {n}", cwd=repo)
+            out = Path(tmp) / "out"
+            out.mkdir()
+            (out / "findings.json").write_text(json.dumps(findings), encoding="utf-8")
+            listed = lambda: json.loads((out / "fix-debt" / "items.json").read_text(encoding="utf-8"))["items"]
+            self.assertEqual(fix_debt.main(["items", str(out), "--org", "personal"]), 0)
+            self.assertEqual([i["id"] for i in listed()], ["RDB-1@src", "RDB-1@lib"])  # by count
+            self.assertEqual(fix_debt.main(["items", str(out), "--org", "personal", "--project", str(repo)]), 0)
+            self.assertEqual([(i["id"], i["recent_commits"]) for i in listed()], [("RDB-1@lib", 3), ("RDB-1@src", 1)])
+
 def head_of(repo: Path) -> str:
     return git_q("rev-parse", "HEAD", cwd=repo).strip()
 

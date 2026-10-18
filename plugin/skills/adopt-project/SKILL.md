@@ -1,6 +1,6 @@
 ---
 name: adopt-project
-description: Use when the user wants the ai-standards tools added to an EXISTING typescript or python repository (full adoption), usually after onboard registered it. Adds the standard configs without overwriting anything, baselines old lint findings so CI enforces new code from day one, and writes a prioritized debt plan (docs/STANDARDS-DEBT.md). Writes to the repository and offers commits. For a read-only check or report of how far a project is from its rules, use the audit skill instead.
+description: Use when the user wants the ai-standards tools added to an EXISTING typescript or python repository (full adoption), usually after onboard registered it. Writes to the repository and offers commits, without overwriting anything. For a read-only check of how far a project is from its rules, use the audit skill instead.
 ---
 
 # Adopt an existing project
