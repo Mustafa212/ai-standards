@@ -51,21 +51,22 @@ normalize_url() { # stdin: a git remote URL -> lowercase, without user@ and a tr
   sed -E 's#^(https?://)[^@/]+@#\1#; s#\.git$##; s#/$##' | tr '[:upper:]' '[:lower:]'
 }
 
-registration() { # prints this project's registration file in the private copy, if there is one
+registration() { # prints this project's registration file in one of the private copies, if there is one
   local clone remote file url
-  clone="$(sed -n 's/^Clone: *//p' "$standards_home/config.md" 2>/dev/null | head -n 1 | tr -d '\r')"
-  [[ -n "$clone" ]] || return 1
-  command -v cygpath >/dev/null 2>&1 && clone="$(cygpath -u "$clone")"
   remote="$(git -C "$project_dir" remote get-url origin 2>/dev/null | normalize_url)"
   [[ -n "$remote" ]] || return 1
-  for file in "$clone"/orgs/*/projects/*.md; do
-    [[ -f "$file" ]] || continue
-    url="$(grep -m 1 -oE 'repo: [^ ]+' "$file" | cut -d ' ' -f 2 | normalize_url)"
-    if [[ "$url" == "$remote" ]]; then
-      echo "$file"
-      return 0
-    fi
-  done
+  while IFS= read -r clone; do
+    [[ -n "$clone" ]] || continue
+    command -v cygpath >/dev/null 2>&1 && clone="$(cygpath -u "$clone")"
+    for file in "$clone"/orgs/*/projects/*.md; do
+      [[ -f "$file" ]] || continue
+      url="$(grep -m 1 -oE 'repo: [^ ]+' "$file" | cut -d ' ' -f 2 | normalize_url)"
+      if [[ "$url" == "$remote" ]]; then
+        echo "$file"
+        return 0
+      fi
+    done
+  done < <(sed -n 's/^Clone: *//p' "$standards_home/config.md" 2>/dev/null | tr -d '\r')
   return 1
 }
 

@@ -13,9 +13,9 @@ would bring (the versions, the CHANGELOG entries in between, the `--pretend` out
 clear yes. The monthly update PR is the same question asked in GitHub: nothing changes until it is
 merged.
 
-**Private copy:** if `~/.claude/ai-standards/config.md` exists, new public releases reach the
-private copy first: `git -C <clone> pull upstream main --tags`, after asking. Then update projects
-from it.
+**Private copy:** if `~/.claude/ai-standards/config.md` exists, new public releases reach each
+private copy in it first: `git -C <clone> pull upstream main --tags` per `Clone:`, after asking.
+Then update projects from their copy.
 
 1. Make sure the working tree is clean (`git status`). If not, ask the user to commit or stash first.
 2. Run `uvx copier update --trust --defaults --conflict rej` (other runners:

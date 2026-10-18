@@ -119,7 +119,8 @@ code isn't rewritten as a side effect.
 ## Orgs and projects (private)
 
 Orgs, projects and their rules belong to whoever uses the plugin, so they never go into this public
-repo. They live in a **private copy** of it, which the `onboard` skill sets up once per machine:
+repo. They live in a **private copy** of it, which the `onboard` skill sets up once per machine (or
+one per client, when one client mustn't see another's rules):
 
 ```
 Mustafa212/ai-standards        public    base + stacks + template + plugin

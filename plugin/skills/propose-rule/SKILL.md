@@ -9,8 +9,8 @@ Rules evolve in the standards repos, never by editing a project's managed files.
 goes depends on its layer:
 
 - **General (base, stack):** a pull request to the public repo (`${user_config.standards_source}`).
-- **Org or project:** the user's private copy (`<clone>` in `~/.claude/ai-standards/config.md`),
-  never the public repo.
+- **Org or project:** the user's private copy that holds the org (`<clone>`, a `Clone:` in
+  `~/.claude/ai-standards/config.md`; with several, the one whose `orgs/` has it), never the public repo.
 
 Nothing is committed, pushed or opened as a PR without the user's clear yes.
 

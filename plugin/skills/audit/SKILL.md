@@ -10,7 +10,7 @@ The tools run in a temporary git worktree that is removed afterwards, and the re
 machine.
 
 Paths:
-- `~/.claude/ai-standards/config.md` holds `Source:` and `Clone:` (the private copy, `<clone>`), and
+- `~/.claude/ai-standards/config.md` holds a `Source:` and `Clone:` pair per private copy, and
   optionally `Audit model: opus | sonnet` (default `opus`).
 - The report folder is `~/.claude/ai-standards/reports/<org>/<slug>/`, called `<out>` below.
 
@@ -20,8 +20,8 @@ copy predates 0.9.0: offer `git -C <clone> pull upstream main --tags` (ask first
 
 ## 1. Find the registration
 
-Compare `git remote get-url origin` with the `repo:` value in each `<clone>/orgs/*/projects/*.md`
-header, ignoring a `user@` part and a trailing `.git`. The match gives `<org>` (the folder),
+Compare `git remote get-url origin` with the `repo:` value in each copy's `orgs/*/projects/*.md`
+header, ignoring a `user@` part and a trailing `.git`. The match gives `<clone>` (its copy), `<org>` (the folder),
 `<slug>` (the file name), `<project name>` (its `## Project:` heading), the stack, and for dotnet the
 architecture (`architecture:`, else `simple`) and, for clean, the use-case style (`use-cases:`, else
 `plain`). No match: say the project isn't registered, offer
