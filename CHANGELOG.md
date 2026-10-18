@@ -9,6 +9,35 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.23.0 — 2026-10-18
+
+MINOR: several projects in one repository. Nothing changes for a single project.
+
+- **Workspace render** (copier `stack: workspace` and `workspace_projects`; init-project). pre-commit,
+  GitHub Actions and Claude Code read their config only at the repository root, so projects rendered
+  into folders of one repo got no pre-commit, no CI and no Claude hooks (and `pre-commit install` at
+  the root blocked every commit). The root render writes one `.pre-commit-config.yaml` (the shared
+  hooks once, then each folder's own hooks, limited to its files and run from inside it), one
+  `ci.yml` (a job per folder with its `working-directory`; the secrets and PR-title jobs once), an
+  update workflow that updates the root and then each folder, `.claude/settings.json` whose hooks
+  hand an edit to the hooks of the folder that holds it (`.claude/hooks/in-project.sh`), and an
+  `AGENTS.md` that points to each folder's.
+- **`in_workspace`** (copier, default `false`): a folder's render leaves out its
+  `.pre-commit-config.yaml`, `.github/` and `.claude/settings.json`, and keeps the hooks and
+  `.ai-standards/` the root calls. Its edit hooks read git paths from the folder (`HEAD:./`), so a
+  tracked file is still formatted after an edit.
+- Not breaking: with the defaults, every file of a single project renders byte for byte as before;
+  only `.copier-answers.yml` gains `in_workspace: false`.
+- `test-templates.sh` (`STACKS=workspace`, a CI job) renders a root with a .NET and an Angular
+  folder, runs each folder's check, runs pre-commit at the root (all files, then a staged change in
+  each folder) and the Claude hooks through the root's settings. `test-hooks.sh` also checks that an
+  edited tracked file is formatted.
+- **Fix: a fresh scaffold's first commit passes pre-commit.** The ESLint hook got the files ESLint
+  ignores (`.claude/hooks/*.mjs`, `.ai-standards/run.mjs`), and their "File ignored" warning failed
+  `--max-warnings=0`: the hook now runs with `--no-warn-ignored`. The Cursor and Copilot instruction
+  files (and `AGENTS.md` without Claude) ended with blank lines that `end-of-file-fixer` rewrote.
+  Found by the workspace test, the first one to run pre-commit on a scaffold.
+
 ## 0.22.1 — 2026-10-18
 
 - **No credentials in a registration.** onboard saves a project's `repo:` URL without a user or

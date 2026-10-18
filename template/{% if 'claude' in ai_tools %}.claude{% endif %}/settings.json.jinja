@@ -4,12 +4,37 @@
 {%- elif stack in ["dotnet", "flutter"] -%}
 {%- set protect_cmd = 'bash \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.sh\\"' -%}
 {%- set check_cmd = 'bash \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check-edited-file.sh\\"' -%}
-{%- else -%}
+{%- elif stack == "python" -%}
 {#- Without uv the hooks can't start, and a hook that can't start doesn't block: fail closed instead. -#}
 {%- set need_uv = 'command -v uv >/dev/null 2>&1 || { echo \\"ai-standards: uv is not installed, so this edit cannot be checked. Install it: https://docs.astral.sh/uv/\\" >&2; exit 2; }; ' -%}
 {%- set protect_cmd = need_uv ~ 'uv run --quiet --no-project python \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect_managed_files.py\\"' -%}
 {%- set check_cmd = need_uv ~ 'uv run --quiet python \\"$CLAUDE_PROJECT_DIR/.claude/hooks/check_edited_file.py\\"' -%}
 {%- endif -%}
+{%- if stack == "workspace" -%}
+{#- The root's own managed files, then each folder's own hooks, run from inside the folder that holds
+    the edited file (in-project.sh), so every folder keeps the guarantees of its own hooks. -#}
+{%- set in_project = 'bash \\"$CLAUDE_PROJECT_DIR/.claude/hooks/in-project.sh\\" ' -%}
+{%- set node = ["node .claude/hooks/protect-managed-files.mjs", "node .claude/hooks/check-edited-file.mjs"] -%}
+{%- set bash = ["bash .claude/hooks/protect-managed-files.sh", "bash .claude/hooks/check-edited-file.sh"] -%}
+{%- set folder_hooks = {"typescript": node, "angular": node, "dotnet": bash, "flutter": bash, "python": [
+  "uv run --quiet --no-project python .claude/hooks/protect_managed_files.py",
+  "uv run --quiet python .claude/hooks/check_edited_file.py"]} -%}
+{%- set cmds = namespace(protect=['bash \\"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-managed-files.sh\\"'], check=[]) -%}
+{%- for folder, project_stack in workspace_projects.items() -%}
+{%- set cmds.protect = cmds.protect + [in_project ~ folder ~ " " ~ folder_hooks[project_stack][0]] -%}
+{%- set cmds.check = cmds.check + [in_project ~ folder ~ " " ~ folder_hooks[project_stack][1]] -%}
+{%- endfor -%}
+{%- else -%}
+{%- set cmds = namespace(protect=[protect_cmd], check=[check_cmd]) -%}
+{%- endif -%}
+{%- macro hook_list(commands) -%}
+{%- for command in commands %}
+          {
+            "type": "command",
+            "command": "{{ command }}"
+          }{{ "," if not loop.last else "" }}
+{%- endfor %}
+{%- endmacro -%}
 {
 {%- if standards_source.startswith("gh:") %}
   "extraKnownMarketplaces": {
@@ -26,22 +51,14 @@
     "PreToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{ protect_cmd }}"
-          }
+        "hooks": [{{ hook_list(cmds.protect) }}
         ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{ check_cmd }}"
-          }
+        "hooks": [{{ hook_list(cmds.check) }}
         ]
       }
     ]

@@ -6,6 +6,7 @@
 #
 # Usage: scripts/test-templates.sh            # everything
 #        STACKS=python ORGS=personal scripts/test-templates.sh
+#        STACKS=workspace scripts/test-templates.sh   # a repo root with a .NET and an Angular folder
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -201,7 +202,66 @@ EOF
   ! grep -q 'depends on another use case' <<<"$output"
 }
 
+settings_blocks() { # <workspace root> <file>: true when a PreToolUse command of the root's
+  # settings.json blocks (exit 2) an edit of the file, run the way Claude Code runs it.
+  local command code
+  while IFS= read -r command; do
+    code=0
+    (cd "$1" && printf '{"tool_input":{"file_path":"%s"}}' "$1/$2" |
+      CLAUDE_PROJECT_DIR="$1" bash -c "$command" >/dev/null 2>&1) || code=$?
+    ((code == 2)) && return 0
+  done < <(python3 -c 'import json, sys
+for group in json.load(open(sys.argv[1], encoding="utf-8"))["hooks"]["PreToolUse"]:
+    print("\n".join(hook["command"] for hook in group["hooks"]))' "$1/.claude/settings.json" | tr -d '\r')
+  return 1
+}
+
+check_workspace() { # a repo whose root is a workspace (pre-commit, CI, Claude settings) and whose
+  # folders are projects rendered with in_workspace=true: the root's tools must reach every folder.
+  local ws="$work/workspace" found leftovers out spacing
+  local tools=(--data 'ai_tools=["claude","cursor","copilot"]')
+  log "workspace: generate the root, backend/ (dotnet) and frontend/ (angular)"
+  copier_cmd copy --trust --defaults --quiet --data project_name="Test workspace" --data stack=workspace \
+    --data 'workspace_projects={backend: dotnet, frontend: angular}' "${tools[@]}" "$work/src" "$ws"
+  copier_cmd copy --trust --defaults --quiet --data project_name="Test backend" --data stack=dotnet \
+    --data in_workspace=true "${tools[@]}" "$work/src" "$ws/backend"
+  copier_cmd copy --trust --defaults --quiet --data project_name="Test frontend" --data stack=angular \
+    --data in_workspace=true "${tools[@]}" "$work/src" "$ws/frontend"
+  for found in {backend,frontend}/{.pre-commit-config.yaml,.github,.claude/settings.json}; do
+    [[ -e "$ws/$found" ]] && fail "workspace: $found is rendered, but only the root's is read"
+  done
+  # shellcheck disable=SC2016  # literal ${{ is GitHub Actions syntax
+  if leftovers="$(grep -rn --exclude='*.html' -e '{%' -e '{{' "$ws" | grep -v '\${{')"; then
+    fail "workspace: unrendered template syntax"; echo "$leftovers"
+  fi
+
+  log "workspace: each project's full check, from its folder"
+  (cd "$ws/backend" && bash .ai-standards/check.sh) || fail "workspace: backend check.sh"
+  (cd "$ws/frontend" && npm install --no-audit --no-fund --silent && npm run --silent check) ||
+    fail "workspace: frontend npm run check"
+
+  log "workspace: pre-commit at the root runs each folder's hooks, from inside that folder"
+  (cd "$ws" && git init -q && git add -A && pre-commit run --all-files) || fail "workspace: pre-commit run --all-files"
+  spacing="backend/$(dirname "$(cd "$ws/backend" && find src -name '*.csproj' | head -n 1)")/Spacing.cs"
+  printf 'namespace Demo;\npublic static class Spacing\n{\n        public static int One()   =>   1;\n}\n' >"$ws/$spacing"
+  printf 'export   const   spaced="b"\n' >"$ws/frontend/src/app/spaced.ts"
+  out="$(cd "$ws" && git add -A && pre-commit run 2>&1)" && fail "workspace: badly formatted files passed pre-commit"
+  grep -q 'Spacing.cs.*WHITESPACE' <<<"$out" || fail "workspace: backend/ dotnet format missed the staged file: $out"
+  grep -qxF 'export const spaced = "b";' "$ws/frontend/src/app/spaced.ts" ||
+    fail "workspace: frontend/ prettier missed the staged file: $out"
+  (cd "$ws" && git reset -q && rm "$spacing" frontend/src/app/spaced.ts)
+
+  log "workspace: the root's Claude hooks run each folder's own hooks"
+  for found in .pre-commit-config.yaml backend/Directory.Build.props frontend/eslint.config.mjs; do
+    settings_blocks "$ws" "$found" || fail "workspace: the root's settings.json lets an edit of $found through"
+  done
+  settings_blocks "$ws" frontend/src/app/app.ts && fail "workspace: the root's settings.json blocks a source file"
+  bash "$work/src/scripts/test-hooks.sh" "$ws/backend" dotnet "$ws" || fail "workspace: backend hooks"
+  bash "$work/src/scripts/test-hooks.sh" "$ws/frontend" angular "$ws" || fail "workspace: frontend hooks"
+}
+
 for stack in $stacks; do
+  if [[ "$stack" == workspace ]]; then check_workspace; continue; fi
   # .NET is generated once per architecture; the other stacks have none ("-").
   # Clean Architecture is generated once per use-case style (architecture:use_cases).
   architectures="-"
@@ -349,7 +409,7 @@ printf '
 python3 "$work/src/scripts/check_rules.py" "$cross" >/dev/null || fail "check_rules: same ID in two orgs reported"
 
 log "fresh project: CLAUDE.md imports AGENTS.md exactly once"
-fresh="$(find "$work" -maxdepth 1 -name '*-personal' | head -n 1)"
+fresh="$(find "$work" -maxdepth 1 \( -name '*-personal' -o -name workspace \) | head -n 1)"
 [[ "$(grep -cxF '@AGENTS.md' "$fresh/CLAUDE.md")" == 1 ]] || fail "fresh: @AGENTS.md not imported exactly once"
 
 log "adopt: existing project keeps its own files"

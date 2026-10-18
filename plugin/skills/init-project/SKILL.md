@@ -21,7 +21,9 @@ Usually the `onboard` skill runs this one, after it has asked the org and regist
 Ask in one go (use AskUserQuestion when available), skipping anything the user already said:
 
 - **org**: which org's rules apply. Default `${user_config.default_org}`.
-- **stack**: `typescript`, `angular`, `python`, `dotnet` or `flutter`.
+- **stack**: `typescript`, `angular`, `python`, `dotnet` or `flutter`. Several projects in one
+  repository (e.g. `backend/` and `frontend/`): ask each folder's stack, and see "Several projects
+  in one repository" below.
 - **architecture** (dotnet only): `simple` (one Web API project), `clean` (Domain, Application,
   Infrastructure, Api), `vertical-slice` (one folder per use case) or `modular-monolith` (a host
   and modules that own their data and talk through `Contracts` projects). Recommend `simple` for
@@ -66,6 +68,22 @@ uvx copier copy --trust \
 Pass `architecture` and `use_cases` only where they apply (dotnet, and `clean` for `use_cases`).
 Use the remote source (not a local clone path) so `copier update` and the monthly update workflow
 can reach it later.
+
+### Several projects in one repository
+
+pre-commit, GitHub Actions and Claude Code read their config only at the repository root, so a
+folder rendered as its own project gets no hooks and no CI. Render the root as a workspace instead:
+
+1. The root (empty, or a new directory): the command above with `--data stack=workspace` and
+   `--data 'workspace_projects={backend: dotnet, frontend: angular}'` (each folder and its stack)
+   in place of `stack`, `architecture` and `use_cases`. It writes the one pre-commit config, CI
+   workflow and Claude settings, which run each folder's own checks and hooks from inside it.
+2. Each folder: the command above with its own answers, `--data in_workspace=true`, and
+   `<root>/<folder>` as the target. It leaves out what the root holds.
+
+In step 3, `git init` and `pre-commit install` run once, at the root; install and check each
+folder from inside it. A folder added later: render it the same way, then run
+`copier update --defaults --trust --data 'workspace_projects={...every folder...}'` at the root.
 
 If the target directory already contains code, stop and use the `adopt-project` skill instead.
 Never run `copier copy` into an existing project and never pass `--overwrite`: it replaces the
