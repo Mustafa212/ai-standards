@@ -9,7 +9,7 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
-## Unreleased
+## 0.23.0 — 2026-10-18
 
 MINOR: several projects in one repository. Nothing changes for a single project.
 
