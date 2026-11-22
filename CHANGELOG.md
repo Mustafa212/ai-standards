@@ -9,6 +9,19 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## 0.23.2 — 2026-11-22
+
+PATCH: the .NET audit failed on projects whose own MSBuild logic is keyed to their Directory.Build files.
+
+- **The .NET audit no longer renames a project's `Directory.Build.props` and `.targets`.** Logic
+  keyed to their path broke: a package-vetting target that strips versions from the packages the
+  managed props define failed with PV001, because the audit's analyzer references took their place.
+  The audit's settings now live in `.ai-standards-audit/audit.props` and `audit.targets`, imported
+  at the end of the project's files (or of a stand-in that imports the parent one). The analyzers
+  are added only when the project doesn't reference them already, and under central package
+  management with a `PackageVersion` pin instead of `VersionOverride`, which a project may disable
+  (NU1013). Still unsupported: a project in locked restore mode that lacks an analyzer.
+
 ## 0.23.1 — 2026-10-18
 
 PATCH: two CI jobs failed on every pull request of an organization-owned repository.
