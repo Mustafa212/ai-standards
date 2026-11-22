@@ -197,19 +197,19 @@ class DotnetTest(unittest.TestCase):
                                                                encoding="utf-8")
             audit.overlay_dotnet(worktree, render)
 
+            # The project's files keep their names (its logic may be keyed to their paths) and import ours last.
             props = (worktree / "Directory.Build.props").read_text(encoding="utf-8")
-            self.assertIn("Directory.Build.project.props", props)
-            self.assertTrue((worktree / "Directory.Build.project.props").exists())
-            # Central package management is decided by MSBuild, wherever the project turns it on.
-            self.assertIn('Include="SonarAnalyzer.CSharp" Version="10.35.0.4138"', props)
-            self.assertIn('Include="SonarAnalyzer.CSharp" VersionOverride="10.35.0.4138"', props)
-            self.assertIn("'$(ManagePackageVersionsCentrally)' == 'true'", props)
-            self.assertIn("!$(MSBuildProjectName.EndsWith('Tests'))", props)  # no banned-API checks in tests
-            self.assertNotIn("xunit", props)
-
-            targets = (worktree / "Directory.Build.targets").read_text(encoding="utf-8")
-            self.assertTrue((worktree / "Directory.Build.project.targets").exists())
-            self.assertIn("Directory.Build.project.targets", targets)
+            self.assertTrue(props.startswith("<Project><PropertyGroup><ManagePackageVersionsCentrally>"))
+            self.assertLess(props.index("</PropertyGroup>"), props.index(f"{audit.SARIF_DIR}/audit.props"))
+            self.assertIn(f"{audit.SARIF_DIR}/audit.targets",
+                          (worktree / "Directory.Build.targets").read_text(encoding="utf-8"))
+            self.assertIn("<AnalysisLevel>latest-Recommended</AnalysisLevel>",
+                          (worktree / audit.SARIF_DIR / "audit.props").read_text(encoding="utf-8"))
+            targets = (worktree / audit.SARIF_DIR / "audit.targets").read_text(encoding="utf-8")
+            self.assertIn('<_AiStandardsAnalyzer Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" />', targets)
+            self.assertIn("!$(MSBuildProjectName.EndsWith('Tests'))", targets)  # no banned-API checks in tests
+            self.assertNotIn("xunit", targets)
+            self.assertNotIn("VersionOverride", targets)  # a project may disable it
             for setting in ("<RunAnalyzers>true</RunAnalyzers>", "<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>",
                             "<WarningsAsErrors></WarningsAsErrors>"):
                 self.assertIn(setting, targets)
@@ -267,7 +267,7 @@ class DotnetTest(unittest.TestCase):
             status, found, notes = self._run_dotnet(worktree, render, backend / audit.SARIF_DIR)
             self.assertEqual((status, len(found), notes), ("ran (dotnet 10.0.401)", 1, []))
             self.assertIn("ai-standards audit", (backend / "Directory.Build.props").read_text(encoding="utf-8"))
-            self.assertTrue((backend / "Directory.Build.project.props").exists())
+            self.assertTrue((backend / audit.SARIF_DIR / "audit.props").exists())
             self.assertTrue((backend / ".ai-standards" / "SonarLint.xml").exists())
             self.assertFalse((worktree / "Directory.Build.props").exists())
 
@@ -306,6 +306,47 @@ class DotnetTest(unittest.TestCase):
                 (where / "Directory.Build.props").write_text(marker.format("project"), encoding="utf-8")
                 audit.overlay_dotnet(worktree, render, worktree / "backend")
                 self.assertEqual(evaluate(app / "App.csproj"), ["latest-Recommended", "project"])
+
+    @unittest.skipUnless(shutil.which("dotnet"), "dotnet not installed")
+    def test_msbuild_adds_only_the_analyzers_the_project_lacks(self) -> None:
+        """Central versions with overrides off, and the project's own props referencing one analyzer."""
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree, render = Path(tmp) / "wt", Path(tmp) / "render"
+            self._small_render(render)
+            (render / "Directory.Build.props").write_text(
+                '<Project><ItemGroup>'
+                '<PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" PrivateAssets="all" />'
+                '<PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" PrivateAssets="all" />'
+                '</ItemGroup></Project>', encoding="utf-8")
+            app = worktree / "App"
+            app.mkdir(parents=True)
+            (app / "App.csproj").write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>'
+                                            "<TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>",
+                                            encoding="utf-8")
+            (worktree / "Directory.Packages.props").write_text(
+                "<Project><PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>"
+                "<CentralPackageVersionOverrideEnabled>false</CentralPackageVersionOverrideEnabled></PropertyGroup>"
+                '<ItemGroup><PackageVersion Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" /></ItemGroup>'
+                "</Project>", encoding="utf-8")
+            (worktree / "Directory.Build.props").write_text(
+                '<Project><ItemGroup><PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="all" />'
+                "</ItemGroup></Project>", encoding="utf-8")
+            audit.overlay_dotnet(worktree, render)
+            proc = subprocess.run(["dotnet", "msbuild", str(app / "App.csproj"), "-nologo",
+                                   "-getItem:PackageReference", "-getItem:PackageVersion"],
+                                  capture_output=True, text=True, check=False)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            items = json.loads(proc.stdout)["Items"]
+            refs = {item["Identity"]: item for item in items["PackageReference"]}
+            pins = {item["Identity"]: item["Version"] for item in items["PackageVersion"]}
+            # The project's own reference stays the only one, still defined in its Directory.Build.props.
+            self.assertEqual([item["Identity"] for item in items["PackageReference"]].count("SonarAnalyzer.CSharp"), 1)
+            self.assertEqual(Path(refs["SonarAnalyzer.CSharp"]["DefiningProjectFullPath"]),
+                             worktree / "Directory.Build.props")
+            # The missing one is added without a version, and pinned centrally.
+            self.assertEqual(refs["Microsoft.CodeAnalysis.BannedApiAnalyzers"].get("Version", ""), "")
+            self.assertEqual(pins, {"SonarAnalyzer.CSharp": "10.35.0.4138",
+                                    "Microsoft.CodeAnalysis.BannedApiAnalyzers": "5.6.0"})
 
     def test_a_build_that_writes_no_analyzer_results_is_failed_not_clean(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
