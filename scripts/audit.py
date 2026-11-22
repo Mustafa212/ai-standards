@@ -199,43 +199,31 @@ def run_ruff(worktree: Path, render: Path, _solution: str | None) -> tuple[str, 
 
 
 SARIF_DIR = ".ai-standards-audit"
-# Written in the worktree only. The project's own root props are imported first, so its settings
-# stay; ours come after them. Analyzer packages are added both ways, and MSBuild keeps the one that
-# matches central package management, wherever the project turns it on. Test projects get the same
-# exemptions as in the template (no banned-API checks, no doc comments).
+# Written in the worktree only, into SARIF_DIR, and imported at the end of the project's own root
+# props and targets, which keep their names: a project's logic may be keyed to their paths. Ours
+# come after the project's settings, so they win.
 AUDIT_PROPS = """<Project>
   <!-- ai-standards audit: temporary worktree only. -->
-  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.project.props"
-          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.project.props')" />
-  <PropertyGroup>
-    <_AiStandardsPropsAbove>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</_AiStandardsPropsAbove>
-  </PropertyGroup>
-  <Import Project="$(_AiStandardsPropsAbove)"
-          Condition="!Exists('$(MSBuildThisFileDirectory)Directory.Build.project.props') And '$(_AiStandardsPropsAbove)' != ''" />
   <PropertyGroup>
     <AnalysisLevel>latest-Recommended</AnalysisLevel>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
-    <ErrorLog>$(MSBuildThisFileDirectory){sarif_dir}/$(MSBuildProjectName)-$(TargetFramework).sarif,version=2.1</ErrorLog>
+    <ErrorLog>$(MSBuildThisFileDirectory)$(MSBuildProjectName)-$(TargetFramework).sarif,version=2.1</ErrorLog>
   </PropertyGroup>
   <ItemGroup>
-{packages}
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory).ai-standards/SonarLint.xml" />
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory).ai-standards/BannedSymbols.txt" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../.ai-standards/SonarLint.xml" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../.ai-standards/BannedSymbols.txt" />
   </ItemGroup>
 </Project>
 """
 # Imported after each project file, so a project can't switch the analyzers off, turn warnings into
-# errors, or hide a standard rule with NoWarn.
+# errors, or hide a standard rule with NoWarn. The analyzer packages are added here, where every
+# PackageReference and PackageVersion is known: only those the project doesn't reference already, and
+# under central package management with a pin when the project has none (no VersionOverride, which a
+# project may disable). Test projects get the template's exemptions (no banned-API checks, no doc
+# comments).
 AUDIT_TARGETS = """<Project>
   <!-- ai-standards audit: temporary worktree only. -->
-  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.project.targets"
-          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.project.targets')" />
-  <PropertyGroup>
-    <_AiStandardsTargetsAbove>$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))</_AiStandardsTargetsAbove>
-  </PropertyGroup>
-  <Import Project="$(_AiStandardsTargetsAbove)"
-          Condition="!Exists('$(MSBuildThisFileDirectory)Directory.Build.project.targets') And '$(_AiStandardsTargetsAbove)' != ''" />
   <PropertyGroup>
     <RunAnalyzers>true</RunAnalyzers>
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
@@ -244,6 +232,15 @@ AUDIT_TARGETS = """<Project>
     <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
     <WarningsAsErrors></WarningsAsErrors>
   </PropertyGroup>
+  <ItemGroup>
+{packages}
+    <_AiStandardsAnalyzer Remove="@(PackageReference)" />
+    <_AiStandardsPin Include="@(_AiStandardsAnalyzer)" Condition="'$(ManagePackageVersionsCentrally)' == 'true'" />
+    <_AiStandardsPin Remove="@(PackageVersion)" />
+    <PackageVersion Include="@(_AiStandardsPin)" />
+    <PackageReference Include="@(_AiStandardsAnalyzer)" PrivateAssets="all" Condition="'$(ManagePackageVersionsCentrally)' != 'true'" />
+    <PackageReference Include="@(_AiStandardsAnalyzer)" Version="" PrivateAssets="all" Condition="'$(ManagePackageVersionsCentrally)' == 'true'" />
+  </ItemGroup>
   <Target Name="AiStandardsAuditKeepStandardWarnings" BeforeTargets="CoreCompile">
     <ItemGroup>
       <_AiStandardsNoWarn Include="$(NoWarn)" Exclude="{standard_ids}" />
@@ -289,16 +286,32 @@ def pick_solution(root: Path) -> Path | None:
 
 
 def analyzer_packages(render: Path) -> str:
-    """The standard's analyzer packages, once with Version and once with VersionOverride."""
+    """The standard's analyzer packages, at its versions."""
     lines: list[str] = []
     text = (render / "Directory.Build.props").read_text(encoding="utf-8")
     for name, version in PACKAGE.findall(text):
-        not_tests = " and !$(MSBuildProjectName.EndsWith('Tests'))" if "BannedApi" in name else ""
-        for attribute, central in (("Version", "!="), ("VersionOverride", "==")):
-            condition = f"'$(ManagePackageVersionsCentrally)' {central} 'true'{not_tests}"
-            lines.append(f'    <PackageReference Include="{name}" {attribute}="{version}" PrivateAssets="all"'
-                         f' Condition="{condition}" />')
+        not_tests = " Condition=\"!$(MSBuildProjectName.EndsWith('Tests'))\"" if "BannedApi" in name else ""
+        lines.append(f'    <_AiStandardsAnalyzer Include="{name}" Version="{version}"{not_tests} />')
     return "\n".join(lines)
+
+
+# Stands in for a root file the project doesn't have, so the settings above still apply.
+PARENT_IMPORT = """<Project>
+  <PropertyGroup>
+    <_AiStandards{kind}Above>$([MSBuild]::GetPathOfFileAbove('Directory.Build.{ext}', '$(MSBuildThisFileDirectory)../'))</_AiStandards{kind}Above>
+  </PropertyGroup>
+  <Import Project="$(_AiStandards{kind}Above)" Condition="'$(_AiStandards{kind}Above)' != ''" />
+</Project>
+"""
+
+
+def import_last(path: Path, imported: str) -> None:
+    """Imports `imported` at the end of the project's file at `path`, creating it when it's missing."""
+    ext = path.suffix[1:]
+    text = path.read_text(encoding="utf-8") if path.exists() else PARENT_IMPORT.format(kind=ext.title(), ext=ext)
+    head = re.sub(r"<Project\s*/>$", "<Project>\n</Project>", text.rstrip()).rpartition("</Project>")[0]
+    line = f'  <Import Project="$(MSBuildThisFileDirectory){imported}" /> <!-- ai-standards audit -->\n'
+    path.write_text(f"{head}{line}</Project>\n", encoding="utf-8")
 
 
 def cs_sections(text: str) -> str:
@@ -323,15 +336,13 @@ def overlay_dotnet(worktree: Path, render: Path, base: Path | None = None) -> No
     """The audit's props and targets go in `base`, the solution's folder: MSBuild stops at the nearest
     Directory.Build.props, so a copy at the repo root is never read when the solution has its own."""
     base = base or worktree
-    for name, renamed in (("Directory.Build.props", "Directory.Build.project.props"),
-                          ("Directory.Build.targets", "Directory.Build.project.targets")):
-        if (base / name).exists():
-            (base / name).rename(base / renamed)
-    (base / "Directory.Build.props").write_text(
-        AUDIT_PROPS.format(sarif_dir=SARIF_DIR, packages=analyzer_packages(render)), encoding="utf-8")
-    (base / "Directory.Build.targets").write_text(
-        AUDIT_TARGETS.format(standard_ids=";".join(standard_ids())), encoding="utf-8")
     (base / SARIF_DIR).mkdir(exist_ok=True)  # the compiler won't create the ErrorLog's folder
+    (base / SARIF_DIR / "audit.props").write_text(AUDIT_PROPS, encoding="utf-8")
+    (base / SARIF_DIR / "audit.targets").write_text(
+        AUDIT_TARGETS.format(packages=analyzer_packages(render), standard_ids=";".join(standard_ids())),
+        encoding="utf-8")
+    import_last(base / "Directory.Build.props", f"{SARIF_DIR}/audit.props")
+    import_last(base / "Directory.Build.targets", f"{SARIF_DIR}/audit.targets")
     (base / ".ai-standards").mkdir(exist_ok=True)
     for name in ("SonarLint.xml", "BannedSymbols.txt"):
         shutil.copy(render / ".ai-standards" / name, base / ".ai-standards" / name)
