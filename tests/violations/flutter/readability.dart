@@ -1,8 +1,8 @@
 // expect: public_member_api_docs, avoid_positional_boolean_parameters, avoid_print, no_default_cases, avoid_dynamic_calls
 enum Size { small, large }
 
-void report(String name, bool loud) {
-  print(loud ? name.toUpperCase() : name);
+void report(String name, bool loud, bool short) {
+  print(loud ? name.toUpperCase() : short ? name[0] : name);
 }
 
 /// Describes a size.

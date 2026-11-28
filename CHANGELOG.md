@@ -9,6 +9,16 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## Unreleased
+
+PATCH: new Flutter projects failed `flutter analyze` on Flutter 3.50, which deprecates `package:flutter/material.dart`.
+
+- **The Flutter template imports `package:material_ui/material_ui.dart`** and depends on
+  `material_ui: ^1.11.1`, the standalone Material package. The widget names stay the same.
+- **The RDB-9 lint fixture has two positional bools.** From Dart 3.14
+  `avoid_positional_boolean_parameters` (RDB-9, stack, `[tool]`) flags a function only when it
+  takes two or more, so a single positional bool flag is left to review.
+
 ## 0.23.2 — 2026-11-22
 
 PATCH: the .NET audit failed on projects whose own MSBuild logic is keyed to their Directory.Build files.
