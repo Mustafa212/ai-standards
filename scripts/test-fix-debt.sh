@@ -185,7 +185,7 @@ code_done="$(pay good "$fixed" "$fixed_test" true)"
 [[ "$code_done" == 0 ]] || fail "a correct fix wasn't DONE: $(cat "$out/fix-debt/good/"*/verdict.out)"
 
 git_q -C "$project" reset -q --hard "$base"
-# shellcheck disable=SC2317  # bad_step runs through pay's fourth argument
+# shellcheck disable=SC2317,SC2329  # bad_step runs through pay's fourth argument
 bad_step() { # drop a test and silence a rule instead of fixing it
   sed -i '/adds five\|extras_add_five/,+2d' "$project/$test_file"
   if [[ "$stack" == python ]]; then echo "x = 1  # noqa: PLR2004" >>"$project/$code"; else echo "// eslint-disable-next-line" >>"$project/$code"; fi
