@@ -631,11 +631,12 @@ def report(args: argparse.Namespace) -> int:
     priorities = load_priorities(args.org)
     exceptions = exceptions_in(args.exceptions)
     targets = {exception["target"] for exception in exceptions}
-    rules = aggregate(tool["findings"], review, priorities)
+    # Only the linters can't tell an excepted place from a break; the auditors got the exceptions in their brief.
+    kept = [finding for finding in tool["findings"] if finding["rule"] not in targets]
     for exception in exceptions:
-        exception["count"] = sum(item["count"] for item in rules.values() if item["rule"] == exception["target"])
+        exception["count"] = sum(finding["rule"] == exception["target"] for finding in tool["findings"])
     active = [{**item, "areas": dict(item["areas"].most_common())}
-              for item in rules.values() if item["rule"] not in targets]
+              for item in aggregate(kept, review, priorities).values()]
     active.sort(key=lambda item: (item["priority"], -item["count"], item["rule"]))
     previous = read_json(out / FINDINGS, None)
     data = {

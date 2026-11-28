@@ -9,6 +9,15 @@ Versions follow semver, from the point of view of a project that runs `copier up
 
 Each entry names the rule ID, the layer (base / stack / org) and the enforcement level.
 
+## Unreleased
+
+PATCH: an audit exception hid every finding of its target rule, not only the excepted places.
+
+- **An exception no longer hides its whole rule.** `audit.py report` dropped every finding of an
+  exception's target rule, the auditors' too, though their brief already lists the exceptions and they
+  skip only the excepted places. Now only the linters' findings of that rule are dropped (and counted
+  as "not counted"); the auditors' findings stay in the report.
+
 ## 0.23.2 — 2026-11-22
 
 PATCH: the .NET audit failed on projects whose own MSBuild logic is keyed to their Directory.Build files.

@@ -477,6 +477,17 @@ class ReportTest(unittest.TestCase):
         self.assertIn("DES-3", report)
         self.assertFalse((self.out / "previous.json").exists())
 
+    def test_an_exception_drops_tool_findings_but_keeps_the_review_count(self) -> None:
+        review = json.loads(self.review.read_text(encoding="utf-8"))
+        review["rules"].append({"rule": "CS-5", "count": 4, "count_kind": "estimate", "confidence": "medium",
+                                "fix": "Pass the token.", "examples": [], "areas": {"src": 4}})
+        self.write(self.review, review)
+        self.run_report()
+        data = json.loads((self.out / "findings.json").read_text(encoding="utf-8"))
+        rules = {rule["rule"]: rule for rule in data["rules"]}
+        self.assertEqual((rules["CS-5"]["count"], rules["CS-5"]["sources"]), (4, ["review"]))
+        self.assertEqual(data["exceptions"][0]["count"], 1)
+
     def test_second_run_keeps_previous_and_reports_change(self) -> None:
         self.run_report()
         tool = json.loads((self.out / "tool-findings.json").read_text(encoding="utf-8"))
